@@ -253,22 +253,24 @@ Observed visual defect after the true-print-preview refactor:
 
 Implemented correction:
 
-- the long top-aligned placeholder text was removed from the table interaction layer;
-- `EmptyCaptionHintBadge` is a compact `+ Tablo başlığı` designer affordance;
-- the badge is collapsed by default and becomes visible only for an editable empty-caption table while the table is selected or hovered;
-- the badge is positioned just above the table block with `Margin="4,-18,0,0"`;
-- only `TableBlockHost` locally overrides `ClipToBounds="False"`, while the final table document `StackPanel` remains `ClipToBounds="True"`;
-- the badge remains outside document flow and does not move Engine-owned X/Y/Width/Height or table/header geometry;
-- double-clicking the badge routes through the existing `TableCaption_MouseLeftButtonDown` handler;
+- the long top-aligned placeholder `TextBlock` was removed from the table interaction layer;
+- `EmptyCaptionHintPopup` is a designer-only WPF `Popup` adorner containing the compact `+ Tablo başlığı` affordance;
+- the popup is closed by default and opens only for an editable empty-caption table while the table is selected or the `TableBlockHost` is hovered;
+- `Placement="Top"`, `HorizontalOffset="4"`, and `VerticalOffset="-2"` place the affordance above the table block without consuming layout height;
+- the popup explicitly binds its `PlacementTarget` and `DataContext` to `TableBlockHost`, so the popup window remains connected to the correct table VM and caption-edit handler;
+- `PageBlockInteractionHost` keeps `ClipToBounds="True"`; no table-host clipping override is required;
+- the final table document `StackPanel` remains `ClipToBounds="True"`;
+- double-clicking the popup badge routes through the existing `TableCaption_MouseLeftButtonDown` handler;
 - the existing bounded empty-caption host double-click gesture remains unchanged;
-- Word output remains unaffected.
+- Engine-owned X/Y/Width/Height, table/header geometry, row spans, caption semantics, and Word output remain untouched.
 
 Regression guard:
 
 - the long placeholder cannot return as a `TextBlock`;
-- the compact badge must remain in the table interaction segment;
-- empty-caption/editability plus selected/hover visibility conditions are required;
-- the floating negative-margin placement and table-host/final-layer clipping split are source-guarded;
+- the compact affordance must remain a `Popup` in the table interaction segment;
+- popup closed-by-default, empty-caption/editability, selected/host-hover conditions are required;
+- explicit `PlacementTarget` and popup `DataContext` binding to `TableBlockHost` are required;
+- final table document clipping remains required and `ClipToBounds="False"` is rejected from the table template;
 - the existing caption edit gesture bridge remains source-guarded.
 
 Status: implemented and source-reviewed on the Sprint17 branch. Windows restore/build/test and visual smoke for the current exact head are pending.
@@ -276,8 +278,8 @@ Status: implemented and source-reviewed on the Sprint17 branch. Windows restore/
 ## Remaining Sprint 17 closure gates
 
 1. Run current exact branch head on Windows: `dotnet restore`, `dotnet build`, `dotnet test` with no deleted/skipped/weakened tests.
-2. Smoke P0-E: with caption empty, the long hint must not cover the first header; the compact `+ Tablo başlığı` badge appears only on table hover/selection and double-click opens caption editing.
-3. Smoke real caption: once a caption is committed, the compact badge disappears and the resolved caption occupies semantic document layout in Preview and Word.
+2. Smoke P0-E: with caption empty, the long hint must not cover the first header; the compact `+ Tablo başlığı` popup appears only on table hover/selection and double-click opens caption editing.
+3. Smoke real caption: once a caption is committed, the popup disappears and the resolved caption occupies semantic document layout in Preview and Word.
 4. Re-run no-reference built-in default-format Preview/Word smoke.
 5. Re-run imported reference-format override smoke.
 6. Confirm P0-E does not alter table X/Y/Width/Height, grouped row spans, caption semantics, or Word output.
