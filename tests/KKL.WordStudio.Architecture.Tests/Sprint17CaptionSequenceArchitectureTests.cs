@@ -33,7 +33,7 @@ public sealed class Sprint17CaptionSequenceArchitectureTests
     }
 
     [Fact]
-    public void PreviewNumbering_UsesPayloadMetadataAndNeverHardCodesTabloOneInXaml()
+    public void PreviewNumbering_UsesPayloadMetadataAndNeverHardcodesTabloOneInXaml()
     {
         var root = SolutionRootLocator.Find();
         var projection = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "PreviewPageProjection.cs");
@@ -46,6 +46,11 @@ public sealed class Sprint17CaptionSequenceArchitectureTests
         Assert.DoesNotContain("Tablo 2:", xaml, StringComparison.Ordinal);
     }
 
-    private static string Read(string root, params string[] parts) =>
-        File.ReadAllText(Path.Combine([root, .. parts]));
+    private static string Read(string root, params string[] parts)
+    {
+        var pathParts = new string[parts.Length + 1];
+        pathParts[0] = root;
+        Array.Copy(parts, 0, pathParts, 1, parts.Length);
+        return File.ReadAllText(Path.Combine(pathParts));
+    }
 }
