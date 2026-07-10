@@ -11,7 +11,8 @@ using KKL.WordStudio.UI.ViewModels;
 /// <summary>
 /// Fragment-local read-only table renderer. Pagination and span clipping are
 /// owned by Engine; this control only maps resolved table formatting and
-/// payload-local spans to WPF Grid geometry.
+/// payload-local spans to WPF Grid geometry. Border thickness comes from the
+/// resolved format; the document border visual uses the Word-equivalent black.
 /// </summary>
 public sealed class PreviewTableGridControl : Grid
 {
