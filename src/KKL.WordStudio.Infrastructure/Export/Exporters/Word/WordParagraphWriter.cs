@@ -71,8 +71,8 @@ internal static class WordParagraphWriter
         ResolvedTextFormat? captionFormat,
         int? sequenceNumber)
     {
-        var cachedSequenceNumber = sequenceNumber is > 0
-            ? sequenceNumber.Value.ToString()
+        var cachedSequenceNumber = sequenceNumber is int positiveSequenceNumber && positiveSequenceNumber > 0
+            ? positiveSequenceNumber.ToString()
             : "1";
 
         if (captionFormat is null)
