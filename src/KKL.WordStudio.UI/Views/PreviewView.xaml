@@ -91,15 +91,14 @@
         </Style>
 
         <!-- Empty captions keep zero document-flow height. The compact hint is a
-             designer-only badge floated just above the table block on hover/selection. -->
-        <Style x:Key="EmptyCaptionHintBadge" TargetType="Border">
-            <Setter Property="Visibility" Value="Collapsed" />
-            <Setter Property="Background" Value="#F2FFFFFF" />
-            <Setter Property="BorderBrush" Value="#887EA6E8" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="Padding" Value="4,1" />
-            <Setter Property="Cursor" Value="IBeam" />
+             designer-only Popup placed above the table block on hover/selection. -->
+        <Style x:Key="EmptyCaptionHintPopup" TargetType="Popup">
+            <Setter Property="IsOpen" Value="False" />
+            <Setter Property="AllowsTransparency" Value="True" />
+            <Setter Property="Placement" Value="Top" />
+            <Setter Property="HorizontalOffset" Value="4" />
+            <Setter Property="VerticalOffset" Value="-2" />
+            <Setter Property="StaysOpen" Value="True" />
             <Style.Triggers>
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions>
@@ -108,16 +107,16 @@
                         <Condition Binding="{Binding CanEditCaption}" Value="True" />
                         <Condition Binding="{Binding IsSelected}" Value="True" />
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Visibility" Value="Visible" />
+                    <Setter Property="IsOpen" Value="True" />
                 </MultiDataTrigger>
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions>
                         <Condition Binding="{Binding ShowCaptionArea}" Value="True" />
                         <Condition Binding="{Binding HasCaption}" Value="False" />
                         <Condition Binding="{Binding CanEditCaption}" Value="True" />
-                        <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=IsMouseOver}" Value="True" />
+                        <Condition Binding="{Binding IsMouseOver, ElementName=TableBlockHost}" Value="True" />
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Visibility" Value="Visible" />
+                    <Setter Property="IsOpen" Value="True" />
                 </MultiDataTrigger>
             </Style.Triggers>
         </Style>
@@ -162,7 +161,7 @@
 
         <DataTemplate DataType="{x:Type vm:PreviewTablePageBlockViewModel}">
             <Grid x:Name="TableBlockHost" Style="{StaticResource PageBlockInteractionHost}"
-                  Width="{Binding Width}" Height="{Binding Height}" ClipToBounds="False">
+                  Width="{Binding Width}" Height="{Binding Height}">
                 <!-- Final document layer: table -->
                 <StackPanel ClipToBounds="True">
                     <Grid Margin="{Binding CaptionAreaMargin}"
@@ -246,17 +245,24 @@
                 <!-- Interaction layer: table -->
                 <Border Style="{StaticResource PageBlockInteractionOverlay}" />
 
-                <Border Style="{StaticResource EmptyCaptionHintBadge}"
-                        HorizontalAlignment="Left" VerticalAlignment="Top"
-                        Margin="4,-18,0,0" Panel.ZIndex="5"
-                        ToolTip="Tablo başlığı eklemek için çift tıklayın"
-                        MouseLeftButtonDown="TableCaption_MouseLeftButtonDown">
-                    <TextBlock Text="+ Tablo başlığı"
-                               FontSize="8.5"
-                               FontWeight="SemiBold"
-                               Foreground="#FF6F9FE8"
-                               IsHitTestVisible="False" />
-                </Border>
+                <Popup Style="{StaticResource EmptyCaptionHintPopup}"
+                       PlacementTarget="{Binding ElementName=TableBlockHost}"
+                       DataContext="{Binding DataContext, ElementName=TableBlockHost}">
+                    <Border Background="#F2FFFFFF"
+                            BorderBrush="#887EA6E8"
+                            BorderThickness="1"
+                            CornerRadius="3"
+                            Padding="4,1"
+                            Cursor="IBeam"
+                            ToolTip="Tablo başlığı eklemek için çift tıklayın"
+                            MouseLeftButtonDown="TableCaption_MouseLeftButtonDown">
+                        <TextBlock Text="+ Tablo başlığı"
+                                   FontSize="8.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FF6F9FE8"
+                                   IsHitTestVisible="False" />
+                    </Border>
+                </Popup>
 
                 <Canvas>
                     <TextBox Text="{Binding CaptionEditText, UpdateSourceTrigger=PropertyChanged}"
