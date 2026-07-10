@@ -29,6 +29,7 @@ internal sealed class GeneratedDocumentPaginator
             DocumentPageOrigin.GeneratedReport,
             document.PageLayout,
             page => DecoratePage(page, document, warnings, cancellationToken));
+        var captionSequenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
 
         if (tocEntries.Count > 0)
             LayoutToc(flow, tocEntries, cancellationToken);
@@ -48,7 +49,7 @@ internal sealed class GeneratedDocumentPaginator
                     document.BodyNodes[nodeIndex + 1]);
             }
 
-            LayoutNode(flow, node, warnings, cancellationToken);
+            LayoutNode(flow, node, captionSequenceCounters, warnings, cancellationToken);
         }
 
         return flow.Complete();
@@ -170,6 +171,7 @@ internal sealed class GeneratedDocumentPaginator
     private void LayoutNode(
         LayoutPageFlow flow,
         ReportContentNode node,
+        IDictionary<string, int> captionSequenceCounters,
         List<string> warnings,
         CancellationToken cancellationToken)
     {
@@ -179,7 +181,7 @@ internal sealed class GeneratedDocumentPaginator
                 LayoutText(flow, text, warnings, cancellationToken);
                 break;
             case TableContentNode table:
-                LayoutTable(flow, table, warnings, cancellationToken);
+                LayoutTable(flow, table, captionSequenceCounters, warnings, cancellationToken);
                 break;
             case ImageContentNode image:
                 LayoutImage(flow, image, cancellationToken);
@@ -308,6 +310,7 @@ internal sealed class GeneratedDocumentPaginator
     private void LayoutTable(
         LayoutPageFlow flow,
         TableContentNode table,
+        IDictionary<string, int> captionSequenceCounters,
         List<string> warnings,
         CancellationToken cancellationToken)
     {
@@ -317,6 +320,7 @@ internal sealed class GeneratedDocumentPaginator
         if (!string.IsNullOrWhiteSpace(table.SourceError))
             AddWarningOnce(warnings, $"'{table.Name}' tablosu kaynak hatası içeriyor: {table.SourceError}");
 
+        var captionSequenceNumber = ResolveCaptionSequenceNumber(table, captionSequenceCounters);
         _tablePaginator.Layout(
             flow,
             table.ElementId,
@@ -324,6 +328,7 @@ internal sealed class GeneratedDocumentPaginator
             table.Caption,
             table.CaptionFormat,
             table.CaptionSequence,
+            captionSequenceNumber,
             table.ColumnHeaders,
             table.Rows,
             table.CellSpans,
@@ -334,6 +339,24 @@ internal sealed class GeneratedDocumentPaginator
             format: table.Format,
             warnings,
             cancellationToken);
+    }
+
+    private static int? ResolveCaptionSequenceNumber(
+        TableContentNode table,
+        IDictionary<string, int> captionSequenceCounters)
+    {
+        if (string.IsNullOrWhiteSpace(table.Caption)
+            || table.CaptionSequence is null
+            || string.IsNullOrWhiteSpace(table.CaptionSequence.SequenceIdentifier))
+        {
+            return null;
+        }
+
+        var identifier = table.CaptionSequence.SequenceIdentifier;
+        captionSequenceCounters.TryGetValue(identifier, out var current);
+        var next = current + 1;
+        captionSequenceCounters[identifier] = next;
+        return next;
     }
 
     private static void LayoutImage(
