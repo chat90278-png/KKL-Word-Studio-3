@@ -106,6 +106,25 @@ public sealed class Sprint17SerialQuantityLayoutRegressionTests
         Assert.Contains("Adet 1", Assert.Single(result.Warnings), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void QuantityOne_WithPackedAndPhysicalSerialCells_DoesNotInferAFalsePhysicalTotal()
+    {
+        var table = CreateConfiguredTable("Parça Numarası", "Seri Numarası", "Adet");
+
+        var result = composer.Compose(table,
+        [
+            ["56789", "9987\n9988", "1"],
+            ["56789", "9989", ""]
+        ]);
+
+        var row = Assert.Single(result.Rows);
+        Assert.Equal("9987\n9988\n9989", row[1]);
+        Assert.Equal("1", row[2]);
+        Assert.Empty(result.CellSpans);
+        Assert.Empty(result.RowGroups);
+        Assert.Contains("Adet 1", Assert.Single(result.Warnings), StringComparison.Ordinal);
+    }
+
     private static void AssertTwoSerialGroupedLayout(
         KKL.WordStudio.Application.Tables.TableRowCompositionResult result,
         int expectedStartRowIndex)
