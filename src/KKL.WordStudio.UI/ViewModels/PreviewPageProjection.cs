@@ -75,7 +75,7 @@ public static class PreviewPageProjection
                 Name = table.Name,
                 Caption = table.Caption,
                 CaptionFormat = table.CaptionFormat,
-                CaptionRuns = [ProjectCaptionRun(table.Caption ?? string.Empty, table.CaptionFormat)],
+                CaptionRuns = [ProjectCaptionRun(ResolveCaptionDisplayText(table), table.CaptionFormat)],
                 CaptionAlignment = ProjectAlignment(table.CaptionFormat?.Alignment ?? ParagraphAlignment.Left),
                 CaptionFontFamily = CreateFontFamily(table.CaptionFormat?.FontFamilyName),
                 CaptionFontSize = ResolveCaptionFontSize(table.CaptionFormat),
@@ -84,7 +84,7 @@ public static class PreviewPageProjection
                     : table.CaptionFormat.Bold ? FontWeights.Bold : FontWeights.Normal,
                 CaptionFontStyle = table.CaptionFormat?.Italic == true ? FontStyles.Italic : FontStyles.Normal,
                 CaptionTextDecorations = table.CaptionFormat?.Underline == true ? System.Windows.TextDecorations.Underline : null,
-                CaptionForeground = CreateBrush(table.CaptionFormat?.ForegroundColor),
+                CaptionForeground = CreateBrush(table.CaptionFormat?.ForegroundColor) ?? Brushes.Black,
                 CaptionLineHeight = ResolveCaptionLineHeight(table.CaptionFormat),
                 CaptionFirstLineIndent = table.CaptionFormat is null
                     ? 0d
@@ -180,6 +180,11 @@ public static class PreviewPageProjection
 
     public static double ToDips(double millimeters) => millimeters * MillimetersToDips;
 
+    private static string ResolveCaptionDisplayText(TablePageBlockPayload table) =>
+        TableCaptionSequenceFormatter.BuildDisplayText(
+            table.Caption ?? string.Empty,
+            table.CaptionSequence,
+            table.CaptionSequenceNumber);
 
     private static PreviewTablePageColumnViewModel ProjectTableColumn(
         PositionedPageBlock block,
