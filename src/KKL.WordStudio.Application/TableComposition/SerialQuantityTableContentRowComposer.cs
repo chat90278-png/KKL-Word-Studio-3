@@ -217,7 +217,7 @@ public sealed class SerialQuantityTableContentRowComposer : ITableContentRowComp
         }
 
         var physicalSerialRowCount = rows.Count(row => !string.IsNullOrWhiteSpace(row[serialIndex]));
-        if (physicalSerialRowCount <= 1)
+        if (physicalSerialRowCount <= 1 || physicalSerialRowCount != observedSerialCount)
             return quantity;
 
         return QuantityResolution.Safe(
