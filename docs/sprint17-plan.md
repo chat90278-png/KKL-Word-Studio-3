@@ -1,4 +1,4 @@
-# Sprint 17 — True Print Preview + Built-in Sero Default + Sparse Trailing AutoRange
+# Sprint 17 — True Print Preview + Built-in Default Format + Sparse Trailing AutoRange
 
 ## Baseline
 
@@ -10,7 +10,7 @@
 
 ## Sprint goal
 
-Make generated KKL documents use the supported Sero formatting profile by default, preserve imported reference-format override semantics, fix sparse trailing Excel columns in automatic ranges, and move Preview toward a true final-document layer with interaction chrome separated from document metrics.
+Make generated KKL documents use the supported built-in default formatting profile, preserve imported reference-format override semantics, fix sparse trailing Excel columns in automatic ranges, and move Preview toward a true final-document layer with interaction chrome separated from document metrics.
 
 ## P0-A — Sparse trailing AutoRange columns
 
@@ -23,19 +23,19 @@ Acceptance:
 
 Status: implemented on the Sprint 17 branch; Windows verification pending.
 
-## P0-B — Built-in Sero generated-document format
+## P0-B — Built-in default generated-document format
 
 Precedence:
 
 1. Usable `Project.ReferenceFormat` -> imported reference profile.
-2. No project reference -> built-in Sero profile.
-3. Configured reference missing/unreadable -> built-in Sero profile plus format warning.
+2. No project reference -> built-in default profile.
+3. Configured reference missing/unreadable -> built-in default profile plus format warning.
 
 Built-in profile source:
 
-- `BuiltInSeroDocumentFormatProfileFactory`
+- `DefaultDocumentFormatProfileFactory`
 - Application-format contracts only.
-- No Sero-specific constants in Engine, Preview, Rendering, or Word writers.
+- No document-specific constants in Engine, Preview, Rendering, or Word writers.
 
 Supported built-in baseline:
 
@@ -45,7 +45,7 @@ Supported built-in baseline:
 - 12 pt bold secondary heading with reference indent.
 - 8 pt bold centered table caption, keep-with-next, 2.0 line spacing.
 - `Tablo` caption sequence.
-- Two six-column Sero table profiles with fixed layout, unequal widths, 0.5 pt borders, 1.235 mm horizontal cell margins, 10.195 mm preferred row height, repeated header, and vertical centering.
+- Two six-column default table profiles with fixed layout, unequal widths, 0.5 pt borders, 1.235 mm horizontal cell margins, 10.195 mm preferred row height, repeated header, and vertical centering.
 
 Status: implemented on the Sprint 17 branch; Windows verification pending.
 
@@ -113,7 +113,7 @@ Expected Word:
 - real `w:vMerge` restart/continue
 - serial column unmerged
 - full table cell count
-- resolved Sero-style table properties
+- resolved default table properties
 
 ## Gates
 
