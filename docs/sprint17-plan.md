@@ -109,7 +109,13 @@ Implemented:
 - source-level architecture guards fail if block-level table designer chrome is reintroduced into the final table layer or interaction feedback is moved back into the geometry-owning host.
 - Engine pagination and `PreviewPageProjection` block geometry mapping were not changed.
 
-Status: implemented on the Sprint 17 branch; Windows restore/build/test and visual smoke pending for the new head.
+Independent source diff review:
+
+- branch remains based on `b273e6a9a43dbd5585c8b4801f2db913421061da` with no behind commits at review time.
+- P0-C changed UI XAML/code-behind, the fragment-local Preview table renderer, architecture guards, and this plan; no Engine pagination or layout-projection source file was changed.
+- block geometry remains supplied by the existing `PreviewPageProjection` path.
+
+Status: implemented and source-reviewed on the Sprint 17 branch; Windows restore/build/test and visual smoke pending for the new head.
 
 ## P0-D — Serial/Quantity manual smoke
 
