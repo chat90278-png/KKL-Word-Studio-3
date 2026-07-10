@@ -105,7 +105,7 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         Assert.DoesNotContain("<TextBlock Text=\"Tablo başlığı eklemek için çift tıklayın\"", xaml, StringComparison.Ordinal);
         Assert.Matches(
             new Regex(
-                @"x:Name=\"TableBlockHost\"[\s\S]*?ClipToBounds=\"False\"[\s\S]*?<!-- Final document layer: table -->[\s\S]*?<StackPanel ClipToBounds=\"True\">",
+                "x:Name=\"TableBlockHost\"[\\s\\S]*?ClipToBounds=\"False\"[\\s\\S]*?<!-- Final document layer: table -->[\\s\\S]*?<StackPanel ClipToBounds=\"True\">",
                 RegexOptions.CultureInvariant),
             xaml);
     }
