@@ -90,6 +90,38 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Empty captions keep zero document-flow height. The compact hint is a
+             designer-only badge floated just above the table block on hover/selection. -->
+        <Style x:Key="EmptyCaptionHintBadge" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="Background" Value="#F2FFFFFF" />
+            <Setter Property="BorderBrush" Value="#887EA6E8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="4,1" />
+            <Setter Property="Cursor" Value="IBeam" />
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding ShowCaptionArea}" Value="True" />
+                        <Condition Binding="{Binding HasCaption}" Value="False" />
+                        <Condition Binding="{Binding CanEditCaption}" Value="True" />
+                        <Condition Binding="{Binding IsSelected}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding ShowCaptionArea}" Value="True" />
+                        <Condition Binding="{Binding HasCaption}" Value="False" />
+                        <Condition Binding="{Binding CanEditCaption}" Value="True" />
+                        <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=IsMouseOver}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <DataTemplate DataType="{x:Type vm:PreviewTextPageBlockViewModel}">
             <Grid x:Name="TextBlockHost" Style="{StaticResource PageBlockInteractionHost}"
                   Width="{Binding Width}" Height="{Binding Height}">
@@ -130,7 +162,7 @@
 
         <DataTemplate DataType="{x:Type vm:PreviewTablePageBlockViewModel}">
             <Grid x:Name="TableBlockHost" Style="{StaticResource PageBlockInteractionHost}"
-                  Width="{Binding Width}" Height="{Binding Height}">
+                  Width="{Binding Width}" Height="{Binding Height}" ClipToBounds="False">
                 <!-- Final document layer: table -->
                 <StackPanel ClipToBounds="True">
                     <Grid Margin="{Binding CaptionAreaMargin}"
@@ -214,31 +246,17 @@
                 <!-- Interaction layer: table -->
                 <Border Style="{StaticResource PageBlockInteractionOverlay}" />
 
-                <TextBlock Text="Tablo başlığı eklemek için çift tıklayın"
-                           Margin="{Binding CaptionAreaMargin}"
-                           VerticalAlignment="Top"
-                           FontSize="12"
-                           FontWeight="SemiBold"
-                           FontStyle="Italic"
-                           Foreground="#FF97A0AE"
-                           TextWrapping="Wrap"
-                           IsHitTestVisible="False">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding ShowCaptionArea}" Value="True" />
-                                        <Condition Binding="{Binding HasCaption}" Value="False" />
-                                        <Condition Binding="{Binding CanEditCaption}" Value="True" />
-                                    </MultiDataTrigger.Conditions>
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </MultiDataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                <Border Style="{StaticResource EmptyCaptionHintBadge}"
+                        HorizontalAlignment="Left" VerticalAlignment="Top"
+                        Margin="4,-18,0,0" Panel.ZIndex="5"
+                        ToolTip="Tablo başlığı eklemek için çift tıklayın"
+                        MouseLeftButtonDown="TableCaption_MouseLeftButtonDown">
+                    <TextBlock Text="+ Tablo başlığı"
+                               FontSize="8.5"
+                               FontWeight="SemiBold"
+                               Foreground="#FF6F9FE8"
+                               IsHitTestVisible="False" />
+                </Border>
 
                 <Canvas>
                     <TextBox Text="{Binding CaptionEditText, UpdateSourceTrigger=PropertyChanged}"
