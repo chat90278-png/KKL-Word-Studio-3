@@ -57,13 +57,24 @@ internal static class WordParagraphWriter
     public static Paragraph BuildTableCaptionParagraph(
         string caption,
         TableCaptionSequenceProfile? sequence) =>
-        BuildTableCaptionParagraph(caption, sequence, captionFormat: null);
+        BuildTableCaptionParagraph(caption, sequence, captionFormat: null, sequenceNumber: null);
 
     public static Paragraph BuildTableCaptionParagraph(
         string caption,
         TableCaptionSequenceProfile? sequence,
-        ResolvedTextFormat? captionFormat)
+        ResolvedTextFormat? captionFormat) =>
+        BuildTableCaptionParagraph(caption, sequence, captionFormat, sequenceNumber: null);
+
+    public static Paragraph BuildTableCaptionParagraph(
+        string caption,
+        TableCaptionSequenceProfile? sequence,
+        ResolvedTextFormat? captionFormat,
+        int? sequenceNumber)
     {
+        var cachedSequenceNumber = sequenceNumber is > 0
+            ? sequenceNumber.Value.ToString()
+            : "1";
+
         if (captionFormat is null)
         {
             var legacyParagraph = new Paragraph();
@@ -78,7 +89,7 @@ internal static class WordParagraphWriter
                 return legacyParagraph;
 
             var legacyDescription = TableCaptionSequenceFormatter.RemoveDeterministicManualSequencePrefix(caption, sequence);
-            var legacyField = new SimpleField(new Run(new Text("1")))
+            var legacyField = new SimpleField(new Run(new Text(cachedSequenceNumber)))
             {
                 Instruction = $" SEQ {sequence.SequenceIdentifier} \\* ARABIC "
             };
@@ -101,7 +112,7 @@ internal static class WordParagraphWriter
 
         paragraph.AppendChild(BuildCaptionRun(sequence.DisplayLabel + " ", captionFormat));
         var descriptiveCaption = TableCaptionSequenceFormatter.RemoveDeterministicManualSequencePrefix(caption, sequence);
-        var field = new SimpleField(BuildCaptionRun("1", captionFormat))
+        var field = new SimpleField(BuildCaptionRun(cachedSequenceNumber, captionFormat))
         {
             Instruction = $" SEQ {sequence.SequenceIdentifier} \\* ARABIC "
         };
