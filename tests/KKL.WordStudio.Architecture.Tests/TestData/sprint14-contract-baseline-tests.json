@@ -1,0 +1,325 @@
+{
+  "baselineTestMethodCount": 165,
+  "entries": [
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/ExcelReportTransferServiceTests.cs",
+      "methodNames": [
+        "TransferConfiguredWorksheet_ToSelectedUnboundTable_BindsAndBuildsColumns",
+        "TransferWithoutColumnMappings_UsesExcelHeaderText",
+        "TransferWithNoTarget_CreatesNewTableInBodySection",
+        "TransferWithHeadingSelected_CreatesTableUnderHeading",
+        "TransferIntoConfiguredTable_WithoutDecision_RequiresExistingTableDecision",
+        "TransferIntoConfiguredTable_RebindKeepColumns_PreservesDisplayedHeaders",
+        "TransferIntoConfiguredTable_ReplaceColumnsFromSource_ReplacesHeaders",
+        "TransferringSameWorkbookTwice_ReusesSameDataSource"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/PluginCatalogTests.cs",
+      "methodNames": [
+        "Register_AddsModule_AndApplyToInvokesConfigureServices"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/ReportContentBuilderTests.cs",
+      "methodNames": [
+        "Heading_And_AltHeading_AreClassifiedConsistently",
+        "BoundTable_ResolvesRealRowsAndAppliesSortFields",
+        "PageHeaderAndFooterSections_AreSeparatedFromBody",
+        "TableOfContents_IsDerivedFromHeadingsOnlyWhenEnabled"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint10TransferSourceMappingTests.cs",
+      "methodNames": [
+        "AdditionalSource_UnresolvedSchema_RequiresExplicitMappingWithoutMutatingTableSources",
+        "AdditionalSource_ExplicitFieldMapping_PersistsProviderFieldByStableTableColumnId"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint11HistoryRegistryTests.cs",
+      "methodNames": [
+        "ResetWorkingData_ClearsWorksheetUndoHistory",
+        "ProjectOpenOrNew_DoesNotResurrectStaleHistory",
+        "Registry_ReturnsSameHistoryInstancePerWorksheet"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint11ViewStateTests.cs",
+      "methodNames": [
+        "PreparationFilter_DoesNotChangeReportContentRows",
+        "FilteredRowEdit_UpdatesCorrectUnderlyingWorkingDataRow",
+        "ColumnVisibility_DoesNotChangeReportColumnsOrWordOutput",
+        "ClearFilter_ShowsAllRowsAgain"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint11WorkingDataQualityTests.cs",
+      "methodNames": [
+        "Undo_CellEdit_RestoresPreviousValue",
+        "Redo_ReappliesUndoneMutation",
+        "NewMutationAfterUndo_ClearsRedo",
+        "UndoHistory_IsIsolatedPerWorksheet",
+        "FailedMutation_CreatesNoHistoryEntry",
+        "PasteAutoGrow_AddsRequiredRowsAndColumns",
+        "PasteAutoGrow_IsSingleUndoStep",
+        "PasteAutoGrow_HandlesRaggedRowsAndTrailingNewline",
+        "Find_IsCaseInsensitiveAndDoesNotMutateData",
+        "ReplaceAll_IsSingleUndoStep",
+        "Replace_DoesNotTouchHeadersOrColumnMetadata"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint12ReportStructureTests.cs",
+      "methodNames": [
+        "RenameHeading_UpdatesSemanticContent",
+        "RenameTable_ChangesNameWithoutChangingCaptionOrBinding",
+        "DeleteTable_DoesNotDeleteProjectDataSources",
+        "DeleteHeading_DoesNotCascadeDeleteProjectedChildren",
+        "MoveHeading1_MovesEntireLogicalSubtree",
+        "MoveHeading2_MovesHeadingAndFollowingTablesAsBlock",
+        "MoveTable_ChangesDocumentOrder",
+        "MoveUp_AtTop_FailsWithoutMutation",
+        "IndentHeading1_ChangesItToHeading2",
+        "OutdentHeading2_ChangesItToHeading1",
+        "IndentHeading2_IsRejected",
+        "DragTableIntoHeading_MovesTableIntoDerivedHeadingScope",
+        "DragHeading1IntoHeading1_BecomesHeading2",
+        "DragHeadingIntoOwnSubtree_IsRejectedWithoutMutation",
+        "CrossSectionMove_IsRejectedWithoutMutation",
+        "SelfDrop_IsRejected",
+        "StructureMutation_PreservesSelectedElementIdentity",
+        "ReorderedStructure_IsReflectedInReportContentAndWordOrder"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint12ScopedMoveTests.cs",
+      "methodNames": [
+        "MoveUp_FirstHeading2InHeading1Scope_IsRejectedWithoutMutation",
+        "MoveUp_FirstTableInHeadingScope_DoesNotEscapeParentScope",
+        "MoveDown_LastHeading2InHeading1Scope_IsRejectedWithoutMutation",
+        "MoveDown_LastTableInHeadingScope_DoesNotEscapeParentScope",
+        "MoveHeading2_StillSwapsWithAdjacentHeading2SiblingBlock",
+        "MoveTable_StillSwapsWithAdjacentTableInSameScope",
+        "MoveDown_Heading1_StillMovesAmongHeading1Blocks",
+        "MoveUp_ContentInsideHeading2_StaysInHeading2Scope",
+        "DeleteConfirmation_Cancel_DoesNotMutate",
+        "DeleteConfirmation_Confirm_DeletesRealElement",
+        "MoveUp_Heading1AfterNestedHeading2_SwapsWholeHeading1Blocks",
+        "MoveUp_Heading1AfterDirectContent_SwapsWholeHeading1Blocks",
+        "MoveUp_Heading2AfterSiblingWithTable_SwapsWholeHeading2Blocks",
+        "MoveUp_TableWithinHeadingScope_SwapsOnlyAdjacentTable"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint13ExcelInteractionAndAutoRangeTests.cs",
+      "methodNames": [
+        "AutoRange_IgnoresLeadingBlankRows",
+        "AutoRange_DetectsHeaderAndDataStart",
+        "AutoRange_SupportsNoHeaderDataset",
+        "AutoRange_DetectsNonAStartAndEndColumns",
+        "AutoRange_LowConfidence_RequiresReviewStatus",
+        "SheetLoad_AutoDetectsWhenNoPersistedRange",
+        "PersistedRange_IsNotOverwrittenByAutoDetection",
+        "WorkingDataWorksheet_IsNotRedetectedFromSource",
+        "Transfer_UsesConfiguredStartAndEndColumns",
+        "EnsureWorkingData_UsesConfiguredColumnBounds",
+        "HeaderTexts_AreAlignedToConfiguredColumnBounds",
+        "FilteredRowContextInsert_UsesUnderlyingWorkingRow",
+        "FilteredRowContextDelete_UsesUnderlyingWorkingRows",
+        "HiddenColumnContextDelete_ResolvesStableWorkingColumn",
+        "ContextColumnDelete_PreservesReferencedTableGuard",
+        "ContextMutation_IsOneUndoStep"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint7EditingAndSelectionTests.cs",
+      "methodNames": [
+        "SelectingPreviewElement_UpdatesSharedWorkspaceSelection",
+        "SelectingSameElementTwice_DoesNotRaiseWorkspaceChangedAgain",
+        "SelectingDifferentElement_RaisesWorkspaceChangedOnce",
+        "InlineHeadingEdit_CommitsToDomainAndContentPipeline",
+        "CommitHeadingText_UnknownElementId_ReturnsFailureWithoutThrowing",
+        "RenamingDisplayedTableHeader_DoesNotChangeSourceDataResolution",
+        "RenamingDisplayedHeader_OnLegacyBoundTableWithNoColumns_MaterializesFromDataSourceFields"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/Sprint8CaptionAndDropTests.cs",
+      "methodNames": [
+        "TableCaption_IsIncludedInReportContentDocument",
+        "UseHeadingTextAsTableCaption_CopiesTextWithoutDeletingHeading",
+        "ExcelDropValidation_AcceptsXlsxAndRejectsUnsupportedFiles",
+        "FrontMatterDropValidation_AcceptsDocxAndRejectsUnsupportedFiles",
+        "MultipleExcelDrop_AcceptsFirstSupportedFileAndReportsLimitation"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/WorksheetWorkingDataServiceTests.cs",
+      "methodNames": [
+        "WorkingData_RowInsertDelete_PreservesOrder",
+        "WorkingData_ColumnInsertDelete_PreservesStableFieldIdentity",
+        "WorkingData_IsIsolatedPerWorksheet",
+        "ClipboardMatrixPaste_AppliesRectangularValues"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Application.Tests/WorkspaceContentChangedTests.cs",
+      "methodNames": [
+        "SelectingAnElement_DoesNotRaiseReportContentChanged",
+        "SwitchingActiveReport_RaisesReportContentChanged",
+        "ExplicitNotify_RaisesReportContentChanged"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Architecture.Tests/EngineProjectDependencyTests.cs",
+      "methodNames": [
+        "EngineProject_DoesNotReferenceUIInfrastructureOrRendering"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Domain.Tests/DataRangeAndBindingTests.cs",
+      "methodNames": [
+        "RangeReference_IsComputed_NotStored",
+        "RangeReference_FallsBackToRowOnly_WhenColumnsUnknown",
+        "WasAutoDetected_DistinguishesAutoFromManualOverride",
+        "Binding_CanCarryFilterAndSort_WithoutDuplicatingDataSourceLevelConcerns"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Domain.Tests/ProjectAndDataSourceTests.cs",
+      "methodNames": [
+        "Project_CanHoldMultipleReportsSharingOneDataSource",
+        "ExcelDataSource_Fields_AreDerivedFromColumnMappings",
+        "TableElement_CanBeBoundToADataSourceByName"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Domain.Tests/ReportModelTests.cs",
+      "methodNames": [
+        "NewReport_HasNoPagesByDefault",
+        "Section_Root_AcceptsChildElements",
+        "EveryElement_AcceptsVisitorWithoutThrowing"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Domain.Tests/Sprint3DomainTests.cs",
+      "methodNames": [
+        "Section_AutoHeight_DefaultsToTrue",
+        "TableElement_CanCarryADescription",
+        "ReportElementFlattener_FindsNestedElementInsideTableCell",
+        "ReportElementFlattener_FlattensAcrossMultipleSections"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Domain.Tests/Sprint5DomainTests.cs",
+      "methodNames": [
+        "Report_IncludeTableOfContents_DefaultsToFalse",
+        "Page_ShowPageNumbers_DefaultsToTrue"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Engine.Tests/FallbackDocumentLayoutEngineTests.cs",
+      "methodNames": [
+        "FallbackLayout_ReturnsContractCompliantGeneratedPage",
+        "GeneratedFallbackBlocks_PreserveElementIdAndEditableIdentity",
+        "PreviewSnapshot_KeepsCompatibilityPropertiesAndLayout"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/DirectTransferBindingTests.cs",
+      "methodNames": [
+        "TransferFromTwoWorksheets_CreatesStableIndependentBindings",
+        "RenamingDisplayedTableHeader_DoesNotChangeSourceDataResolution_EndToEnd"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/KwsProjectRepositoryTests.cs",
+      "methodNames": [
+        "SaveThenOpen_RoundTripsProjectAndReportNames",
+        "SaveThenOpen_RoundTripsProjectAggregateGraph"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/OpenXmlExcelWorkbookReaderTests.cs",
+      "methodNames": [
+        "OpenWorkbookAsync_ListsAllSheetNames",
+        "OpenWorkbookAsync_DoesNotModifySourceWorkbook",
+        "GetSheetPreviewAsync_ReadsHeaderAndDataRows",
+        "DetectDataRangeAsync_FindsLastContiguousDataRow",
+        "AutoDetection_DoesNotModifyOriginalWorkbook"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/Sprint10MultiSourceTests.cs",
+      "methodNames": [
+        "MultiSourceTable_AppendsRowsInConfiguredSourceOrder",
+        "MultiSourceTable_SupportsSameWorkbookDifferentWorksheets",
+        "MultiSourceTable_SupportsDifferentWorkbooks",
+        "PerSourceFieldMapping_NormalizesDifferentSchemas",
+        "SourceOrder_RoundTripsThroughProjectPersistence",
+        "ReorderingSources_ChangesComposedRowOrder",
+        "LegacySingleBinding_StillRenders",
+        "WorkingData_HasPrecedenceInsideMultiSourceComposition",
+        "MissingMultiSourceInput_IsSurfacedWithoutCrashing",
+        "MultiSourceRows_AreIdenticalInReportContentAndWord",
+        "AddingSource_DoesNotOverwriteExistingDisplayHeaders",
+        "RemovingSource_DoesNotDeleteProjectDataSource",
+        "MultiSourceOriginalExcel_UsesPinnedRangeOverride"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/Sprint8PersistenceAndCompositionTests.cs",
+      "methodNames": [
+        "TableCaption_RoundTripsThroughProjectPersistence",
+        "FrontMatterState_RoundTripsThroughProjectPersistence",
+        "FrontMatterImport_ValidatesPackageWithoutModifyingSource",
+        "MissingFrontMatterSource_DoesNotPreventProjectOpen",
+        "ComposedWordDocument_ContainsFrontMatterBeforeGeneratedReport",
+        "ComposedWordDocument_ReopensWithOpenXml"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/Sprint9WorkingDataTests.cs",
+      "methodNames": [
+        "WorkingData_IsCreatedWithoutModifyingOriginalWorkbook",
+        "WorkingData_CellEdit_IsUsedByExcelDataProvider",
+        "WorkingData_RoundTripsThroughProjectPersistence",
+        "WorkingData_Reset_FallsBackToOriginalWorkbook",
+        "WorkingData_MissingSource_RemainsUsable",
+        "EditedWorkingData_IsReflectedInReportContentDocument"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/TableWorksheetBindingStabilityTests.cs",
+      "methodNames": [
+        "TablesBoundToDifferentWorksheets_StayStable_WhenActiveWorksheetChanges",
+        "HeaderRow_IsNeverReturned_WhenDataStartRowIsAfterIt"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/WordExporterTests.cs",
+      "methodNames": [
+        "ExportAsync_ProducesValidDocxContainingHeadingAndTableText",
+        "ExportAsync_IncludesHeaderFooterPageNumberAndTocFields"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/WordWriterTests.cs",
+      "methodNames": [
+        "WordParagraphWriter_Heading_GetsHeading1StyleId",
+        "WordParagraphWriter_AltHeading_GetsHeading2StyleId",
+        "WordParagraphWriter_PlainParagraph_HasNoParagraphStyleId",
+        "WordParagraphWriter_TocParagraph_ContainsTocFieldInstruction",
+        "WordStyleWriter_Heading1And2_HaveDistinctOutlineLevels",
+        "WordPageLayoutWriter_ConvertsMillimetersToTwipsCorrectly"
+      ]
+    },
+    {
+      "relativePath": "tests/KKL.WordStudio.Infrastructure.Tests/WorksheetMappingIndependenceTests.cs",
+      "methodNames": [
+        "WorksheetMappings_AreIndependentPerWorksheet"
+      ]
+    }
+  ]
+}
