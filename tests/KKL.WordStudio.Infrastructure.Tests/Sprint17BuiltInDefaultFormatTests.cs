@@ -40,12 +40,16 @@ public sealed class Sprint17BuiltInDefaultFormatTests
         Assert.True(profile.SecondaryHeading.KeepWithNext);
         Assert.InRange(profile.SecondaryHeading.LeftIndentMillimeters, 21.7d, 21.8d);
 
+        Assert.Equal("Arial", profile.TableCaption.FontFamilyName);
         Assert.Equal(8d, profile.TableCaption.FontSizePoints, 3);
         Assert.True(profile.TableCaption.Bold);
+        Assert.Equal("#FF000000", profile.TableCaption.ForegroundColor);
         Assert.Equal(ParagraphAlignment.Center, profile.TableCaption.Alignment);
         Assert.True(profile.TableCaption.KeepWithNext);
         Assert.Equal(2d, profile.TableCaption.LineSpacingMultiple, 3);
-        Assert.Equal("Tablo", profile.TableCaptionSequence!.SequenceIdentifier);
+        Assert.Equal("Tablo", profile.TableCaptionSequence!.DisplayLabel);
+        Assert.Equal("Tablo", profile.TableCaptionSequence.SequenceIdentifier);
+        Assert.Equal(": ", profile.TableCaptionSequence.Separator);
 
         Assert.Equal(2, profile.TableFormats.Count);
         Assert.Equal(
