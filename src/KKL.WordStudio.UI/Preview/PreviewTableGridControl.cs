@@ -17,7 +17,7 @@ public sealed class PreviewTableGridControl : Grid
 {
     private const double MillimetersToDips = 96.0 / 25.4;
     private const double PointsToDips = 96.0 / 72.0;
-    private static readonly Brush CellBorderBrush = CreateFrozenBrush(Color.FromRgb(0xD7, 0xDD, 0xE6));
+    private static readonly Brush CellBorderBrush = Brushes.Black;
 
     public static readonly DependencyProperty RowsProperty = DependencyProperty.Register(
         nameof(Rows),
@@ -227,13 +227,6 @@ public sealed class PreviewTableGridControl : Grid
     }
 
     private static double ToDips(double millimeters) => millimeters * MillimetersToDips;
-
-    private static Brush CreateFrozenBrush(Color color)
-    {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        return brush;
-    }
 
     private static ResolvedTableColumnFormat FallbackColumnFormat { get; } = new()
     {
