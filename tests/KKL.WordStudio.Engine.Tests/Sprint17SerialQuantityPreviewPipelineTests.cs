@@ -68,9 +68,10 @@ public sealed class Sprint17SerialQuantityPreviewPipelineTests
             FrontMatter = null
         });
 
-        var block = Assert.Single(layout.Pages
-            .SelectMany(page => page.Blocks)
-            .Where(candidate => candidate.ElementId == table.Id && candidate.Kind == PageBlockKind.Table));
+        var blocks = layout.Pages.SelectMany(page => page.Blocks);
+        var block = Assert.Single(
+            blocks,
+            candidate => candidate.ElementId == table.Id && candidate.Kind == PageBlockKind.Table);
         var payload = Assert.IsType<TablePageBlockPayload>(block.Payload);
 
         Assert.Equal(3, payload.Rows.Count);
