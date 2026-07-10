@@ -1,4 +1,4 @@
-# Sprint 17 — True Print Preview + Built-in Default Format + Sparse Trailing AutoRange
+# Sprint 17 — True Print Preview + Built-in Default Format + Sparse AutoRange + Serial-backed Grouped Layout
 
 ## Baseline
 
@@ -10,7 +10,7 @@
 
 ## Sprint goal
 
-Make generated KKL documents use the supported built-in default formatting profile, preserve imported reference-format override semantics, fix sparse trailing Excel columns in automatic ranges, separate Preview interaction chrome from final-document metrics, and produce true serial-backed grouped rows from the real project data shape.
+Make generated KKL documents use the supported built-in default formatting profile, preserve imported reference-format override semantics, fix sparse trailing Excel columns in automatic ranges, separate Preview interaction chrome from final-document metrics, and produce true serial-backed grouped rows from the real WorkingData source shape.
 
 ## P0-A — Sparse trailing AutoRange columns
 
@@ -49,7 +49,7 @@ Supported built-in baseline:
 
 Status: implemented and included in a successful Windows gate.
 
-## Captured Windows gates before P0-D semantic correction
+## Captured Windows gates before P0-D
 
 Foundation gate:
 
@@ -123,53 +123,54 @@ The real WorkingData shape can contain one physical source row per serial while 
 | 2 | armut | 56789 | 459-485-5 | 9987 | 1 |
 |   | armut | 56789 |   | 9988 |   |
 
-The old exact-equality rule resolves the nonblank quantity as `1`, observes two serials, and aggregates them into one cell. That creates `9987\n9988` instead of true grouped rows.
+The previous exact-equality-only rule resolved the nonblank quantity as `1`, observed two serials, and aggregated them into one serial cell. That produced `9987\n9988` instead of true grouped rows.
 
-### Accepted quantity source shapes for safe physical serial rows
+### Accepted quantity source shapes
 
-For a safe same-match-key group with 2+ distinct serials already represented by 2+ physical source rows:
+For a safe same-match-key group with 2+ distinct serials represented by 2+ physical source rows, all of these are supported:
 
-1. Per-group seed quantity plus sparse continuation:
+Per-group seed quantity plus sparse continuation:
 
 ```text
 9987 | 1
 9988 | blank
 ```
 
-2. Per-serial unit quantity:
+Per-serial unit quantity:
 
 ```text
 9987 | 1
 9988 | 1
 ```
 
-3. Explicit group total:
+Explicit group total:
 
 ```text
 9987 | 2
 9988 | blank
 ```
 
-The three shapes above must produce the same semantic result for two distinct serials:
+The three shapes produce the same semantic result:
 
 ```text
 2 | armut | 56789 | 459-485-5 | 9987 | 2
   |       |       |           | 9988 |
 ```
 
-Rules:
+### P0-D composition rules
 
-- each distinct serial remains one physical semantic row.
+- Each distinct serial remains one physical semantic row.
 - Serial column is never vertically merged for this grouping.
-- every non-serial column receives a vertical `TableCellSpan` across the serial rows.
-- canonical `Adet` becomes the distinct serial count when the only explicit quantity value is unit quantity `1` and the serials were observed on multiple physical source rows.
-- repeated unit quantity `1` values are treated as per-serial units and therefore total to the distinct physical serial count.
-- an already-correct explicit total equal to serial count keeps the existing exact grouping path.
+- Every non-serial column receives a vertical `TableCellSpan` across the serial rows.
+- When the only resolved explicit quantity is unit quantity `1`, there are 2+ serial-bearing physical source rows, every serial-bearing source row carries exactly one serial token, and serials are distinct, canonical `Adet` is inferred from distinct serial count.
+- Repeated unit quantity `1` values are treated as per-serial units and total to the distinct physical serial count.
+- An already-correct explicit total equal to serial count keeps the existing exact grouping path.
 - `Adet 3 + two serials` remains a mismatch: aggregate serial text plus warning, no spans.
-- duplicate serials remain unsafe for grouped layout.
-- multiple serial tokens packed into one source cell with `Adet 1` do not masquerade as multiple physical source rows.
-- conflicting quantity values such as `1` and `2` remain unsafe and preserve original rows.
-- conflicting non-serial product data remains unsafe and preserves original rows.
+- Duplicate serials remain unsafe for grouped layout.
+- Packed serial cells such as `9987\n9988` do not masquerade as multiple physical source rows for unit-quantity inference.
+- Mixed packed + physical serial cells do not trigger unit-quantity inference.
+- Conflicting quantity values such as `1` and `2` remain unsafe and preserve original rows.
+- Conflicting non-serial product data remains unsafe and preserves original rows.
 
 Grouping roles remain stable `TableColumn.Id` identities:
 
@@ -177,24 +178,63 @@ Grouping roles remain stable `TableColumn.Id` identities:
 - Serial -> Seri Numarası
 - Quantity -> Adet
 
-Expected Preview:
+### Shared semantic path
 
-- `9987` and `9988` are two physical rows.
-- No / Tr İsim / Parça Numarası / NSN / Adet are true WPF rowspans.
-- merged `Adet` displays `2`.
-- serial rows retain their individual row geometry/borders.
-- built-in/imported table geometry remains resolved through the shared format path.
+```text
+Excel / WorkingData normalized rows
+                ↓
+ReportContentBuilder
+                ↓
+ITableContentRowComposer
+                ↓
+TableContentNode.Rows / CellSpans / RowGroups
+                ↓
+       ┌────────┴────────┐
+     Engine             Word
+       ↓                  ↓
+fragment spans      complete spans
+       ↓                  ↓
+Preview Grid.RowSpan   w:vMerge
+```
 
-Expected Word:
+Production DI remains:
 
-- two data `TableRow` elements for the armut serial group.
-- full `TableCell` count remains present in each row.
-- No / Tr İsim / Parça Numarası / NSN / Adet emit real `w:vMerge restart/continue`.
+`ITableContentRowComposer -> SerialQuantityTableContentRowComposer`
+
+Excel transfer continues to auto-detect Turkish Product/Serial/Quantity roles and persist stable `TableColumn.Id` grouping identities.
+
+### Regression coverage added
+
+Application source-shape behavior:
+
+- `1 + blank` physical serial rows -> inferred total and true grouping.
+- `1 + 1` physical serial rows -> total `2` and true grouping.
+- explicit total `2 + blank` -> existing exact grouping.
+- explicit total `3` with two serials -> mismatch remains.
+- multiple serial tokens in one cell with `Adet 1` -> no false physical-row inference.
+- packed + physical serial cell mix -> no false physical-row inference.
+
+Live builder pipeline:
+
+- real `ReportContentBuilder` + real composer transports the exact WorkingData shape into `TableContentNode` with separate serial rows, `Adet=2`, five non-serial spans, and one two-row group.
+
+Engine / Preview payload pipeline:
+
+- real composer result enters `DeterministicDocumentLayoutEngine`.
+- `TablePageBlockPayload.Rows` retains `9999`, `9987`, `9988` as separate serial rows.
+- armut group payload contains five fragment-local non-serial spans at the expected row index.
+- Serial column has no span.
+
+Word pipeline:
+
+- real composer result enters real `WordTableWriter`.
+- two armut data rows retain full six-cell shape.
+- columns No / Tr İsim / Parça Numarası / NSN / Adet emit `w:vMerge restart/continue`.
 - Serial column emits no vertical merge.
-- serial values remain in separate cells as `9987` and `9988`.
+- `9987` and `9988` remain separate serial cells.
 - merged quantity anchor text is `2`.
 
-Status: Application composition correction and focused source-shape regressions implemented; Engine payload and Word integration regression verification next.
+Status: production correction implemented and source-reviewed. Application, ReportContentBuilder, Engine payload, and Word OpenXML regression coverage is present. Current-head Windows `restore/build/test` and the real Preview/Word visual smoke remain pending.
 
 ## Gates
 
