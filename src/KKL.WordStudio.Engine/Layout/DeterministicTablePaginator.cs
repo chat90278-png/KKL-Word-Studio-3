@@ -27,6 +27,43 @@ internal sealed class DeterministicTablePaginator
         bool repeatHeader,
         ResolvedTableFormat format,
         List<string> warnings,
+        CancellationToken cancellationToken) =>
+        Layout(
+            flow,
+            elementId,
+            name,
+            caption,
+            captionFormat,
+            captionSequence: null,
+            captionSequenceNumber: null,
+            columnHeaders,
+            rows,
+            cellSpans,
+            rowGroups,
+            sourceError,
+            isEditable,
+            repeatHeader,
+            format,
+            warnings,
+            cancellationToken);
+
+    public void Layout(
+        LayoutPageFlow flow,
+        Guid? elementId,
+        string name,
+        string? caption,
+        ResolvedTextFormat? captionFormat,
+        TableCaptionSequenceProfile? captionSequence,
+        int? captionSequenceNumber,
+        IReadOnlyList<string> columnHeaders,
+        IReadOnlyList<IReadOnlyList<string>> rows,
+        IReadOnlyList<TableCellSpan> cellSpans,
+        IReadOnlyList<TableRowGroup> rowGroups,
+        string? sourceError,
+        bool isEditable,
+        bool repeatHeader,
+        ResolvedTableFormat format,
+        List<string> warnings,
         CancellationToken cancellationToken)
     {
         var rowIndex = 0;
@@ -50,6 +87,8 @@ internal sealed class DeterministicTablePaginator
                 fragmentIndex,
                 caption,
                 captionFormat,
+                captionSequence,
+                captionSequenceNumber,
                 columnHeaders,
                 sourceError,
                 repeatHeader,
@@ -96,6 +135,8 @@ internal sealed class DeterministicTablePaginator
                         freshFragmentIndex,
                         caption,
                         captionFormat,
+                        captionSequence,
+                        captionSequenceNumber,
                         columnHeaders,
                         sourceError,
                         repeatHeader,
@@ -166,6 +207,8 @@ internal sealed class DeterministicTablePaginator
                             name,
                             metrics.FragmentCaption,
                             captionFormat,
+                            captionSequence,
+                            captionSequenceNumber,
                             columnHeaders,
                             [],
                             [],
@@ -210,6 +253,8 @@ internal sealed class DeterministicTablePaginator
                     name,
                     metrics.FragmentCaption,
                     captionFormat,
+                    captionSequence,
+                    captionSequenceNumber,
                     columnHeaders,
                     projectedFragment.Rows,
                     projectedFragment.CellSpans,
@@ -299,6 +344,8 @@ internal sealed class DeterministicTablePaginator
         int fragmentIndex,
         string? caption,
         ResolvedTextFormat? captionFormat,
+        TableCaptionSequenceProfile? captionSequence,
+        int? captionSequenceNumber,
         IReadOnlyList<string> columnHeaders,
         string? sourceError,
         bool repeatHeader,
@@ -307,9 +354,15 @@ internal sealed class DeterministicTablePaginator
     {
         var isFirstFragment = fragmentIndex == 0;
         var fragmentCaption = isFirstFragment ? caption : null;
+        var fragmentCaptionDisplayText = fragmentCaption is null
+            ? null
+            : TableCaptionSequenceFormatter.BuildDisplayText(
+                fragmentCaption,
+                captionSequence,
+                captionSequenceNumber);
         var hasHeader = columnHeaders.Count > 0;
         var isHeaderRepeated = hasHeader && repeatHeader && !isFirstFragment;
-        var captionHeight = EstimateCaptionHeight(fragmentCaption, captionFormat, tableWidthMillimeters);
+        var captionHeight = EstimateCaptionHeight(fragmentCaptionDisplayText, captionFormat, tableWidthMillimeters);
         var headerHeight = hasHeader
             ? EstimateHeaderHeight(columnHeaders, tableWidthMillimeters, format)
             : 0d;
@@ -595,6 +648,8 @@ internal sealed class DeterministicTablePaginator
         string name,
         string? caption,
         ResolvedTextFormat? captionFormat,
+        TableCaptionSequenceProfile? captionSequence,
+        int? captionSequenceNumber,
         IReadOnlyList<string> columnHeaders,
         IReadOnlyList<IReadOnlyList<string>> rows,
         IReadOnlyList<TableCellSpan> cellSpans,
@@ -624,6 +679,8 @@ internal sealed class DeterministicTablePaginator
                 Name = name,
                 Caption = caption,
                 CaptionFormat = captionFormat,
+                CaptionSequence = captionSequence,
+                CaptionSequenceNumber = captionSequenceNumber,
                 ColumnHeaders = columnHeaders,
                 Rows = rows,
                 CellSpans = cellSpans,

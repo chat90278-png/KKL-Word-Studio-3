@@ -7,8 +7,9 @@ using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Styling;
 
 /// <summary>
-/// Resolves supported authored KKL semantics against an optional normalized
-/// reference-DOCX format profile. It never opens or interprets a DOCX package.
+/// Resolves supported authored KKL semantics against a normalized document-format
+/// profile. Imported reference profiles override the deterministic built-in default.
+/// It never opens or interprets a DOCX package.
 /// </summary>
 public sealed class ReferenceReportContentFormatResolver : IReportContentFormatResolver
 {
@@ -23,14 +24,12 @@ public sealed class ReferenceReportContentFormatResolver : IReportContentFormatR
     {
         ArgumentNullException.ThrowIfNull(elementStyle);
 
-        if (profile is null)
-            return compatibilityResolver.ResolveText(null, kind, elementStyle);
-
+        var effectiveProfile = profile ?? DefaultDocumentFormatProfileFactory.Create();
         var reference = kind switch
         {
-            ReportContentKind.Heading => profile.PrimaryHeading,
-            ReportContentKind.AltHeading => profile.SecondaryHeading,
-            _ => profile.BodyText
+            ReportContentKind.Heading => effectiveProfile.PrimaryHeading,
+            ReportContentKind.AltHeading => effectiveProfile.SecondaryHeading,
+            _ => effectiveProfile.BodyText
         };
         var semanticDefault = SemanticDefaultFor(kind);
 
@@ -64,19 +63,20 @@ public sealed class ReferenceReportContentFormatResolver : IReportContentFormatR
     {
         ArgumentNullException.ThrowIfNull(table);
 
-        if (profile is null || profile.TableFormats.Count == 0)
+        var effectiveProfile = profile ?? DefaultDocumentFormatProfileFactory.Create();
+        if (effectiveProfile.TableFormats.Count == 0)
             return compatibilityResolver.ResolveTable(null, table);
 
         ReferenceTableFormatProfile? selected = null;
         if (!string.IsNullOrWhiteSpace(table.ReferenceTableFormatKey))
         {
-            selected = profile.TableFormats.FirstOrDefault(candidate =>
+            selected = effectiveProfile.TableFormats.FirstOrDefault(candidate =>
                 string.Equals(candidate.Key, table.ReferenceTableFormatKey, StringComparison.Ordinal));
         }
 
-        selected ??= profile.TableFormats.FirstOrDefault(candidate =>
+        selected ??= effectiveProfile.TableFormats.FirstOrDefault(candidate =>
             candidate.ReferenceHeaders.Count == table.Columns.Count);
-        selected ??= profile.TableFormats.FirstOrDefault();
+        selected ??= effectiveProfile.TableFormats.FirstOrDefault();
 
         return selected?.Format ?? compatibilityResolver.ResolveTable(null, table);
     }
@@ -86,19 +86,18 @@ public sealed class ReferenceReportContentFormatResolver : IReportContentFormatR
         PageLayout authoredLayout)
     {
         ArgumentNullException.ThrowIfNull(authoredLayout);
-        if (profile is null)
-            return authoredLayout;
+        var effectiveProfile = profile ?? DefaultDocumentFormatProfileFactory.Create();
 
         return new PageLayout
         {
-            WidthMillimeters = profile.Page.WidthMillimeters,
-            HeightMillimeters = profile.Page.HeightMillimeters,
-            MarginTopMillimeters = profile.Page.MarginTopMillimeters,
-            MarginBottomMillimeters = profile.Page.MarginBottomMillimeters,
-            MarginLeftMillimeters = profile.Page.MarginLeftMillimeters,
-            MarginRightMillimeters = profile.Page.MarginRightMillimeters,
-            HeaderDistanceMillimeters = profile.Page.HeaderDistanceMillimeters,
-            FooterDistanceMillimeters = profile.Page.FooterDistanceMillimeters,
+            WidthMillimeters = effectiveProfile.Page.WidthMillimeters,
+            HeightMillimeters = effectiveProfile.Page.HeightMillimeters,
+            MarginTopMillimeters = effectiveProfile.Page.MarginTopMillimeters,
+            MarginBottomMillimeters = effectiveProfile.Page.MarginBottomMillimeters,
+            MarginLeftMillimeters = effectiveProfile.Page.MarginLeftMillimeters,
+            MarginRightMillimeters = effectiveProfile.Page.MarginRightMillimeters,
+            HeaderDistanceMillimeters = effectiveProfile.Page.HeaderDistanceMillimeters,
+            FooterDistanceMillimeters = effectiveProfile.Page.FooterDistanceMillimeters,
             ShowPageNumbers = authoredLayout.ShowPageNumbers
         };
     }

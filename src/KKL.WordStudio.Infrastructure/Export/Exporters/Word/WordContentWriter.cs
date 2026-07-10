@@ -2,11 +2,18 @@ namespace KKL.WordStudio.Infrastructure.Export.Exporters.Word;
 
 using DocumentFormat.OpenXml;
 using KKL.WordStudio.Application.Content;
+using KKL.WordStudio.Application.Formatting;
 
 /// <summary>Appends a single ReportContentNode into any composite container (Body, Header, or Footer) — the one place that dispatches by node type, reused by all three regions so they can never diverge in how they render the same node kinds.</summary>
 internal static class WordContentWriter
 {
-    public static void AppendNode(OpenXmlCompositeElement container, ReportContentNode node)
+    public static void AppendNode(OpenXmlCompositeElement container, ReportContentNode node) =>
+        AppendNode(container, node, captionSequenceCounters: null);
+
+    public static void AppendNode(
+        OpenXmlCompositeElement container,
+        ReportContentNode node,
+        IDictionary<string, int>? captionSequenceCounters)
     {
         switch (node)
         {
@@ -16,10 +23,17 @@ internal static class WordContentWriter
             case TableContentNode table:
                 if (!string.IsNullOrWhiteSpace(table.Caption))
                 {
+                    var sequenceNumber = captionSequenceCounters is null
+                        ? null
+                        : TableCaptionSequenceFormatter.ResolveNextSequenceNumber(
+                            table.Caption,
+                            table.CaptionSequence,
+                            captionSequenceCounters);
                     container.AppendChild(WordParagraphWriter.BuildTableCaptionParagraph(
                         table.Caption,
                         table.CaptionSequence,
-                        table.CaptionFormat));
+                        table.CaptionFormat,
+                        sequenceNumber));
                 }
                 if (table.Rows.Count == 0 && table.ColumnHeaders.Count == 0)
                     break; // caption may still be meaningful even before columns are configured

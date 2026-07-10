@@ -73,8 +73,9 @@ public sealed class WordExporter : IReportExporter
                 if (report.IncludeTableOfContents && document.TableOfContents.Count > 0)
                     body.AppendChild(WordParagraphWriter.BuildTocParagraph());
 
+                var captionSequenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
                 foreach (var node in document.BodyNodes)
-                    WordContentWriter.AppendNode(body, node);
+                    WordContentWriter.AppendNode(body, node, captionSequenceCounters);
 
                 var sectionProperties = new SectionProperties();
                 WordHeaderFooterWriter.AppendHeaderFooterReferences(mainPart, sectionProperties, document);

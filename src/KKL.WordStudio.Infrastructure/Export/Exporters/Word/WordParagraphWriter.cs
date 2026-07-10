@@ -57,13 +57,24 @@ internal static class WordParagraphWriter
     public static Paragraph BuildTableCaptionParagraph(
         string caption,
         TableCaptionSequenceProfile? sequence) =>
-        BuildTableCaptionParagraph(caption, sequence, captionFormat: null);
+        BuildTableCaptionParagraph(caption, sequence, captionFormat: null, sequenceNumber: null);
 
     public static Paragraph BuildTableCaptionParagraph(
         string caption,
         TableCaptionSequenceProfile? sequence,
-        ResolvedTextFormat? captionFormat)
+        ResolvedTextFormat? captionFormat) =>
+        BuildTableCaptionParagraph(caption, sequence, captionFormat, sequenceNumber: null);
+
+    public static Paragraph BuildTableCaptionParagraph(
+        string caption,
+        TableCaptionSequenceProfile? sequence,
+        ResolvedTextFormat? captionFormat,
+        int? sequenceNumber)
     {
+        var cachedSequenceNumber = sequenceNumber is int positiveSequenceNumber && positiveSequenceNumber > 0
+            ? positiveSequenceNumber.ToString()
+            : "1";
+
         if (captionFormat is null)
         {
             var legacyParagraph = new Paragraph();
@@ -77,8 +88,8 @@ internal static class WordParagraphWriter
             if (sequence is null)
                 return legacyParagraph;
 
-            var legacyDescription = RemoveDeterministicManualSequencePrefix(caption, sequence);
-            var legacyField = new SimpleField(new Run(new Text("1")))
+            var legacyDescription = TableCaptionSequenceFormatter.RemoveDeterministicManualSequencePrefix(caption, sequence);
+            var legacyField = new SimpleField(new Run(new Text(cachedSequenceNumber)))
             {
                 Instruction = $" SEQ {sequence.SequenceIdentifier} \\* ARABIC "
             };
@@ -100,8 +111,8 @@ internal static class WordParagraphWriter
         }
 
         paragraph.AppendChild(BuildCaptionRun(sequence.DisplayLabel + " ", captionFormat));
-        var descriptiveCaption = RemoveDeterministicManualSequencePrefix(caption, sequence);
-        var field = new SimpleField(BuildCaptionRun("1", captionFormat))
+        var descriptiveCaption = TableCaptionSequenceFormatter.RemoveDeterministicManualSequencePrefix(caption, sequence);
+        var field = new SimpleField(BuildCaptionRun(cachedSequenceNumber, captionFormat))
         {
             Instruction = $" SEQ {sequence.SequenceIdentifier} \\* ARABIC "
         };
@@ -109,7 +120,6 @@ internal static class WordParagraphWriter
         paragraph.AppendChild(BuildCaptionRun(sequence.Separator + descriptiveCaption, captionFormat));
         return paragraph;
     }
-
 
     private static Run BuildCaptionRun(string text, ResolvedTextFormat format) =>
         new(
@@ -210,32 +220,5 @@ internal static class WordParagraphWriter
         return normalized.Length == 6 && normalized.All(Uri.IsHexDigit)
             ? normalized.ToUpperInvariant()
             : "000000";
-    }
-
-    /// <summary>
-    /// Avoids duplicate numbering only for the exact deterministic shape
-    /// "{DisplayLabel} {positive integer}{Separator}{description}" at the start
-    /// of the authored caption. Digits elsewhere are never interpreted as numbering.
-    /// </summary>
-    private static string RemoveDeterministicManualSequencePrefix(
-        string caption,
-        TableCaptionSequenceProfile sequence)
-    {
-        var prefix = sequence.DisplayLabel + " ";
-        if (!caption.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            return caption;
-
-        var numberStart = prefix.Length;
-        var numberEnd = numberStart;
-        while (numberEnd < caption.Length && char.IsAsciiDigit(caption[numberEnd]))
-            numberEnd++;
-
-        if (numberEnd == numberStart
-            || !caption.AsSpan(numberEnd).StartsWith(sequence.Separator.AsSpan(), StringComparison.Ordinal))
-        {
-            return caption;
-        }
-
-        return caption[(numberEnd + sequence.Separator.Length)..];
     }
 }
