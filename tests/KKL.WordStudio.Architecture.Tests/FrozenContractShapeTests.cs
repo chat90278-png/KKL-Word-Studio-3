@@ -105,8 +105,8 @@ public sealed class FrozenContractShapeTests
             ("Name", typeof(string)),
             ("ImageBytes", typeof(byte[])),
             ("ContentType", typeof(string)),
-            ("WidthMillimeters", typeof(double?)),
-            ("HeightMillimeters", typeof(double?)));
+            ("IntrinsicWidthMillimeters", typeof(double?)),
+            ("IntrinsicHeightMillimeters", typeof(double?)));
         AssertPayload<PageNumberPageBlockPayload>(("PageNumber", typeof(int)));
         AssertPayload<UnsupportedPageBlockPayload>(("Description", typeof(string)));
 
