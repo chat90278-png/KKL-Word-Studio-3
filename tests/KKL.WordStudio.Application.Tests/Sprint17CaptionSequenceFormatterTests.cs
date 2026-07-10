@@ -28,6 +28,18 @@ public sealed class Sprint17CaptionSequenceFormatterTests
     }
 
     [Fact]
+    public void ResolveNextSequenceNumber_CountsCaptionedTablesAndSkipsBlankCaptions()
+    {
+        var counters = new Dictionary<string, int>(StringComparer.Ordinal);
+        var sequence = DefaultSequence();
+
+        Assert.Equal(1, TableCaptionSequenceFormatter.ResolveNextSequenceNumber("Birinci", sequence, counters));
+        Assert.Null(TableCaptionSequenceFormatter.ResolveNextSequenceNumber("   ", sequence, counters));
+        Assert.Equal(2, TableCaptionSequenceFormatter.ResolveNextSequenceNumber("İkinci", sequence, counters));
+        Assert.Equal(2, counters["Tablo"]);
+    }
+
+    [Fact]
     public void BuildDisplayText_ReplacesOnlyExactManualSequencePrefix()
     {
         var actual = TableCaptionSequenceFormatter.BuildDisplayText(
