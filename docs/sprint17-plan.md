@@ -21,7 +21,7 @@ Acceptance:
 - Exact regression sample detects `A3:F13`, not `A3:E13`.
 - Existing header/no-header and non-A start detection behavior is preserved.
 
-Status: implemented on the Sprint 17 branch; Windows verification pending.
+Status: implemented and included in the successful Windows foundation gate captured before P0-C changes.
 
 ## P0-B — Built-in default generated-document format
 
@@ -47,7 +47,20 @@ Supported built-in baseline:
 - `Tablo` caption sequence.
 - Two six-column default table profiles with fixed layout, unequal widths, 0.5 pt borders, 1.235 mm horizontal cell margins, 10.195 mm preferred row height, repeated header, and vertical centering.
 
-Status: implemented on the Sprint 17 branch; Windows verification pending.
+Status: implemented and included in the successful Windows foundation gate captured before P0-C changes.
+
+## Foundation Windows gate captured before P0-C
+
+- `dotnet restore`: success.
+- `dotnet build`: success, 0 warnings, 0 errors.
+- Domain tests: 18 passed, 0 failed, 0 skipped.
+- Application tests: 170 passed, 0 failed, 0 skipped.
+- Engine tests: 55 passed, 0 failed, 0 skipped.
+- Architecture tests: 54 passed, 0 failed, 0 skipped.
+- Infrastructure tests: 115 passed, 0 failed, 0 skipped.
+- `NETSDK1057` remained an informational preview-SDK message and was not a compile failure.
+
+P0-C moved the branch head after this gate. The complete branch must be re-run on Windows before Sprint 17 is declared GREEN.
 
 ## P0-C — True Print Preview
 
@@ -84,7 +97,19 @@ Rules:
 - Word export never receives placeholder content.
 - Preview and Word continue to consume the same resolved semantic format path.
 
-Status: source-triage next after foundation changes.
+Implemented:
+
+- positioned block root is now `PageBlockInteractionHost`; it owns gestures and hit testing, not visual selection borders.
+- selection/hover/drop feedback moved to hit-test-free `PageBlockInteractionOverlay` children.
+- text editors and table-header editors are hosted in `Canvas` overlays so editor desired size does not alter final document flow.
+- table final layer contains only real caption and table visuals.
+- empty-caption placeholder, table name/continuation badge, and source-error feedback moved out of the table document-flow `StackPanel`.
+- empty-caption double-click editing is preserved by a caption-area-bounded host gesture.
+- Preview table header/body borders use the final-document black border visual while thickness remains resolved from `ResolvedTableFormat.BorderSizePoints`.
+- source-level architecture guards fail if table designer chrome is reintroduced into the final table layer or interaction feedback is moved back into the geometry-owning host.
+- Engine pagination and `PreviewPageProjection` block geometry mapping were not changed.
+
+Status: implemented on the Sprint 17 branch; Windows restore/build/test and visual smoke pending for the new head.
 
 ## P0-D — Serial/Quantity manual smoke
 
@@ -124,6 +149,7 @@ Expected Word:
 5. AutoRange exact regression smoke.
 6. Default-format Preview/Word smoke with no imported reference.
 7. Imported reference override smoke.
-8. Serial/Quantity Preview and Word smoke.
+8. True Print Preview interaction-overlay visual smoke.
+9. Serial/Quantity Preview and Word smoke.
 
-Do not claim GREEN before the exact Windows command output is captured.
+Do not claim Sprint 17 GREEN before the exact Windows command output is captured for the current branch head.
