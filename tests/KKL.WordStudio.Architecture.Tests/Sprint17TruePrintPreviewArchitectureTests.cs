@@ -117,6 +117,31 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         Assert.DoesNotContain("ClipToBounds=\"False\"", tableTemplate, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CaptionProjection_UsesStructuredSequenceDisplayBlackFallbackAndRawEditorCaption()
+    {
+        var root = SolutionRootLocator.Find();
+        var projection = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.UI",
+            "ViewModels",
+            "PreviewPageProjection.cs"));
+        var viewModel = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.UI",
+            "ViewModels",
+            "PreviewViewModel.cs"));
+
+        Assert.Contains("TableCaptionSequenceFormatter.BuildDisplayText", projection, StringComparison.Ordinal);
+        Assert.Contains("table.CaptionSequence", projection, StringComparison.Ordinal);
+        Assert.Contains("table.CaptionSequenceNumber", projection, StringComparison.Ordinal);
+        Assert.Contains("CaptionForeground = CreateBrush(table.CaptionFormat?.ForegroundColor) ?? Brushes.Black", projection, StringComparison.Ordinal);
+        Assert.Contains("CaptionEditText = block.Caption ?? string.Empty", viewModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("CaptionEditText = block.CaptionDisplayText", viewModel, StringComparison.Ordinal);
+    }
+
     private static string ReadPreviewXaml()
     {
         var path = Path.Combine(
