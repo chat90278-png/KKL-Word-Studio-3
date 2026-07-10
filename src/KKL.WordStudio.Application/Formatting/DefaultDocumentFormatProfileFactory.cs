@@ -46,7 +46,7 @@ public static class DefaultDocumentFormatProfileFactory
         {
             DisplayLabel = "Tablo",
             SequenceIdentifier = "Tablo",
-            Separator = ". "
+            Separator = ": "
         },
         TableFormats =
         [
