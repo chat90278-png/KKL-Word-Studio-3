@@ -91,7 +91,9 @@ public sealed class FrozenContractShapeTests
             [
                 ("CellSpans", typeof(IReadOnlyList<TableCellSpan>)),
                 ("Format", typeof(ResolvedTableFormat)),
-                ("CaptionFormat", typeof(ResolvedTextFormat))
+                ("CaptionFormat", typeof(ResolvedTextFormat)),
+                ("CaptionSequence", typeof(TableCaptionSequenceProfile)),
+                ("CaptionSequenceNumber", typeof(int?))
             ]);
         AssertPayload<TocPageBlockPayload>(("Entries", typeof(IReadOnlyList<LaidOutTocEntry>)));
         AssertRequiredProperties<LaidOutTocEntry>(
@@ -103,8 +105,8 @@ public sealed class FrozenContractShapeTests
             ("Name", typeof(string)),
             ("ImageBytes", typeof(byte[])),
             ("ContentType", typeof(string)),
-            ("IntrinsicWidthMillimeters", typeof(double?)),
-            ("IntrinsicHeightMillimeters", typeof(double?)));
+            ("WidthMillimeters", typeof(double?)),
+            ("HeightMillimeters", typeof(double?)));
         AssertPayload<PageNumberPageBlockPayload>(("PageNumber", typeof(int)));
         AssertPayload<UnsupportedPageBlockPayload>(("Description", typeof(string)));
 
