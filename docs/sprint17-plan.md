@@ -102,11 +102,11 @@ Implemented:
 - positioned block root is now `PageBlockInteractionHost`; it owns gestures and hit testing, not visual selection borders.
 - selection/hover/drop feedback moved to hit-test-free `PageBlockInteractionOverlay` children.
 - text editors and table-header editors are hosted in `Canvas` overlays so editor desired size does not alter final document flow.
-- table final layer contains only real caption and table visuals.
+- table final layer contains only real caption and table visuals at block level; header cell editing remains a zero-measure local Canvas interaction overlay.
 - empty-caption placeholder, table name/continuation badge, and source-error feedback moved out of the table document-flow `StackPanel`.
 - empty-caption double-click editing is preserved by a caption-area-bounded host gesture.
 - Preview table header/body borders use the final-document black border visual while thickness remains resolved from `ResolvedTableFormat.BorderSizePoints`.
-- source-level architecture guards fail if table designer chrome is reintroduced into the final table layer or interaction feedback is moved back into the geometry-owning host.
+- source-level architecture guards fail if block-level table designer chrome is reintroduced into the final table layer or interaction feedback is moved back into the geometry-owning host.
 - Engine pagination and `PreviewPageProjection` block geometry mapping were not changed.
 
 Status: implemented on the Sprint 17 branch; Windows restore/build/test and visual smoke pending for the new head.
