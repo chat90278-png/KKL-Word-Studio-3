@@ -1,0 +1,32 @@
+{
+  "checks": 67,
+  "pass": 65,
+  "fail": 2,
+  "failures": [
+    [
+      "Exact Sero fixture present",
+      "missing exact raw input"
+    ],
+    [
+      "Exact Sero fixture SHA256",
+      "fixture missing"
+    ]
+  ],
+  "integrated_frozen_drift": [
+    "src/KKL.WordStudio.Application/Content/ReportContentBuilder.cs",
+    "src/KKL.WordStudio.Application/Content/ReportContentNode.cs",
+    "src/KKL.WordStudio.Application/Layout/DocumentLayoutContracts.cs",
+    "tests/KKL.WordStudio.Application.Tests/Sprint16ContractBootstrapTests.cs",
+    "tests/KKL.WordStudio.Architecture.Tests/FrozenContractShapeTests.cs"
+  ],
+  "interface_defs": [
+    "src/KKL.WordStudio.Application/Formatting/IReferenceFormatDocumentService.cs"
+  ],
+  "test_inventory": {
+    "baseline": 318,
+    "integrated": 400,
+    "skips": 0,
+    "removed_files": [],
+    "removed_methods": []
+  }
+}

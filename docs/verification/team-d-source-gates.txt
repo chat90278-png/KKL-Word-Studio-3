@@ -1,0 +1,26 @@
+EXACT TEAM D SOURCE-LEVEL GATES: 25/25 PASS
+PASS | Engine boundary scan: WPF/System.Windows | []
+PASS | Engine boundary scan: DocumentFormat.OpenXml | []
+PASS | Engine boundary scan: WordprocessingDocument | []
+PASS | Engine boundary scan: Excel data-provider access | []
+PASS | Engine boundary scan: TableElement Binding/Sources semantic access | []
+PASS | Engine boundary scan: SpreadsheetDocument.Open | []
+PASS | Production prohibition: Office COM/Interop | []
+PASS | Production prohibition: WebView | []
+PASS | No PDF implementation packages | []
+PASS | PDF placeholder retained
+PASS | Domain subset | ['KKL.WordStudio.Shared']
+PASS | Engine subset | ['KKL.WordStudio.Application', 'KKL.WordStudio.Shared']
+PASS | Rendering subset | ['KKL.WordStudio.Domain', 'KKL.WordStudio.Shared']
+PASS | Shared subset | []
+PASS | Application excludes upper layers | ['KKL.WordStudio.Domain', 'KKL.WordStudio.Shared']
+PASS | Infrastructure excludes UI | ['KKL.WordStudio.Application', 'KKL.WordStudio.Domain', 'KKL.WordStudio.Shared']
+PASS | Architecture.Tests absent from production refs | []
+PASS | Serilog.Extensions.Hosting retained | ['CommunityToolkit.Mvvm', 'Microsoft.Extensions.Hosting', 'Serilog.Extensions.Hosting', 'Serilog.Extensions.Logging', 'Serilog.Sinks.File']
+PASS | Populate object creation retained
+PASS | Source Excel not opened edit=true | []
+PASS | Existing front matter reader remains read-only
+PASS | Explicit Word Save markers retained
+PASS | Preview refresh stays ReportContentChanged
+PASS | Structure remains Root.Children based
+PASS | DataRange.RangeReference JsonIgnore retained

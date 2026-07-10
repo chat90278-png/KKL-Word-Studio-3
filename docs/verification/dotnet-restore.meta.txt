@@ -1,0 +1,2 @@
+COMMAND: dotnet restore
+EXIT: 127

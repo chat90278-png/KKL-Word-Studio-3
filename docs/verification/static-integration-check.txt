@@ -1,0 +1,121 @@
+STATIC INTEGRATION CHECKS: 64/64 PASS, 0 FAIL
+CHANGED VS BASELINE: 51 files
+SOURCE TEST INVENTORY: 222; SKIPPED: 0
+
+PASS | Frozen contract unchanged: src/KKL.WordStudio.Application/Layout | files=2
+PASS | Frozen contract unchanged: src/KKL.WordStudio.Application/ImportedDocuments | files=2
+PASS | Frozen file unchanged: src/KKL.WordStudio.Application/Preview/PreviewSnapshot.cs
+PASS | No contract change request files
+PASS | teamA ownership diff | changed=10 offenders=[]
+PASS | teamB ownership diff | changed=8 offenders=[]
+PASS | teamC ownership diff | changed=9 offenders=[]
+PASS | teamD ownership diff | changed=13 offenders=[]
+PASS | Accepted branch files reapplied exactly except central fixes | []
+PASS | Exactly one layout engine DI registration | ['DeterministicDocumentLayoutEngine']
+PASS | Exactly one imported preview provider DI registration | ['OpenXmlImportedDocumentPreviewProvider']
+PASS | Fallback imported provider deleted
+PASS | Fallback layout engine remains class
+PASS | Single contract declaration: IDocumentLayoutEngine | count=1
+PASS | Single contract declaration: DocumentLayoutResult | count=1
+PASS | Single contract declaration: DocumentLayoutRequest | count=1
+PASS | Single contract declaration: IImportedDocumentPreviewProvider | count=1
+PASS | Single contract declaration: ImportedDocumentPreviewResult | count=1
+PASS | Engine prohibited token absent: System.Windows
+PASS | Engine prohibited token absent: DocumentFormat.OpenXml
+PASS | Engine prohibited token absent: WordprocessingDocument
+PASS | Engine prohibited token absent: SpreadsheetDocument
+PASS | Engine prohibited token absent: KKL.WordStudio.UI
+PASS | Engine prohibited token absent: KKL.WordStudio.Rendering
+PASS | Engine prohibited token absent: KKL.WordStudio.Infrastructure
+PASS | Engine prohibited token absent: IDataProvider
+PASS | Engine prohibited token absent: IReportStructureService
+PASS | Domain refs Shared only | ['KKL.WordStudio.Shared']
+PASS | Application does not ref forbidden upper layers | ['KKL.WordStudio.Domain', 'KKL.WordStudio.Shared']
+PASS | Engine refs only Application/Shared | ['KKL.WordStudio.Application', 'KKL.WordStudio.Shared']
+PASS | Infrastructure has no UI ref | ['KKL.WordStudio.Application', 'KKL.WordStudio.Domain', 'KKL.WordStudio.Shared']
+PASS | Semantic text helper present
+PASS | Semantic helper groups by FragmentIndex
+PASS | Semantic helper orders fragments
+PASS | BeginTextEdit uses semantic text
+PASS | CommitTextEdit compares semantic text
+PASS | Fragment-only comparison removed
+PASS | CanStructureInteract body gate
+PASS | Delete uses structure gate
+PASS | Neighbor selection uses structure gate
+PASS | Drag source uses structure gate
+PASS | Context delete uses structure gate
+PASS | Drop target uses structure gate
+PASS | Renderer reads imported status
+PASS | Renderer merges status into warnings
+PASS | Renderer preserves layout pages
+PASS | AltChunk composition preserved
+PASS | WordExporter does not consume DocumentLayoutResult
+PASS | Source DOCX read-only open present
+PASS | PreviewView.xaml XML well formed
+PASS | Preview XAML handlers resolve in code-behind | []
+PASS | All csproj XML parses | []
+PASS | Changed C# delimiter balance | []
+PASS | Source test inventory equals 222 | count=222
+PASS | Skipped source tests equals 0 | count=0
+PASS | Baseline manifest count equals 165 | count=165
+PASS | Removed baseline test files equals 0 | []
+PASS | Removed/renamed baseline test methods equals 0 | []
+PASS | Three integration guard test method names present
+PASS | TOC max five passes
+PASS | Table FragmentIndex
+PASS | Table StartRowIndex
+PASS | Table continuation header
+PASS | Cancellation checks
+
+CHANGED FILES VS BASELINE
+ADD docs/sprint14-integration-checklist.md
+ADD docs/sprint14-integration-report.md
+ADD docs/sprint14-team-a-layout-report.md
+ADD docs/sprint14-team-b-wpf-report.md
+ADD docs/sprint14-team-c-docx-report.md
+ADD docs/sprint14-team-d-qa-report.md
+ADD docs/verification/dotnet-build.meta.txt
+ADD docs/verification/dotnet-build.txt
+ADD docs/verification/dotnet-restore.meta.txt
+ADD docs/verification/dotnet-restore.txt
+ADD docs/verification/dotnet-test.meta.txt
+ADD docs/verification/dotnet-test.txt
+ADD docs/verification/static-integration-check.txt
+ADD docs/verification/team-d-source-gates.txt
+MOD src/KKL.WordStudio.Engine/DependencyInjection/EngineServiceCollectionExtensions.cs
+ADD src/KKL.WordStudio.Engine/Layout/DeterministicDocumentLayoutEngine.cs
+ADD src/KKL.WordStudio.Engine/Layout/DeterministicTablePaginator.cs
+ADD src/KKL.WordStudio.Engine/Layout/DeterministicTextMeasurement.cs
+ADD src/KKL.WordStudio.Engine/Layout/FrontMatterPaginator.cs
+ADD src/KKL.WordStudio.Engine/Layout/GeneratedDocumentPaginator.cs
+ADD src/KKL.WordStudio.Engine/Layout/LayoutPageFlow.cs
+ADD src/KKL.WordStudio.Engine/Layout/TextRunLayoutFactory.cs
+MOD src/KKL.WordStudio.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs
+MOD src/KKL.WordStudio.Infrastructure/Export/Exporters/Word/WordPageLayoutWriter.cs
+MOD src/KKL.WordStudio.Infrastructure/Export/Exporters/Word/WordParagraphWriter.cs
+MOD src/KKL.WordStudio.Infrastructure/Export/Exporters/Word/WordTableWriter.cs
+DEL src/KKL.WordStudio.Infrastructure/Word/FallbackImportedDocumentPreviewProvider.cs
+ADD src/KKL.WordStudio.Infrastructure/Word/OpenXmlImportedDocumentPreviewProvider.cs
+MOD src/KKL.WordStudio.UI/Preview/PreviewRenderer.cs
+ADD src/KKL.WordStudio.UI/Preview/PreviewTextBlockControl.cs
+ADD src/KKL.WordStudio.UI/ViewModels/PreviewInteractionHelpers.cs
+ADD src/KKL.WordStudio.UI/ViewModels/PreviewPageProjection.cs
+ADD src/KKL.WordStudio.UI/ViewModels/PreviewPageViewModel.cs
+MOD src/KKL.WordStudio.UI/ViewModels/PreviewViewModel.cs
+MOD src/KKL.WordStudio.UI/Views/PreviewView.xaml
+MOD src/KKL.WordStudio.UI/Views/PreviewView.xaml.cs
+ADD tests/KKL.WordStudio.Architecture.Tests/BaselineRegressionInventoryTests.cs
+MOD tests/KKL.WordStudio.Architecture.Tests/EngineProjectDependencyTests.cs
+ADD tests/KKL.WordStudio.Architecture.Tests/FrozenContractShapeTests.cs
+MOD tests/KKL.WordStudio.Architecture.Tests/KKL.WordStudio.Architecture.Tests.csproj
+ADD tests/KKL.WordStudio.Architecture.Tests/LayerAndPackageProhibitionTests.cs
+ADD tests/KKL.WordStudio.Architecture.Tests/ProjectReferenceArchitectureTests.cs
+ADD tests/KKL.WordStudio.Architecture.Tests/SolutionRootLocator.cs
+ADD tests/KKL.WordStudio.Architecture.Tests/SourceScan.cs
+ADD tests/KKL.WordStudio.Architecture.Tests/Sprint14IntegrationGuardTests.cs
+ADD tests/KKL.WordStudio.Architecture.Tests/StabilizationMarkerTests.cs
+ADD tests/KKL.WordStudio.Architecture.Tests/TestData/sprint14-contract-baseline-tests.json
+ADD tests/KKL.WordStudio.Architecture.Tests/TestInventory.cs
+ADD tests/KKL.WordStudio.Engine.Tests/DeterministicDocumentLayoutEngineTests.cs
+ADD tests/KKL.WordStudio.Infrastructure.Tests/Sprint14ImportedDocumentPreviewTests.cs
+ADD tests/KKL.WordStudio.Infrastructure.Tests/Sprint14WordFidelityTests.cs

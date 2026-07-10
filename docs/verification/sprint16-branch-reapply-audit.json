@@ -1,0 +1,30 @@
+{
+  "A": {
+    "accepted_count": 9,
+    "central_touched": 3,
+    "missing": [],
+    "unexpected_hash_mismatch": [],
+    "exact_reapplied": 6
+  },
+  "B": {
+    "accepted_count": 16,
+    "central_touched": 2,
+    "missing": [],
+    "unexpected_hash_mismatch": [],
+    "exact_reapplied": 14
+  },
+  "C": {
+    "accepted_count": 16,
+    "central_touched": 10,
+    "missing": [],
+    "unexpected_hash_mismatch": [],
+    "exact_reapplied": 6
+  },
+  "D": {
+    "accepted_count": 9,
+    "central_touched": 4,
+    "missing": [],
+    "unexpected_hash_mismatch": [],
+    "exact_reapplied": 5
+  }
+}
