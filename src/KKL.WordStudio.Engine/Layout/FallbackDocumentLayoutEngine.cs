@@ -196,6 +196,7 @@ public sealed class FallbackDocumentLayoutEngine : IDocumentLayoutEngine
                     Name = table.Name,
                     Caption = table.Caption,
                     CaptionFormat = table.CaptionFormat,
+                    CaptionSequence = table.CaptionSequence,
                     ColumnHeaders = table.ColumnHeaders,
                     Rows = table.Rows,
                     CellSpans = table.CellSpans,
