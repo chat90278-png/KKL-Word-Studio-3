@@ -62,10 +62,22 @@ public sealed class Sprint17BuiltInDefaultFormatTests
     public void ReferenceAwareResolver_UsesBuiltInDefaultWhenProfileIsNull()
     {
         var resolver = new ReferenceReportContentFormatResolver();
+        var authoredPage = new PageLayout
+        {
+            WidthMillimeters = 180d,
+            HeightMillimeters = 240d,
+            MarginTopMillimeters = 5d,
+            MarginBottomMillimeters = 6d,
+            MarginLeftMillimeters = 7d,
+            MarginRightMillimeters = 8d,
+            ShowPageNumbers = false
+        };
 
-        var page = resolver.ResolvePageLayout(null, new PageLayout { ShowPageNumbers = false });
+        var page = resolver.ResolvePageLayout(null, authoredPage);
         var text = resolver.ResolveText(null, ReportContentKind.Paragraph, new Style());
 
+        Assert.InRange(page.WidthMillimeters, 209.99d, 210.02d);
+        Assert.InRange(page.HeightMillimeters, 296.99d, 297.02d);
         Assert.InRange(page.MarginLeftMillimeters, 24.98d, 25.01d);
         Assert.InRange(page.MarginRightMillimeters, 24.98d, 25.01d);
         Assert.False(page.ShowPageNumbers);
