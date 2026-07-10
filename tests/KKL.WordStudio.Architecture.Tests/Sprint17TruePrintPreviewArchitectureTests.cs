@@ -78,36 +78,43 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
     }
 
     [Fact]
-    public void EmptyCaptionHint_IsCompactFloatingInteractionBadgeAndNeverHeaderFlowText()
+    public void EmptyCaptionHint_IsCompactPopupAdornerAndNeverHeaderFlowText()
     {
         var xaml = ReadPreviewXaml();
-        var badgeStyle = ExtractSegment(
+        var popupStyle = ExtractSegment(
             xaml,
-            "<Style x:Key=\"EmptyCaptionHintBadge\"",
+            "<Style x:Key=\"EmptyCaptionHintPopup\"",
             "<DataTemplate DataType=\"{x:Type vm:PreviewTextPageBlockViewModel}\"");
-        var tableInteractionLayer = ExtractSegment(
+        var tableTemplate = ExtractSegment(
             xaml,
-            "<!-- Interaction layer: table -->",
+            "<DataTemplate DataType=\"{x:Type vm:PreviewTablePageBlockViewModel}\"",
             "<DataTemplate DataType=\"{x:Type vm:PreviewTocPageBlockViewModel}\"");
+        var finalTableLayer = ExtractSegment(
+            tableTemplate,
+            "<!-- Final document layer: table -->",
+            "<!-- Interaction layer: table -->");
+        var tableInteractionLayer = ExtractSegment(
+            tableTemplate,
+            "<!-- Interaction layer: table -->",
+            "</DataTemplate>");
 
-        Assert.Contains("<Setter Property=\"Visibility\" Value=\"Collapsed\" />", badgeStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding ShowCaptionArea", badgeStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding HasCaption", badgeStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding CanEditCaption", badgeStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding IsSelected", badgeStyle, StringComparison.Ordinal);
-        Assert.Contains("Path=IsMouseOver", badgeStyle, StringComparison.Ordinal);
+        Assert.Contains("TargetType=\"Popup\"", popupStyle, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"IsOpen\" Value=\"False\" />", popupStyle, StringComparison.Ordinal);
+        Assert.Contains("Binding ShowCaptionArea", popupStyle, StringComparison.Ordinal);
+        Assert.Contains("Binding HasCaption", popupStyle, StringComparison.Ordinal);
+        Assert.Contains("Binding CanEditCaption", popupStyle, StringComparison.Ordinal);
+        Assert.Contains("Binding IsSelected", popupStyle, StringComparison.Ordinal);
+        Assert.Contains("Binding IsMouseOver, ElementName=TableBlockHost", popupStyle, StringComparison.Ordinal);
 
-        Assert.Contains("Style=\"{StaticResource EmptyCaptionHintBadge}\"", tableInteractionLayer, StringComparison.Ordinal);
-        Assert.Contains("Margin=\"4,-18,0,0\"", tableInteractionLayer, StringComparison.Ordinal);
+        Assert.Contains("<Popup Style=\"{StaticResource EmptyCaptionHintPopup}\"", tableInteractionLayer, StringComparison.Ordinal);
+        Assert.Contains("PlacementTarget=\"{Binding ElementName=TableBlockHost}\"", tableInteractionLayer, StringComparison.Ordinal);
+        Assert.Contains("DataContext=\"{Binding DataContext, ElementName=TableBlockHost}\"", tableInteractionLayer, StringComparison.Ordinal);
         Assert.Contains("ToolTip=\"Tablo başlığı eklemek için çift tıklayın\"", tableInteractionLayer, StringComparison.Ordinal);
         Assert.Contains("MouseLeftButtonDown=\"TableCaption_MouseLeftButtonDown\"", tableInteractionLayer, StringComparison.Ordinal);
         Assert.Contains("Text=\"+ Tablo başlığı\"", tableInteractionLayer, StringComparison.Ordinal);
         Assert.DoesNotContain("<TextBlock Text=\"Tablo başlığı eklemek için çift tıklayın\"", xaml, StringComparison.Ordinal);
-        Assert.Matches(
-            new Regex(
-                "x:Name=\"TableBlockHost\"[\\s\\S]*?ClipToBounds=\"False\"[\\s\\S]*?<!-- Final document layer: table -->[\\s\\S]*?<StackPanel ClipToBounds=\"True\">",
-                RegexOptions.CultureInvariant),
-            xaml);
+        Assert.Contains("<StackPanel ClipToBounds=\"True\">", finalTableLayer, StringComparison.Ordinal);
+        Assert.DoesNotContain("ClipToBounds=\"False\"", tableTemplate, StringComparison.Ordinal);
     }
 
     private static string ReadPreviewXaml()
