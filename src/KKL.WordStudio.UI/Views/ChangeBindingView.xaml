@@ -1,0 +1,52 @@
+<UserControl x:Class="KKL.WordStudio.UI.Views.ChangeBindingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Height="48" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Margin="8,0">
+                <Button Content="←" Style="{StaticResource Btn.DockIcon}" Command="{Binding BackFromBindingCommand}" Margin="0,0,8,0" />
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="TABLO ÖZELLİKLERİ" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    <TextBlock Text="Veri Kaynağını Değiştir" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,1,0,0" Padding="12,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="İptal" Style="{StaticResource Btn.Mini}" Command="{Binding BackFromBindingCommand}" Margin="0,0,8,0" />
+                <Button Content="Seçili Aralığı Bağla" Style="{StaticResource Btn.Primary}" Command="{Binding BindSelectedRangeCommand}" Padding="14,0" Height="32" />
+            </StackPanel>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding BindingCandidates}" Margin="10">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="9" Padding="12,11" Margin="0,0,0,8" Cursor="Hand"
+                            MouseLeftButtonUp="CandidateBorder_MouseLeftButtonUp">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                        <Setter Property="Background" Value="{DynamicResource Brush.Accent.Soft}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <StackPanel>
+                                <TextBlock Text="{Binding WorksheetName}" FontWeight="Bold" />
+                                <TextBlock Text="{Binding RangeText}" FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <Border Style="{StaticResource Chip}" Margin="14,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource Chip.Text}"
+                                           Text="{Binding IsConfigured, Converter={StaticResource BoolToConfiguredText}}" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </DockPanel>
+</UserControl>

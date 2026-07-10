@@ -1,0 +1,49 @@
+<UserControl x:Class="KKL.WordStudio.UI.Views.ContextDockView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Background="{DynamicResource Brush.Surface.Alt}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1,0,0,0">
+        <Grid>
+            <!-- Normal / Expanded: segmented header + active page body -->
+            <DockPanel Visibility="{Binding State, ConverterParameter=Collapsed, Converter={StaticResource EnumNotEqualToVisibility}}">
+                <Border DockPanel.Dock="Top" Height="48" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
+                    <Grid Margin="9,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="#FFEEF2F6" CornerRadius="8" Padding="3" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton GroupName="DockTab" Style="{StaticResource Segment.RadioButton}" Content="İçindekiler"
+                                             IsChecked="{Binding Page, ConverterParameter=Contents, Converter={StaticResource EnumEqualsToBool}}"
+                                             Command="{Binding ShowContentsCommand}" />
+                                <RadioButton GroupName="DockTab" Style="{StaticResource Segment.RadioButton}" Content="Özellikler"
+                                             IsChecked="{Binding Page, ConverterParameter=Properties, Converter={StaticResource EnumEqualsToBool}}"
+                                             Command="{Binding ShowPropertiesCommand}" />
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="↗" ToolTip="Bölmeyi genişlet" Style="{StaticResource Btn.DockIcon}" Command="{Binding ExpandCommand}" Margin="0,0,2,0" />
+                            <Button Content="›" ToolTip="Bölmeyi daralt" Style="{StaticResource Btn.DockIcon}" Command="{Binding CollapseCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Grid>
+                    <ContentControl x:Name="ContentsHost" Visibility="{Binding Page, ConverterParameter=Contents, Converter={StaticResource EnumEqualsToVisibility}}" />
+                    <ContentControl x:Name="PropertiesHost" Visibility="{Binding Page, ConverterParameter=Properties, Converter={StaticResource EnumEqualsToVisibility}}" />
+                    <ContentControl x:Name="ChangeBindingHost" Visibility="{Binding Page, ConverterParameter=ChangeBinding, Converter={StaticResource EnumEqualsToVisibility}}" />
+                </Grid>
+            </DockPanel>
+
+            <!-- Collapsed: minimal icon rail -->
+            <StackPanel Visibility="{Binding State, ConverterParameter=Collapsed, Converter={StaticResource EnumEqualsToVisibility}}"
+                        HorizontalAlignment="Center" Margin="0,10,0,0">
+                <Button Content="☷" ToolTip="İçindekiler" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToContentsCommand}" Margin="0,0,0,7" />
+                <Button Content="⚙" ToolTip="Özellikler" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToPropertiesCommand}" Margin="0,0,0,7" />
+                <Button Content="‹" ToolTip="Geri yükle" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToContentsCommand}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

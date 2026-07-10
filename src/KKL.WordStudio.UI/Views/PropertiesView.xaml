@@ -1,0 +1,163 @@
+<UserControl x:Class="KKL.WordStudio.UI.Views.PropertiesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="Foreground" Value="#FF7A8798" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style x:Key="Section" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,13,0,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16">
+
+            <!-- ==================== Heading properties ==================== -->
+            <StackPanel Visibility="{Binding SelectionKind, ConverterParameter=Heading, Converter={StaticResource EnumEqualsToVisibility}}">
+                <TextBlock Text="Başlık Özellikleri" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,14" />
+
+                <TextBlock Text="Metin" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding HeadingText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,11" />
+
+                <TextBlock Text="Düzey" Style="{StaticResource FieldLabel}" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,11">
+                    <RadioButton GroupName="HeadingLevel" Content="Başlık 1" IsChecked="{Binding IsMainHeading}" Margin="0,0,16,0" VerticalAlignment="Center" />
+                    <RadioButton GroupName="HeadingLevel" Content="Başlık 2" IsChecked="{Binding IsMainHeading, Converter={StaticResource InverseBool}}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Button Content="Uygula" Style="{StaticResource Btn.Primary}" Command="{Binding ApplyHeadingChangesCommand}" HorizontalAlignment="Left" Padding="16,0" Height="32" />
+            </StackPanel>
+
+            <!-- ==================== Table properties ==================== -->
+            <StackPanel Visibility="{Binding SelectionKind, ConverterParameter=Table, Converter={StaticResource EnumEqualsToVisibility}}">
+                <TextBlock Text="Tablo Özellikleri" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,14" />
+
+                <TextBlock Text="Ad" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,11" />
+
+                <TextBlock Text="Açıklama" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,11" />
+
+                <TextBlock Text="Tablo Başlığı" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding TableCaption, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
+                <Grid Margin="0,0,0,11">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Grid.Column="0" ItemsSource="{Binding HeadingCaptionCandidates}"
+                              SelectedItem="{Binding SelectedHeadingCaptionCandidate}"
+                              DisplayMemberPath="DisplayText" MinWidth="150" Margin="0,0,6,0"
+                              ToolTip="Mevcut Başlık 1 / Başlık 2 öğelerinden birini seçin" />
+                    <Button Grid.Column="1" Content="Başlıktan Al" Style="{StaticResource Btn.Mini}"
+                            Command="{Binding UseSelectedHeadingAsTableCaptionCommand}" />
+                </Grid>
+
+                <StackPanel Style="{StaticResource Section}">
+                    <TextBlock Text="TABLO BİÇİMİ" FontSize="10" FontWeight="Bold" Foreground="#FF7B8798" Margin="0,0,0,9" />
+                    <ComboBox ItemsSource="{Binding TableFormatOptions}"
+                              SelectedItem="{Binding SelectedTableFormatOption}"
+                              DisplayMemberPath="DisplayName" MinWidth="180" />
+                    <TextBlock Text="{Binding TableFormatStatusText}" FontSize="10" Foreground="{DynamicResource Brush.Text.Secondary}"
+                               TextWrapping="Wrap" Margin="0,5,0,0" />
+                </StackPanel>
+
+                <StackPanel Style="{StaticResource Section}">
+                    <TextBlock Text="SERİ NO / ADET DÜZENİ" FontSize="10" FontWeight="Bold" Foreground="#FF7B8798" Margin="0,0,0,9" />
+                    <Border Padding="9" CornerRadius="8" Background="{DynamicResource Brush.Soft}"
+                            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                        <TextBlock Text="{Binding GroupingStatusText}" FontSize="10.5" TextWrapping="Wrap" />
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                        <Button Content="Otomatik Algıla" Style="{StaticResource Btn.Mini}"
+                                Command="{Binding AutoDetectGroupingCommand}" Margin="0,0,5,0" />
+                        <Button Content="Düzenle" Style="{StaticResource Btn.Mini}"
+                                Command="{Binding EditGroupingCommand}" Margin="0,0,5,0" />
+                        <Button Content="Kaldır" Style="{StaticResource Btn.Mini}"
+                                Command="{Binding RemoveGroupingCommand}" IsEnabled="{Binding CanRemoveGrouping}" />
+                    </StackPanel>
+
+                    <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" Background="#FFF7F8FA"
+                            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                            Visibility="{Binding IsGroupingEditorOpen, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="Eşleşme alanı" Style="{StaticResource FieldLabel}" />
+                            <ComboBox ItemsSource="{Binding GroupingColumns}" SelectedItem="{Binding SelectedMatchKeyColumn}"
+                                      DisplayMemberPath="DisplayName" Margin="0,0,0,8" />
+                            <TextBlock Text="Seri no alanı" Style="{StaticResource FieldLabel}" />
+                            <ComboBox ItemsSource="{Binding GroupingColumns}" SelectedItem="{Binding SelectedSerialColumn}"
+                                      DisplayMemberPath="DisplayName" Margin="0,0,0,8" />
+                            <TextBlock Text="Adet alanı" Style="{StaticResource FieldLabel}" />
+                            <ComboBox ItemsSource="{Binding GroupingColumns}" SelectedItem="{Binding SelectedQuantityColumn}"
+                                      DisplayMemberPath="DisplayName" Margin="0,0,0,9" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Uygula" Style="{StaticResource Btn.Mini}"
+                                        Command="{Binding ApplyManualGroupingCommand}" Margin="0,0,6,0" />
+                                <Button Content="İptal" Style="{StaticResource Btn.Mini}"
+                                        Command="{Binding CancelGroupingEditCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Style="{StaticResource Section}">
+                    <TextBlock Text="VERİ KAYNAKLARI" FontSize="10" FontWeight="Bold" Foreground="#FF7B8798" Margin="0,0,0,9" />
+
+                    <ItemsControl ItemsSource="{Binding TableSources}" Visibility="{Binding HasBinding, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="9" CornerRadius="8" Background="{DynamicResource Brush.Soft}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Margin="0,0,0,7">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding SourceDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding WorksheetRangeDisplay}" FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding StatusText}" FontSize="10" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
+                                            <Button Content="Yukarı" Style="{StaticResource Btn.Mini}" Padding="7,0" Height="26" Margin="0,0,4,0"
+                                                    Command="{Binding DataContext.MoveTableSourceUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                            <Button Content="Aşağı" Style="{StaticResource Btn.Mini}" Padding="7,0" Height="26" Margin="0,0,4,0"
+                                                    Command="{Binding DataContext.MoveTableSourceDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                            <Button Content="Kaldır" Style="{StaticResource Btn.Mini}" Padding="7,0" Height="26"
+                                                    Command="{Binding DataContext.RemoveTableSourceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="Herhangi bir veri kaynağına bağlı değil." Margin="0,0,0,10" Foreground="{DynamicResource Brush.Text.Secondary}"
+                               Visibility="{Binding HasBinding, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                    <Button Content="Veri Kaynağını Değiştir" Style="{StaticResource Btn.Mini}" Command="{Binding ChangeBindingCommand}" HorizontalAlignment="Left" />
+                </StackPanel>
+
+                <StackPanel Style="{StaticResource Section}">
+                    <TextBlock Text="Başlık satırı" Style="{StaticResource FieldLabel}" />
+                    <CheckBox Content="Başlık satırını göster" IsChecked="{Binding ShowHeader}" Margin="0,0,0,9" />
+
+                    <TextBlock Text="Stil" Style="{StaticResource FieldLabel}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,11">
+                        <CheckBox Content="Kalın" IsChecked="{Binding IsBold}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <TextBlock Text="Yazı boyutu" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="11" />
+                        <TextBox Width="46" Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Button Content="Uygula" Style="{StaticResource Btn.Primary}" Command="{Binding ApplyTableChangesCommand}" HorizontalAlignment="Left" Padding="16,0" Height="32" Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- ==================== Nothing selected ==================== -->
+            <TextBlock Text="Özelliklerini görmek için İçindekiler'den veya tasarım yüzeyinden bir öğe seçin." Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap"
+                       Visibility="{Binding SelectionKind, ConverterParameter=None, Converter={StaticResource EnumEqualsToVisibility}}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
