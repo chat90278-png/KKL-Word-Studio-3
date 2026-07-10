@@ -8,7 +8,7 @@ using KKL.WordStudio.Domain.Projects;
 /// Reads the project-owned reference DOCX in read-only mode and projects only
 /// the supported Sprint 16 WordprocessingML properties into the frozen
 /// Application format contract. Default-format fallback is applied later at the
-/// shared report-content composition boundary.
+/// shared format-resolution boundary.
 /// </summary>
 public sealed class OpenXmlReferenceDocumentFormatProvider : IReferenceDocumentFormatProvider
 {
