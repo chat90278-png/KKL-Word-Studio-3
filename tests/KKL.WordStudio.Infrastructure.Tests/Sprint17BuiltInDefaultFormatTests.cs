@@ -1,20 +1,19 @@
 namespace KKL.WordStudio.Infrastructure.Tests;
 
+using KKL.WordStudio.Application.Content;
+using KKL.WordStudio.Application.Formatting;
 using KKL.WordStudio.Application.Layout;
 using KKL.WordStudio.Domain.Projects;
+using KKL.WordStudio.Domain.Styling;
 using KKL.WordStudio.Infrastructure.ReferenceFormatting;
 using Xunit;
 
 public sealed class Sprint17BuiltInDefaultFormatTests
 {
     [Fact]
-    public async Task NoProjectReference_ReturnsBuiltInDefaultProfile()
+    public void DefaultProfile_UsesSupportedBuiltInGeometry()
     {
-        var result = await new OpenXmlReferenceDocumentFormatProvider().ReadAsync(new Project());
-
-        Assert.False(result.IsMissing);
-        Assert.Null(result.StatusMessage);
-        var profile = Assert.IsType<KKL.WordStudio.Application.Formatting.DocumentFormatProfile>(result.Profile);
+        var profile = DefaultDocumentFormatProfileFactory.Create();
 
         Assert.InRange(profile.Page.WidthMillimeters, 209.99d, 210.02d);
         Assert.InRange(profile.Page.HeightMillimeters, 296.99d, 297.02d);
@@ -60,7 +59,22 @@ public sealed class Sprint17BuiltInDefaultFormatTests
     }
 
     [Fact]
-    public async Task MissingProjectReference_FallsBackToBuiltInDefaultProfileAndWarns()
+    public void ReferenceAwareResolver_UsesBuiltInDefaultWhenProfileIsNull()
+    {
+        var resolver = new ReferenceReportContentFormatResolver();
+
+        var page = resolver.ResolvePageLayout(null, new PageLayout { ShowPageNumbers = false });
+        var text = resolver.ResolveText(null, ReportContentKind.Paragraph, new Style());
+
+        Assert.InRange(page.MarginLeftMillimeters, 24.98d, 25.01d);
+        Assert.InRange(page.MarginRightMillimeters, 24.98d, 25.01d);
+        Assert.False(page.ShowPageNumbers);
+        Assert.Equal("Arial", text.FontFamilyName);
+        Assert.Equal(10d, text.FontSizePoints, 3);
+    }
+
+    [Fact]
+    public async Task MissingProjectReference_PreservesMissingStateAndWarnsAboutDefaultFallback()
     {
         var project = new Project
         {
@@ -74,8 +88,8 @@ public sealed class Sprint17BuiltInDefaultFormatTests
         var result = await new OpenXmlReferenceDocumentFormatProvider().ReadAsync(project);
 
         Assert.True(result.IsMissing);
-        Assert.NotNull(result.Profile);
-        Assert.Equal("Arial", result.Profile!.BodyText.FontFamilyName);
-        Assert.Contains("Varsayılan KKL belge biçimi kullanılıyor", result.StatusMessage, StringComparison.Ordinal);
+        Assert.Null(result.Profile);
+        Assert.Contains("Biçim şablonu bulunamadı", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Varsayılan KKL belge biçimi kullanılacak", result.StatusMessage, StringComparison.Ordinal);
     }
 }
