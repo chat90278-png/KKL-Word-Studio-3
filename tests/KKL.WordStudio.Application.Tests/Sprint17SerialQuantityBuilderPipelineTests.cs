@@ -4,7 +4,6 @@ using KKL.WordStudio.Application.Abstractions;
 using KKL.WordStudio.Application.Content;
 using KKL.WordStudio.Application.Formatting;
 using KKL.WordStudio.Application.TableComposition;
-using KKL.WordStudio.Domain.DataSources;
 using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Expressions;
 using KKL.WordStudio.Domain.Projects;
