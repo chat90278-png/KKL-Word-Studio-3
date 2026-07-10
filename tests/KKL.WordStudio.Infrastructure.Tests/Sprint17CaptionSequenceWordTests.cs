@@ -27,6 +27,26 @@ public sealed class Sprint17CaptionSequenceWordTests
     }
 
     [Fact]
+    public void AutomaticSequenceNumber_IsWrittenAsTheSeqFieldsCachedResult()
+    {
+        var profile = DefaultDocumentFormatProfileFactory.Create();
+        var first = WordParagraphWriter.BuildTableCaptionParagraph(
+            "Birinci",
+            profile.TableCaptionSequence,
+            profile.TableCaption,
+            1);
+        var second = WordParagraphWriter.BuildTableCaptionParagraph(
+            "İkinci",
+            profile.TableCaptionSequence,
+            profile.TableCaption,
+            2);
+
+        Assert.Equal("1", Assert.Single(first.Descendants<SimpleField>()).InnerText);
+        Assert.Equal("2", Assert.Single(second.Descendants<SimpleField>()).InnerText);
+        Assert.Contains("SEQ Tablo", Assert.Single(second.Descendants<SimpleField>()).Instruction!.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ManualBuiltInPrefix_IsRemovedBeforeRealSeqFieldDescription()
     {
         var profile = DefaultDocumentFormatProfileFactory.Create();
