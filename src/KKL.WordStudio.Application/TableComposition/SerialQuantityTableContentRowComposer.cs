@@ -95,7 +95,17 @@ public sealed class SerialQuantityTableContentRowComposer : ITableContentRowComp
         List<TableRowGroup> rowGroups,
         List<string> warnings)
     {
+        var observedSerials = ReadObservedSerialTokens(groupRows, serialIndex);
+        var distinctSerialCount = observedSerials.Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        var hasDuplicates = distinctSerialCount != observedSerials.Count;
         var quantity = ResolveQuantity(groupRows, quantityIndex);
+        quantity = InferQuantityFromPhysicalSerialRows(
+            quantity,
+            groupRows,
+            serialIndex,
+            observedSerials.Count,
+            hasDuplicates);
+
         var groupWarnings = new List<string>();
         if (!quantity.IsSafe)
             groupWarnings.Add(BuildQuantityWarning(key, quantity));
@@ -137,10 +147,6 @@ public sealed class SerialQuantityTableContentRowComposer : ITableContentRowComp
             warnings.AddRange(groupWarnings);
             return;
         }
-
-        var observedSerials = ReadObservedSerialTokens(groupRows, serialIndex);
-        var distinctSerialCount = observedSerials.Distinct(StringComparer.OrdinalIgnoreCase).Count();
-        var hasDuplicates = distinctSerialCount != observedSerials.Count;
 
         if (quantity.Value > 1
             && observedSerials.Count == quantity.Value
@@ -193,6 +199,30 @@ public sealed class SerialQuantityTableContentRowComposer : ITableContentRowComp
         }
 
         warnings.Add($"PN/key '{key}' için Adet {quantity.Value}, eşleşen Seri No {observedSerials.Count}; çoklu seri düzeni uygulanmadı.");
+    }
+
+    private static QuantityResolution InferQuantityFromPhysicalSerialRows(
+        QuantityResolution quantity,
+        IReadOnlyList<string[]> rows,
+        int serialIndex,
+        int observedSerialCount,
+        bool hasDuplicates)
+    {
+        if (!quantity.IsSafe
+            || quantity.Value != 1
+            || observedSerialCount <= 1
+            || hasDuplicates)
+        {
+            return quantity;
+        }
+
+        var physicalSerialRowCount = rows.Count(row => !string.IsNullOrWhiteSpace(row[serialIndex]));
+        if (physicalSerialRowCount <= 1)
+            return quantity;
+
+        return QuantityResolution.Safe(
+            observedSerialCount,
+            observedSerialCount.ToString(CultureInfo.InvariantCulture));
     }
 
     private static QuantityResolution ResolveQuantity(IReadOnlyList<string[]> rows, int quantityIndex)
