@@ -114,7 +114,7 @@ public static class DefaultDocumentFormatProfileFactory
         {
             Key = key,
             DisplayName = displayName,
-            ReferenceHeaders = ["No", "Product Name", "Product No", "NSN", "Serial No", "Quantity"],
+            ReferenceHeaders = ["Column 1", "Column 2", "Column 3", "Column 4", "Column 5", "Column 6"],
             Format = new ResolvedTableFormat
             {
                 WidthPercent = 100d,
