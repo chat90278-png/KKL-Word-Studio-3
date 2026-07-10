@@ -7,9 +7,10 @@ using KKL.WordStudio.Domain.Projects;
 /// <summary>
 /// Reads the project-owned reference DOCX in read-only mode and projects only
 /// the supported Sprint 16 WordprocessingML properties into the frozen
-/// Application format contract. When no usable project reference is available,
-/// the deterministic built-in default profile is returned so all shared format
-/// metadata, including caption format and sequence semantics, stays complete.
+/// Application format contract. Projects with no configured reference receive
+/// the deterministic built-in default profile so shared caption metadata is
+/// complete. Configured missing/unreadable references preserve the Sprint 16
+/// missing-state contract and return a null profile plus an actionable warning.
 /// </summary>
 public sealed class OpenXmlReferenceDocumentFormatProvider : IReferenceDocumentFormatProvider
 {
@@ -36,7 +37,7 @@ public sealed class OpenXmlReferenceDocumentFormatProvider : IReferenceDocumentF
         {
             return Task.FromResult(new ReferenceDocumentFormatResult
             {
-                Profile = DefaultDocumentFormatProfileFactory.Create(),
+                Profile = null,
                 IsMissing = true,
                 StatusMessage = $"Biçim şablonu bulunamadı: {referenceFormat.FileName}. Varsayılan KKL belge biçimi kullanılacak."
             });
@@ -49,7 +50,7 @@ public sealed class OpenXmlReferenceDocumentFormatProvider : IReferenceDocumentF
             {
                 return Task.FromResult(new ReferenceDocumentFormatResult
                 {
-                    Profile = DefaultDocumentFormatProfileFactory.Create(),
+                    Profile = null,
                     IsMissing = true,
                     StatusMessage = $"Biçim şablonu okunamadı: {referenceFormat.FileName}. Varsayılan KKL belge biçimi kullanılacak."
                 });
@@ -71,7 +72,7 @@ public sealed class OpenXmlReferenceDocumentFormatProvider : IReferenceDocumentF
         {
             return Task.FromResult(new ReferenceDocumentFormatResult
             {
-                Profile = DefaultDocumentFormatProfileFactory.Create(),
+                Profile = null,
                 IsMissing = true,
                 StatusMessage = $"Biçim şablonu okunamadı: {referenceFormat.FileName}. Varsayılan KKL belge biçimi kullanılacak."
             });
