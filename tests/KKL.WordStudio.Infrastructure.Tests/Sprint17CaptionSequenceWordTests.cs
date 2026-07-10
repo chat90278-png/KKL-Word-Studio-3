@@ -21,7 +21,7 @@ public sealed class Sprint17CaptionSequenceWordTests
 
         Assert.Contains("SEQ Tablo", field.Instruction!.Value, StringComparison.Ordinal);
         Assert.Contains("ARABIC", field.Instruction.Value, StringComparison.Ordinal);
-        Assert.StartsWith("Tablo ", paragraph.InnerText, StringComparison.Ordinal);
+        Assert.StartsWith("Tablo ", paragraph.InnerText);
         Assert.Contains(": İnsansız Hava Aracı", paragraph.InnerText, StringComparison.Ordinal);
         Assert.DoesNotContain("Tablo 1: Tablo", paragraph.InnerText, StringComparison.Ordinal);
     }
