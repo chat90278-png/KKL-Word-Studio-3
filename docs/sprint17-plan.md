@@ -62,7 +62,7 @@ Foundation gate:
 - Infrastructure tests: 115 passed, 0 failed, 0 skipped.
 - `NETSDK1057` remained informational preview-SDK output and was not a compile failure.
 
-The user subsequently confirmed the P0-C head `86412321b31337628bec8c9e5155ab87fa9d5824` GREEN on Windows. P0-D changes move the branch head again, so the current head must receive a new Windows gate before Sprint 17 is declared GREEN.
+The user subsequently confirmed the P0-C head `86412321b31337628bec8c9e5155ab87fa9d5824` GREEN on Windows. P0-D and P0-E changes move the branch head again, so the current head must receive a new Windows gate before Sprint 17 is declared GREEN.
 
 ## P0-C — True Print Preview
 
@@ -247,30 +247,42 @@ Status: production correction implemented and source-reviewed. Application, Repo
 
 Observed visual defect after the true-print-preview refactor:
 
-- the designer-only text `Tablo başlığı eklemek için çift tıklayın` is correctly outside document flow, but it is currently top-aligned at the table block origin;
-- when the table has no real caption, the final table starts at the same block origin, so the interaction hint overlays the first header row;
-- Word output is unaffected because the placeholder is interaction-only.
+- the designer-only text `Tablo başlığı eklemek için çift tıklayın` was outside document flow but top-aligned at the table block origin;
+- with no real caption, the final table started at the same block origin, so the interaction hint overlaid the first header row;
+- Word output was unaffected because the placeholder was interaction-only.
 
-Target fix:
+Implemented correction:
 
-- keep the empty-caption hint in the interaction/adorner layer;
-- keep zero document-flow height and do not move Engine-owned table geometry;
-- render the hint as a compact designer affordance that does not cover table header text;
-- show it only when the table can be interacted with and the caption is empty;
-- preserve the existing bounded double-click caption-edit gesture;
-- real captions continue to consume resolved caption layout and appear identically in Preview/Word semantic output.
+- the long top-aligned placeholder text was removed from the table interaction layer;
+- `EmptyCaptionHintBadge` is a compact `+ Tablo başlığı` designer affordance;
+- the badge is collapsed by default and becomes visible only for an editable empty-caption table while the table is selected or hovered;
+- the badge is positioned just above the table block with `Margin="4,-18,0,0"`;
+- only `TableBlockHost` locally overrides `ClipToBounds="False"`, while the final table document `StackPanel` remains `ClipToBounds="True"`;
+- the badge remains outside document flow and does not move Engine-owned X/Y/Width/Height or table/header geometry;
+- double-clicking the badge routes through the existing `TableCaption_MouseLeftButtonDown` handler;
+- the existing bounded empty-caption host double-click gesture remains unchanged;
+- Word output remains unaffected.
 
-Status: pending narrow Preview interaction-layer fix and visual smoke.
+Regression guard:
+
+- the long placeholder cannot return as a `TextBlock`;
+- the compact badge must remain in the table interaction segment;
+- empty-caption/editability plus selected/hover visibility conditions are required;
+- the floating negative-margin placement and table-host/final-layer clipping split are source-guarded;
+- the existing caption edit gesture bridge remains source-guarded.
+
+Status: implemented and source-reviewed on the Sprint17 branch. Windows restore/build/test and visual smoke for the current exact head are pending.
 
 ## Remaining Sprint 17 closure gates
 
-1. Implement and smoke P0-E empty-caption hint placement.
-2. Run current exact branch head on Windows: `dotnet restore`, `dotnet build`, `dotnet test` with no deleted/skipped/weakened tests.
-3. Re-run no-reference built-in default-format Preview/Word smoke.
-4. Re-run imported reference-format override smoke.
-5. Confirm P0-E does not alter table X/Y/Width/Height, row spans, caption semantics, or Word output.
-6. Update the PR with final Windows gate evidence and visual-smoke result.
-7. Mark the Sprint 17 PR ready only after the exact current head is GREEN.
+1. Run current exact branch head on Windows: `dotnet restore`, `dotnet build`, `dotnet test` with no deleted/skipped/weakened tests.
+2. Smoke P0-E: with caption empty, the long hint must not cover the first header; the compact `+ Tablo başlığı` badge appears only on table hover/selection and double-click opens caption editing.
+3. Smoke real caption: once a caption is committed, the compact badge disappears and the resolved caption occupies semantic document layout in Preview and Word.
+4. Re-run no-reference built-in default-format Preview/Word smoke.
+5. Re-run imported reference-format override smoke.
+6. Confirm P0-E does not alter table X/Y/Width/Height, grouped row spans, caption semantics, or Word output.
+7. Update the PR with final Windows gate evidence and visual-smoke result.
+8. Mark the Sprint 17 PR ready only after the exact current head is GREEN.
 
 ## Post-Sprint-17 next work
 
