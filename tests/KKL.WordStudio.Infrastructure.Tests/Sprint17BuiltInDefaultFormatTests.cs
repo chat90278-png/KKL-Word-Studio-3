@@ -106,7 +106,7 @@ public sealed class Sprint17BuiltInDefaultFormatTests
     }
 
     [Fact]
-    public async Task MissingProjectReference_PreservesMissingStateAndReturnsDefaultFallbackProfile()
+    public async Task MissingProjectReference_PreservesMissingStateAndNullProfileContract()
     {
         var project = new Project
         {
@@ -120,9 +120,7 @@ public sealed class Sprint17BuiltInDefaultFormatTests
         var result = await new OpenXmlReferenceDocumentFormatProvider().ReadAsync(project);
 
         Assert.True(result.IsMissing);
-        var profile = Assert.IsType<DocumentFormatProfile>(result.Profile);
-        Assert.Equal("Tablo", profile.TableCaptionSequence!.DisplayLabel);
-        Assert.Equal(": ", profile.TableCaptionSequence.Separator);
+        Assert.Null(result.Profile);
         Assert.Contains("Biçim şablonu bulunamadı", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Varsayılan KKL belge biçimi kullanılacak", result.StatusMessage, StringComparison.Ordinal);
     }
