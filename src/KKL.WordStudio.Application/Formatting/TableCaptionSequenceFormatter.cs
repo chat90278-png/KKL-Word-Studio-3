@@ -1,12 +1,33 @@
 namespace KKL.WordStudio.Application.Formatting;
 
 /// <summary>
-/// Shared deterministic presentation rules for a table-caption sequence.
+/// Shared deterministic presentation and sequence-counting rules for table captions.
 /// Word remains authoritative for live SEQ fields; Preview uses the same
-/// descriptive-caption normalization when showing the cached sequence number.
+/// descriptive-caption normalization and document-order number semantics.
 /// </summary>
 public static class TableCaptionSequenceFormatter
 {
+    public static int? ResolveNextSequenceNumber(
+        string? caption,
+        TableCaptionSequenceProfile? sequence,
+        IDictionary<string, int> sequenceCounters)
+    {
+        ArgumentNullException.ThrowIfNull(sequenceCounters);
+
+        if (string.IsNullOrWhiteSpace(caption)
+            || sequence is null
+            || string.IsNullOrWhiteSpace(sequence.SequenceIdentifier))
+        {
+            return null;
+        }
+
+        var identifier = sequence.SequenceIdentifier;
+        sequenceCounters.TryGetValue(identifier, out var current);
+        var next = current + 1;
+        sequenceCounters[identifier] = next;
+        return next;
+    }
+
     public static string BuildDisplayText(
         string caption,
         TableCaptionSequenceProfile? sequence,
