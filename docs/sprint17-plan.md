@@ -10,7 +10,7 @@
 
 ## Sprint goal
 
-Make generated KKL documents use the supported built-in default formatting profile, preserve imported reference-format override semantics, fix sparse trailing Excel columns in automatic ranges, and move Preview toward a true final-document layer with interaction chrome separated from document metrics.
+Make generated KKL documents use the supported built-in default formatting profile, preserve imported reference-format override semantics, fix sparse trailing Excel columns in automatic ranges, separate Preview interaction chrome from final-document metrics, and produce true serial-backed grouped rows from the real project data shape.
 
 ## P0-A — Sparse trailing AutoRange columns
 
@@ -21,7 +21,7 @@ Acceptance:
 - Exact regression sample detects `A3:F13`, not `A3:E13`.
 - Existing header/no-header and non-A start detection behavior is preserved.
 
-Status: implemented and included in the successful Windows foundation gate captured before P0-C changes.
+Status: implemented and included in a successful Windows gate.
 
 ## P0-B — Built-in default generated-document format
 
@@ -47,9 +47,11 @@ Supported built-in baseline:
 - `Tablo` caption sequence.
 - Two six-column default table profiles with fixed layout, unequal widths, 0.5 pt borders, 1.235 mm horizontal cell margins, 10.195 mm preferred row height, repeated header, and vertical centering.
 
-Status: implemented and included in the successful Windows foundation gate captured before P0-C changes.
+Status: implemented and included in a successful Windows gate.
 
-## Foundation Windows gate captured before P0-C
+## Captured Windows gates before P0-D semantic correction
+
+Foundation gate:
 
 - `dotnet restore`: success.
 - `dotnet build`: success, 0 warnings, 0 errors.
@@ -58,13 +60,11 @@ Status: implemented and included in the successful Windows foundation gate captu
 - Engine tests: 55 passed, 0 failed, 0 skipped.
 - Architecture tests: 54 passed, 0 failed, 0 skipped.
 - Infrastructure tests: 115 passed, 0 failed, 0 skipped.
-- `NETSDK1057` remained an informational preview-SDK message and was not a compile failure.
+- `NETSDK1057` remained informational preview-SDK output and was not a compile failure.
 
-P0-C moved the branch head after this gate. The complete branch must be re-run on Windows before Sprint 17 is declared GREEN.
+The user subsequently confirmed the P0-C head `86412321b31337628bec8c9e5155ab87fa9d5824` GREEN on Windows. P0-D changes move the branch head again, so the current head must receive a new Windows gate before Sprint 17 is declared GREEN.
 
 ## P0-C — True Print Preview
-
-Target architecture:
 
 ### Final document layer
 
@@ -99,35 +99,79 @@ Rules:
 
 Implemented:
 
-- positioned block root is now `PageBlockInteractionHost`; it owns gestures and hit testing, not visual selection borders.
-- selection/hover/drop feedback moved to hit-test-free `PageBlockInteractionOverlay` children.
+- positioned block root is `PageBlockInteractionHost`; it owns gestures and hit testing, not visual selection borders.
+- selection/hover/drop feedback is rendered by hit-test-free `PageBlockInteractionOverlay` children.
 - text editors and table-header editors are hosted in `Canvas` overlays so editor desired size does not alter final document flow.
-- table final layer contains only real caption and table visuals at block level; header cell editing remains a zero-measure local Canvas interaction overlay.
-- empty-caption placeholder, table name/continuation badge, and source-error feedback moved out of the table document-flow `StackPanel`.
-- empty-caption double-click editing is preserved by a caption-area-bounded host gesture.
+- table final layer contains real caption and table visuals; block-level designer chrome is outside document flow.
+- empty-caption placeholder, table name/continuation badge, and source-error feedback are outside the table document-flow `StackPanel`.
+- empty-caption double-click editing uses a caption-area-bounded host gesture.
 - Preview table header/body borders use the final-document black border visual while thickness remains resolved from `ResolvedTableFormat.BorderSizePoints`.
-- source-level architecture guards fail if block-level table designer chrome is reintroduced into the final table layer or interaction feedback is moved back into the geometry-owning host.
+- architecture guards protect layer separation and zero-measure interaction overlays.
 - Engine pagination and `PreviewPageProjection` block geometry mapping were not changed.
 
-Independent source diff review:
+Status: implemented, source-reviewed, and user-confirmed GREEN on Windows at P0-C head `86412321b31337628bec8c9e5155ab87fa9d5824`.
 
-- branch remains based on `b273e6a9a43dbd5585c8b4801f2db913421061da` with no behind commits at review time.
-- P0-C changed UI XAML/code-behind, the fragment-local Preview table renderer, architecture guards, and this plan; no Engine pagination or layout-projection source file was changed.
-- block geometry remains supplied by the existing `PreviewPageProjection` path.
+## P0-D — Serial-backed grouped layout correction
 
-Status: implemented and source-reviewed on the Sprint 17 branch; Windows restore/build/test and visual smoke pending for the new head.
+### Observed real-data defect
 
-## P0-D — Serial/Quantity manual smoke
-
-Use the exact sample:
+The real WorkingData shape can contain one physical source row per serial while the `Adet` field is sparse or per-row:
 
 | No | Tr İsim | Parça Numarası | NSN | Seri Numarası | Adet |
 |---|---|---|---|---|---|
 | 1 | elma | 1234 | 45-50-60 | 9999 | 1 |
-| 2 | armut | 56789 | 459-485-5 | 9988 | 2 |
-| 2 | armut | 56789 | 459-485-5 | 9987 | 2 |
+| 2 | armut | 56789 | 459-485-5 | 9987 | 1 |
+|   | armut | 56789 |   | 9988 |   |
 
-Grouping roles:
+The old exact-equality rule resolves the nonblank quantity as `1`, observes two serials, and aggregates them into one cell. That creates `9987\n9988` instead of true grouped rows.
+
+### Accepted quantity source shapes for safe physical serial rows
+
+For a safe same-match-key group with 2+ distinct serials already represented by 2+ physical source rows:
+
+1. Per-group seed quantity plus sparse continuation:
+
+```text
+9987 | 1
+9988 | blank
+```
+
+2. Per-serial unit quantity:
+
+```text
+9987 | 1
+9988 | 1
+```
+
+3. Explicit group total:
+
+```text
+9987 | 2
+9988 | blank
+```
+
+The three shapes above must produce the same semantic result for two distinct serials:
+
+```text
+2 | armut | 56789 | 459-485-5 | 9987 | 2
+  |       |       |           | 9988 |
+```
+
+Rules:
+
+- each distinct serial remains one physical semantic row.
+- Serial column is never vertically merged for this grouping.
+- every non-serial column receives a vertical `TableCellSpan` across the serial rows.
+- canonical `Adet` becomes the distinct serial count when the only explicit quantity value is unit quantity `1` and the serials were observed on multiple physical source rows.
+- repeated unit quantity `1` values are treated as per-serial units and therefore total to the distinct physical serial count.
+- an already-correct explicit total equal to serial count keeps the existing exact grouping path.
+- `Adet 3 + two serials` remains a mismatch: aggregate serial text plus warning, no spans.
+- duplicate serials remain unsafe for grouped layout.
+- multiple serial tokens packed into one source cell with `Adet 1` do not masquerade as multiple physical source rows.
+- conflicting quantity values such as `1` and `2` remain unsafe and preserve original rows.
+- conflicting non-serial product data remains unsafe and preserves original rows.
+
+Grouping roles remain stable `TableColumn.Id` identities:
 
 - MatchKey -> Parça Numarası
 - Serial -> Seri Numarası
@@ -135,16 +179,22 @@ Grouping roles:
 
 Expected Preview:
 
-- two physical serial rows for `9988` / `9987`
-- true rowspan for non-serial cells
-- built-in/imported reference table geometry
+- `9987` and `9988` are two physical rows.
+- No / Tr İsim / Parça Numarası / NSN / Adet are true WPF rowspans.
+- merged `Adet` displays `2`.
+- serial rows retain their individual row geometry/borders.
+- built-in/imported table geometry remains resolved through the shared format path.
 
 Expected Word:
 
-- real `w:vMerge` restart/continue
-- serial column unmerged
-- full table cell count
-- resolved default table properties
+- two data `TableRow` elements for the armut serial group.
+- full `TableCell` count remains present in each row.
+- No / Tr İsim / Parça Numarası / NSN / Adet emit real `w:vMerge restart/continue`.
+- Serial column emits no vertical merge.
+- serial values remain in separate cells as `9987` and `9988`.
+- merged quantity anchor text is `2`.
+
+Status: Application composition correction and focused source-shape regressions implemented; Engine payload and Word integration regression verification next.
 
 ## Gates
 
@@ -153,9 +203,12 @@ Expected Word:
 3. Windows `dotnet build`.
 4. Windows `dotnet test` with no deleted/skipped/weakened tests.
 5. AutoRange exact regression smoke.
-6. Default-format Preview/Word smoke with no imported reference.
+6. Built-in default-format Preview/Word smoke with no imported reference.
 7. Imported reference override smoke.
 8. True Print Preview interaction-overlay visual smoke.
-9. Serial/Quantity Preview and Word smoke.
+9. P0-D real WorkingData sample produces two physical serial rows in shared semantic composition.
+10. P0-D Engine fragment payload contains true non-serial spans and separate serial rows.
+11. P0-D Preview renders true WPF rowspan with serial values on separate rows.
+12. P0-D Word emits real `w:vMerge` restart/continue and keeps serial cells unmerged.
 
-Do not claim Sprint 17 GREEN before the exact Windows command output is captured for the current branch head.
+Do not claim Sprint 17 GREEN before the exact Windows command output is captured for the current branch head and the real Preview/Word smoke matches the P0-D expected structure.
