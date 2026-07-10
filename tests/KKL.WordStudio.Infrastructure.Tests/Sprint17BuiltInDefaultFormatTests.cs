@@ -90,7 +90,23 @@ public sealed class Sprint17BuiltInDefaultFormatTests
     }
 
     [Fact]
-    public async Task MissingProjectReference_PreservesMissingStateAndWarnsAboutDefaultFallback()
+    public async Task NoProjectReference_ReturnsCompleteBuiltInProfileIncludingCaptionMetadata()
+    {
+        var result = await new OpenXmlReferenceDocumentFormatProvider().ReadAsync(new Project());
+
+        Assert.False(result.IsMissing);
+        Assert.Null(result.StatusMessage);
+        var profile = Assert.IsType<DocumentFormatProfile>(result.Profile);
+        Assert.Equal("Arial", profile.TableCaption.FontFamilyName);
+        Assert.Equal(8d, profile.TableCaption.FontSizePoints, 3);
+        Assert.Equal(ParagraphAlignment.Center, profile.TableCaption.Alignment);
+        Assert.Equal("#FF000000", profile.TableCaption.ForegroundColor);
+        Assert.Equal("Tablo", profile.TableCaptionSequence!.DisplayLabel);
+        Assert.Equal(": ", profile.TableCaptionSequence.Separator);
+    }
+
+    [Fact]
+    public async Task MissingProjectReference_PreservesMissingStateAndReturnsDefaultFallbackProfile()
     {
         var project = new Project
         {
@@ -104,7 +120,9 @@ public sealed class Sprint17BuiltInDefaultFormatTests
         var result = await new OpenXmlReferenceDocumentFormatProvider().ReadAsync(project);
 
         Assert.True(result.IsMissing);
-        Assert.Null(result.Profile);
+        var profile = Assert.IsType<DocumentFormatProfile>(result.Profile);
+        Assert.Equal("Tablo", profile.TableCaptionSequence!.DisplayLabel);
+        Assert.Equal(": ", profile.TableCaptionSequence.Separator);
         Assert.Contains("Biçim şablonu bulunamadı", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Varsayılan KKL belge biçimi kullanılacak", result.StatusMessage, StringComparison.Ordinal);
     }
