@@ -6,7 +6,7 @@ using Xunit;
 public sealed class Sprint17TruePrintPreviewArchitectureTests
 {
     [Fact]
-    public void TableFinalDocumentLayer_DoesNotContainDesignerChrome()
+    public void TableFinalDocumentLayer_DoesNotContainBlockLevelDesignerChrome()
     {
         var source = ReadPreviewXaml();
         var finalTableLayer = ExtractSegment(
