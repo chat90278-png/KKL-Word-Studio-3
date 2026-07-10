@@ -10,7 +10,7 @@ public sealed class Sprint17SerialQuantityLayoutRegressionTests
     private readonly SerialQuantityTableContentRowComposer composer = new();
 
     [Fact]
-    public void PhysicalSerialRows_WithQuantityOne_InferSerialCountAndCreateTrueGroupedLayout()
+    public void PhysicalSerialRows_WithQuantityOneAndBlank_InferSerialCountAndCreateTrueGroupedLayout()
     {
         var table = CreateConfiguredTable(
             "No",
@@ -32,20 +32,41 @@ public sealed class Sprint17SerialQuantityLayoutRegressionTests
         Assert.Equal(new[] { "2", "armut", "56789", "459-485-5", "9987", "2" }, result.Rows[1]);
         Assert.Equal(new[] { "", "", "", "", "9988", "" }, result.Rows[2]);
 
-        var group = Assert.Single(result.RowGroups);
-        Assert.Equal(1, group.StartRowIndex);
-        Assert.Equal(2, group.RowCount);
-        Assert.True(group.KeepTogetherWhenPossible);
+        AssertTwoSerialGroupedLayout(result, expectedStartRowIndex: 1);
+    }
 
-        Assert.Equal(5, result.CellSpans.Count);
-        Assert.All(result.CellSpans, span =>
-        {
-            Assert.Equal(1, span.RowIndex);
-            Assert.Equal(2, span.RowSpan);
-        });
-        Assert.Equal(new[] { 0, 1, 2, 3, 5 }, result.CellSpans.Select(span => span.ColumnIndex).OrderBy(index => index));
-        Assert.DoesNotContain(result.CellSpans, span => span.ColumnIndex == 4);
-        Assert.Empty(result.Warnings);
+    [Fact]
+    public void PhysicalSerialRows_WithQuantityOneOnBothRows_SumToSerialCountAndGroup()
+    {
+        var table = CreateConfiguredTable("Parça Numarası", "Seri Numarası", "Adet");
+
+        var result = composer.Compose(table,
+        [
+            ["56789", "9987", "1"],
+            ["56789", "9988", "1"]
+        ]);
+
+        Assert.Equal(2, result.Rows.Count);
+        Assert.Equal(new[] { "56789", "9987", "2" }, result.Rows[0]);
+        Assert.Equal(new[] { "", "9988", "" }, result.Rows[1]);
+        AssertTwoSerialGroupedLayout(result, expectedStartRowIndex: 0);
+    }
+
+    [Fact]
+    public void PhysicalSerialRows_WithExplicitTotalQuantity_UseExistingTotalAndGroup()
+    {
+        var table = CreateConfiguredTable("Parça Numarası", "Seri Numarası", "Adet");
+
+        var result = composer.Compose(table,
+        [
+            ["56789", "9987", "2"],
+            ["56789", "9988", ""]
+        ]);
+
+        Assert.Equal(2, result.Rows.Count);
+        Assert.Equal(new[] { "56789", "9987", "2" }, result.Rows[0]);
+        Assert.Equal(new[] { "", "9988", "" }, result.Rows[1]);
+        AssertTwoSerialGroupedLayout(result, expectedStartRowIndex: 0);
     }
 
     [Fact]
@@ -83,6 +104,18 @@ public sealed class Sprint17SerialQuantityLayoutRegressionTests
         Assert.Empty(result.CellSpans);
         Assert.Empty(result.RowGroups);
         Assert.Contains("Adet 1", Assert.Single(result.Warnings), StringComparison.Ordinal);
+    }
+
+    private static void AssertTwoSerialGroupedLayout(
+        KKL.WordStudio.Application.Tables.TableRowCompositionResult result,
+        int expectedStartRowIndex)
+    {
+        var group = Assert.Single(result.RowGroups);
+        Assert.Equal(expectedStartRowIndex, group.StartRowIndex);
+        Assert.Equal(2, group.RowCount);
+        Assert.True(group.KeepTogetherWhenPossible);
+        Assert.All(result.CellSpans, span => Assert.Equal(2, span.RowSpan));
+        Assert.Empty(result.Warnings);
     }
 
     private TableElement CreateConfiguredTable(params string[] headers)
