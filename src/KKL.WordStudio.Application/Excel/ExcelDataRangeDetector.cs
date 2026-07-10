@@ -38,7 +38,7 @@ public sealed class ExcelDataRangeDetector : IExcelDataRangeDetector
         var dataStartIndex = hasHeader ? startIndex + 1 : startIndex;
         var dataStart = rows[dataStartIndex];
         var block = BuildPreviewBlock(rows, dataStartIndex);
-        var (startColumn, endColumn) = ResolveActiveColumns(block);
+        var (startColumn, endColumn) = ResolveActiveColumns(block, hasHeader ? current : null);
 
         var strongContinuation = block.Count >= 2
             && block.Zip(block.Skip(1), (left, right) => AreAdjacent(left, right) && ColumnOverlap(left, right) >= StrongOverlap)
@@ -105,7 +105,9 @@ public sealed class ExcelDataRangeDetector : IExcelDataRangeDetector
         return block;
     }
 
-    private static (int StartColumn, int EndColumn) ResolveActiveColumns(IReadOnlyList<RowProfile> block)
+    private static (int StartColumn, int EndColumn) ResolveActiveColumns(
+        IReadOnlyList<RowProfile> block,
+        RowProfile? header)
     {
         var occupancy = new Dictionary<int, int>();
         foreach (var row in block)
@@ -117,7 +119,23 @@ public sealed class ExcelDataRangeDetector : IExcelDataRangeDetector
         if (active.Count == 0)
             active = block.SelectMany(row => row.OccupiedColumns).Distinct().OrderBy(value => value).ToList();
 
-        return (active[0], active[^1]);
+        var startColumn = active[0];
+        var endColumn = active[^1];
+
+        if (header is not null)
+        {
+            var dataOccupiedColumns = block
+                .SelectMany(row => row.OccupiedColumns)
+                .ToHashSet();
+
+            while (header.OccupiedColumns.Contains(endColumn + 1)
+                && dataOccupiedColumns.Contains(endColumn + 1))
+            {
+                endColumn++;
+            }
+        }
+
+        return (startColumn, endColumn);
     }
 
     private static RowProfile AnalyzeRow(int rowNumber, IReadOnlyList<string> cells)
