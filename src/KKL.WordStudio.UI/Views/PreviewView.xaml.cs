@@ -55,6 +55,19 @@ public partial class PreviewView : UserControl
             return;
         }
 
+        if (e.ClickCount == 2
+            && block is PreviewTablePageBlockViewModel tableBlock
+            && tableBlock.CanEditCaption
+            && tableBlock.ShowCaptionArea
+            && !tableBlock.HasCaption
+            && e.GetPosition(host).Y <= Math.Max(24d, tableBlock.CaptionLineHeight))
+        {
+            _dragSourceElementId = null;
+            _viewModel.BeginTableCaptionEdit(tableBlock);
+            e.Handled = true;
+            return;
+        }
+
         _viewModel.SelectBlock(block);
         _dragStartPoint = e.GetPosition(this);
         _dragSourceElementId = block.CanStructureInteract ? elementId : null;
