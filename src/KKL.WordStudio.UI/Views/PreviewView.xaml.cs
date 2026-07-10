@@ -38,12 +38,12 @@ public partial class PreviewView : UserControl
 
     private void PageBlock_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not Border { DataContext: PreviewPageBlockViewModel block } border)
+        if (sender is not FrameworkElement { DataContext: PreviewPageBlockViewModel block } host)
             return;
         if (FindAncestor<TextBox>(e.OriginalSource as DependencyObject) is not null)
             return;
 
-        border.Focus();
+        host.Focus();
         if (!block.CanInteract || block.ElementId is not { } elementId)
             return;
 
@@ -90,14 +90,14 @@ public partial class PreviewView : UserControl
 
     private void PageBlock_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not Border { DataContext: PreviewPageBlockViewModel block } border || !block.CanStructureInteract)
+        if (sender is not FrameworkElement { DataContext: PreviewPageBlockViewModel block } host || !block.CanStructureInteract)
             return;
 
         _viewModel.SelectBlock(block);
         var deleteItem = new MenuItem { Header = "Sil" };
         deleteItem.Click += (_, _) => _viewModel.DeletePreviewElement(block);
 
-        var menu = new ContextMenu { PlacementTarget = border };
+        var menu = new ContextMenu { PlacementTarget = host };
         menu.Items.Add(deleteItem);
         menu.IsOpen = true;
         e.Handled = true;
