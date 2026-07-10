@@ -102,6 +102,7 @@ public sealed class TablePageBlockPayload : PageBlockPayload
     public IReadOnlyList<TableCellSpan> CellSpans { get; init; } = Array.Empty<TableCellSpan>();
     public ResolvedTableFormat Format { get; init; } = DefaultFormatProfiles.Table;
     public ResolvedTextFormat? CaptionFormat { get; init; }
+    public TableCaptionSequenceProfile? CaptionSequence { get; init; }
     public required int StartRowIndex { get; init; }
     public required bool HasHeader { get; init; }
     public required bool IsHeaderRepeated { get; init; }
