@@ -234,21 +234,52 @@ Word pipeline:
 - `9987` and `9988` remain separate serial cells.
 - merged quantity anchor text is `2`.
 
-Status: production correction implemented and source-reviewed. Application, ReportContentBuilder, Engine payload, and Word OpenXML regression coverage is present. Current-head Windows `restore/build/test` and the real Preview/Word visual smoke remain pending.
+Visual smoke captured from the real project data:
 
-## Gates
+- Preview shows `9988` and `9987` on separate physical rows.
+- No / Tr İsim / Parça Numarası / NSN / Adet render as one merged visual group.
+- merged `Adet` displays `2`.
+- generated Word output shows the same grouped visual structure with separate serial cells.
 
-1. Independent branch source diff review.
-2. Windows `dotnet restore`.
-3. Windows `dotnet build`.
-4. Windows `dotnet test` with no deleted/skipped/weakened tests.
-5. AutoRange exact regression smoke.
-6. Built-in default-format Preview/Word smoke with no imported reference.
-7. Imported reference override smoke.
-8. True Print Preview interaction-overlay visual smoke.
-9. P0-D real WorkingData sample produces two physical serial rows in shared semantic composition.
-10. P0-D Engine fragment payload contains true non-serial spans and separate serial rows.
-11. P0-D Preview renders true WPF rowspan with serial values on separate rows.
-12. P0-D Word emits real `w:vMerge` restart/continue and keeps serial cells unmerged.
+Status: production correction implemented and source-reviewed. Application, ReportContentBuilder, Engine payload, and Word OpenXML regression coverage is present. Real Preview and Word grouped-layout visual smoke passed. Current-head Windows `restore/build/test` remains required.
 
-Do not claim Sprint 17 GREEN before the exact Windows command output is captured for the current branch head and the real Preview/Word smoke matches the P0-D expected structure.
+## P0-E — Empty-caption interaction hint placement
+
+Observed visual defect after the true-print-preview refactor:
+
+- the designer-only text `Tablo başlığı eklemek için çift tıklayın` is correctly outside document flow, but it is currently top-aligned at the table block origin;
+- when the table has no real caption, the final table starts at the same block origin, so the interaction hint overlays the first header row;
+- Word output is unaffected because the placeholder is interaction-only.
+
+Target fix:
+
+- keep the empty-caption hint in the interaction/adorner layer;
+- keep zero document-flow height and do not move Engine-owned table geometry;
+- render the hint as a compact designer affordance that does not cover table header text;
+- show it only when the table can be interacted with and the caption is empty;
+- preserve the existing bounded double-click caption-edit gesture;
+- real captions continue to consume resolved caption layout and appear identically in Preview/Word semantic output.
+
+Status: pending narrow Preview interaction-layer fix and visual smoke.
+
+## Remaining Sprint 17 closure gates
+
+1. Implement and smoke P0-E empty-caption hint placement.
+2. Run current exact branch head on Windows: `dotnet restore`, `dotnet build`, `dotnet test` with no deleted/skipped/weakened tests.
+3. Re-run no-reference built-in default-format Preview/Word smoke.
+4. Re-run imported reference-format override smoke.
+5. Confirm P0-E does not alter table X/Y/Width/Height, row spans, caption semantics, or Word output.
+6. Update the PR with final Windows gate evidence and visual-smoke result.
+7. Mark the Sprint 17 PR ready only after the exact current head is GREEN.
+
+## Post-Sprint-17 next work
+
+After Sprint 17 is closed, the next planned tranche should focus on product-level document authoring rather than more serial heuristics:
+
+- caption/title editing polish and clear empty/non-empty states;
+- table-level format selection UX for the two built-in table profiles and imported reference profiles;
+- richer report structure editing and element property editing without leaking designer chrome into document metrics;
+- pagination/continuation visual QA with long tables, repeated headers, and groups near page boundaries;
+- broader generated-DOCX fidelity fixtures for headings, captions, tables, margins, and page continuation.
+
+Do not claim Sprint 17 GREEN before the exact Windows command output is captured for the current branch head and P0-E visual smoke is complete.
