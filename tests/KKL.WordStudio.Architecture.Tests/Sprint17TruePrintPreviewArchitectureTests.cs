@@ -1,0 +1,99 @@
+namespace KKL.WordStudio.Architecture.Tests;
+
+using System.Text.RegularExpressions;
+using Xunit;
+
+public sealed class Sprint17TruePrintPreviewArchitectureTests
+{
+    [Fact]
+    public void TableFinalDocumentLayer_DoesNotContainDesignerChrome()
+    {
+        var source = ReadPreviewXaml();
+        var finalTableLayer = ExtractSegment(
+            source,
+            "<!-- Final document layer: table -->",
+            "<!-- Interaction layer: table -->");
+
+        Assert.Contains("CaptionRuns", finalTableLayer, StringComparison.Ordinal);
+        Assert.Contains("PreviewTableGridControl", finalTableLayer, StringComparison.Ordinal);
+        Assert.DoesNotContain("Tablo başlığı eklemek", finalTableLayer, StringComparison.Ordinal);
+        Assert.DoesNotContain("ContinuationText", finalTableLayer, StringComparison.Ordinal);
+        Assert.DoesNotContain("SourceError", finalTableLayer, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding Name}\"", finalTableLayer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InteractionFeedback_IsAHitTestFreeOverlayAndEditorsDoNotMeasureDocumentFlow()
+    {
+        var source = ReadPreviewXaml();
+        var hostStyle = ExtractSegment(
+            source,
+            "<Style x:Key=\"PageBlockInteractionHost\"",
+            "<Style x:Key=\"PageBlockInteractionOverlay\"");
+        var overlayStyle = ExtractSegment(
+            source,
+            "<Style x:Key=\"PageBlockInteractionOverlay\"",
+            "<Style x:Key=\"PageBlockDesignerBadge\"");
+
+        Assert.DoesNotContain("BorderThickness", hostStyle, StringComparison.Ordinal);
+        Assert.DoesNotContain("BorderBrush", hostStyle, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"IsHitTestVisible\" Value=\"False\" />", overlayStyle, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"BorderThickness\" Value=\"0\" />", overlayStyle, StringComparison.Ordinal);
+        Assert.DoesNotContain("PageBlockContainer", source, StringComparison.Ordinal);
+
+        Assert.Matches(
+            new Regex(
+                @"<!-- Interaction layer: text -->[\s\S]*?<Canvas>[\s\S]*?<TextBox",
+                RegexOptions.CultureInvariant),
+            source);
+        Assert.Matches(
+            new Regex(
+                @"<!-- Interaction layer: table header cell -->[\s\S]*?<Canvas>[\s\S]*?<TextBox",
+                RegexOptions.CultureInvariant),
+            source);
+    }
+
+    [Fact]
+    public void EmptyCaptionOverlay_PreservesCaptionEditGestureWithoutPuttingPlaceholderInFlow()
+    {
+        var xaml = ReadPreviewXaml();
+        var codeBehindPath = Path.Combine(
+            SolutionRootLocator.Find(),
+            "src",
+            "KKL.WordStudio.UI",
+            "Views",
+            "PreviewView.xaml.cs");
+        var codeBehind = File.ReadAllText(codeBehindPath);
+
+        var finalTableLayer = ExtractSegment(
+            xaml,
+            "<!-- Final document layer: table -->",
+            "<!-- Interaction layer: table -->");
+
+        Assert.DoesNotContain("Tablo başlığı eklemek", finalTableLayer, StringComparison.Ordinal);
+        Assert.Contains("tableBlock.ShowCaptionArea", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("!tableBlock.HasCaption", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("tableBlock.CanEditCaption", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("BeginTableCaptionEdit(tableBlock)", codeBehind, StringComparison.Ordinal);
+    }
+
+    private static string ReadPreviewXaml()
+    {
+        var path = Path.Combine(
+            SolutionRootLocator.Find(),
+            "src",
+            "KKL.WordStudio.UI",
+            "Views",
+            "PreviewView.xaml");
+        return File.ReadAllText(path);
+    }
+
+    private static string ExtractSegment(string source, string startMarker, string endMarker)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        Assert.True(start >= 0, $"Source marker not found: {startMarker}");
+        var end = source.IndexOf(endMarker, start + startMarker.Length, StringComparison.Ordinal);
+        Assert.True(end > start, $"Source end marker not found after {startMarker}: {endMarker}");
+        return source[start..end];
+    }
+}
