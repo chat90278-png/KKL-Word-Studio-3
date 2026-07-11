@@ -86,7 +86,7 @@ public sealed class Sprint20DiagnosticsArchitectureTests
     public void DiagnosticFactory_PreservesMessageAndAttachesKeyAndSourceMetadata()
     {
         var root = SolutionRootLocator.Find();
-        var factory = Read(root, "src", "KKL.WordStudio.UI", "Preview", "PreviewDiagnosticFactory.cs");
+        var factory = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnosticFactory.cs");
         var contract = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnostic.cs");
 
         Assert.Contains("tableNode.CompositionWarnings", factory, StringComparison.Ordinal);
