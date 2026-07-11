@@ -1,7 +1,9 @@
 namespace KKL.WordStudio.UI.Views;
 
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
 using KKL.WordStudio.UI.ViewModels;
@@ -9,6 +11,7 @@ using KKL.WordStudio.UI.ViewModels;
 public partial class PreviewView
 {
     private bool _diagnosticNavigationAttached;
+    private TextBlock? _surfaceStatusTextBlock;
 
     protected override void OnInitialized(EventArgs e)
     {
@@ -23,6 +26,13 @@ public partial class PreviewView
             return;
 
         _viewModel.NavigateToElementRequested += ViewModel_NavigateToElementRequested;
+        _viewModel.PropertyChanged += ViewModel_DiagnosticsPropertyChanged;
+        _surfaceStatusTextBlock = FindVisualDescendants<TextBlock>(this)
+            .FirstOrDefault(textBlock => string.Equals(
+                BindingOperations.GetBinding(textBlock, TextBlock.TextProperty)?.Path?.Path,
+                nameof(PreviewViewModel.SurfaceStatusText),
+                StringComparison.Ordinal));
+        UpdateSurfaceStatusVisibility();
         _diagnosticNavigationAttached = true;
     }
 
@@ -32,7 +42,27 @@ public partial class PreviewView
             return;
 
         _viewModel.NavigateToElementRequested -= ViewModel_NavigateToElementRequested;
+        _viewModel.PropertyChanged -= ViewModel_DiagnosticsPropertyChanged;
+        _surfaceStatusTextBlock = null;
         _diagnosticNavigationAttached = false;
+    }
+
+    private void ViewModel_DiagnosticsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PreviewViewModel.SurfaceStatusText))
+            UpdateSurfaceStatusVisibility();
+    }
+
+    private void UpdateSurfaceStatusVisibility()
+    {
+        if (_surfaceStatusTextBlock is null)
+            return;
+
+        _surfaceStatusTextBlock.Visibility = _viewModel.SurfaceStatusText.StartsWith(
+            "Önizleme uyarısı:",
+            StringComparison.Ordinal)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
     }
 
     private void ViewModel_NavigateToElementRequested(Guid elementId)
