@@ -12,7 +12,7 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         var finalTableLayer = ExtractSegment(
             source,
             "<!-- Final document layer: table -->",
-            "<!-- Interaction layer: table -->");
+            "<!-- Interaction layer: table");
 
         Assert.Contains("CaptionRuns", finalTableLayer, StringComparison.Ordinal);
         Assert.Contains("PreviewTableGridControl", finalTableLayer, StringComparison.Ordinal);
@@ -33,7 +33,7 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         var overlayStyle = ExtractSegment(
             source,
             "<Style x:Key=\"PageBlockInteractionOverlay\"",
-            "<Style x:Key=\"PageBlockDesignerBadge\"");
+            "<DataTemplate DataType=\"{x:Type vm:PreviewTextPageBlockViewModel}\"");
 
         Assert.DoesNotContain("BorderThickness", hostStyle, StringComparison.Ordinal);
         Assert.DoesNotContain("BorderBrush", hostStyle, StringComparison.Ordinal);
@@ -68,7 +68,7 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         var finalTableLayer = ExtractSegment(
             xaml,
             "<!-- Final document layer: table -->",
-            "<!-- Interaction layer: table -->");
+            "<!-- Interaction layer: table");
 
         Assert.DoesNotContain("Tablo başlığı eklemek", finalTableLayer, StringComparison.Ordinal);
         Assert.Contains("tableBlock.ShowCaptionArea", codeBehind, StringComparison.Ordinal);
@@ -78,13 +78,9 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
     }
 
     [Fact]
-    public void EmptyCaptionHint_IsCompactPopupAdornerAndNeverHeaderFlowText()
+    public void TableDesignerChrome_DoesNotUseFloatingPopupOrCoverDocumentCells()
     {
         var xaml = ReadPreviewXaml();
-        var popupStyle = ExtractSegment(
-            xaml,
-            "<Style x:Key=\"EmptyCaptionHintPopup\"",
-            "<DataTemplate DataType=\"{x:Type vm:PreviewTextPageBlockViewModel}\"");
         var tableTemplate = ExtractSegment(
             xaml,
             "<DataTemplate DataType=\"{x:Type vm:PreviewTablePageBlockViewModel}\"",
@@ -92,27 +88,14 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         var finalTableLayer = ExtractSegment(
             tableTemplate,
             "<!-- Final document layer: table -->",
-            "<!-- Interaction layer: table -->");
-        var tableInteractionLayer = ExtractSegment(
-            tableTemplate,
-            "<!-- Interaction layer: table -->",
-            "</DataTemplate>");
+            "<!-- Interaction layer: table");
 
-        Assert.Contains("TargetType=\"Popup\"", popupStyle, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"IsOpen\" Value=\"False\" />", popupStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding ShowCaptionArea", popupStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding HasCaption", popupStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding CanEditCaption", popupStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding IsSelected", popupStyle, StringComparison.Ordinal);
-        Assert.Contains("Binding IsMouseOver, ElementName=TableBlockHost", popupStyle, StringComparison.Ordinal);
-
-        Assert.Contains("<Popup Style=\"{StaticResource EmptyCaptionHintPopup}\"", tableInteractionLayer, StringComparison.Ordinal);
-        Assert.Contains("PlacementTarget=\"{Binding ElementName=TableBlockHost}\"", tableInteractionLayer, StringComparison.Ordinal);
-        Assert.Contains("DataContext=\"{Binding DataContext, ElementName=TableBlockHost}\"", tableInteractionLayer, StringComparison.Ordinal);
-        Assert.Contains("ToolTip=\"Tablo başlığı eklemek için çift tıklayın\"", tableInteractionLayer, StringComparison.Ordinal);
-        Assert.Contains("MouseLeftButtonDown=\"TableCaption_MouseLeftButtonDown\"", tableInteractionLayer, StringComparison.Ordinal);
-        Assert.Contains("Text=\"+ Tablo başlığı\"", tableInteractionLayer, StringComparison.Ordinal);
-        Assert.DoesNotContain("<TextBlock Text=\"Tablo başlığı eklemek için çift tıklayın\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("TargetType=\"Popup\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Popup", tableTemplate, StringComparison.Ordinal);
+        Assert.DoesNotContain("+ Tablo başlığı", tableTemplate, StringComparison.Ordinal);
+        Assert.DoesNotContain("PageBlockDesignerBadge", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ContinuationText", tableTemplate, StringComparison.Ordinal);
+        Assert.Contains("bounded host double-click gesture", tableTemplate, StringComparison.Ordinal);
         Assert.Contains("<StackPanel ClipToBounds=\"True\">", finalTableLayer, StringComparison.Ordinal);
         Assert.DoesNotContain("ClipToBounds=\"False\"", tableTemplate, StringComparison.Ordinal);
     }
