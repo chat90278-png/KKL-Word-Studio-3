@@ -65,8 +65,10 @@ public sealed class ReferenceReportContentFormatResolver : IReportContentFormatR
 
         var effectiveProfile = profile ?? DefaultDocumentFormatProfileFactory.Create();
         var selected = TableFormatProfileSelector.Select(effectiveProfile, table);
+        if (selected is null)
+            return compatibilityResolver.ResolveTable(null, table);
 
-        return selected?.Format ?? compatibilityResolver.ResolveTable(null, table);
+        return AutomaticTableFormatWidthAdapter.Adapt(selected, table);
     }
 
     public PageLayout ResolvePageLayout(
