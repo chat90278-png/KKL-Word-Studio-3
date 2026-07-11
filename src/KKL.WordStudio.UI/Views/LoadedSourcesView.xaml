@@ -29,7 +29,7 @@
                     <DataTemplate>
                         <DockPanel LastChildFill="True" ToolTip="{Binding FilePath}">
                             <TextBlock DockPanel.Dock="Right"
-                                       Text="{Binding SheetNames.Count, StringFormat={}  {0} sayfa}"
+                                       Text="{Binding SheetNames.Count, StringFormat='{}{0} sayfa'}"
                                        FontSize="10"
                                        Foreground="{DynamicResource Brush.Text.Secondary}"
                                        Margin="10,0,0,0"
