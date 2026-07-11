@@ -17,7 +17,6 @@ public sealed class PreviewSnapshot
     public required IReadOnlyList<TocEntry> TableOfContents { get; init; }
     public required PageLayout PageLayout { get; init; }
     public required DocumentLayoutResult Layout { get; init; }
-    public IReadOnlyList<PreviewDiagnostic> Diagnostics { get; init; } = Array.Empty<PreviewDiagnostic>();
 }
 
 /// <summary>
