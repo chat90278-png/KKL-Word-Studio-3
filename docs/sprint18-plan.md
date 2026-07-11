@@ -16,11 +16,11 @@ Turn the stabilized generated-document path into a clearer authoring experience 
 
 ## P0-A — Effective table-format selection UX
 
-Current state at the Sprint 18 baseline:
+Baseline gap:
 
-- `TableElement.ReferenceTableFormatKey` persists an optional explicit profile key.
-- the Properties panel already exposes `TableFormatOptions`.
-- null key displayed only `Varsayılan`, while the production resolver actually selected the first compatible profile by table column count and then fell back to the first profile.
+- `TableElement.ReferenceTableFormatKey` already persisted an optional explicit profile key.
+- the Properties panel already exposed `TableFormatOptions`.
+- null key displayed only `Varsayılan`, while the production resolver selected the first compatible profile by table column count and then fell back to the first profile.
 - with multiple compatible profiles, the user could not see which profile was effectively active.
 
 Implemented:
@@ -46,7 +46,7 @@ Status: implemented and source-reviewed. Current-head Windows and UI smoke pendi
 
 ## P0-B — Multi-page table pagination and continuation fidelity
 
-A deterministic A4 70-row fixture now exercises at least three generated pages with:
+A deterministic A4 70-row fixture exercises at least three generated pages with:
 
 - a real numbered table caption;
 - repeated headers;
@@ -77,51 +77,111 @@ The Sprint 18 integrated Engine regression verifies:
 
 Status: integrated regression implemented. No P0-B production paginator rewrite was required by source triage. Current-head Windows gate pending.
 
-## P0-C — Heading/caption keep-with-next boundary QA
+## P0-C — Heading/caption keep-with-next boundary fidelity
 
-Source triage identified a real measurement gap before implementation:
+Observed gap:
 
 - actual table fragment layout measures the visible numbered caption text through `TableCaptionSequenceFormatter.BuildDisplayText`;
-- heading `KeepWithNext` minimum-height estimation currently passes raw `TableContentNode.Caption` to `DeterministicTablePaginator.EstimateMinimumFragmentHeight`;
-- therefore a long caption near a wrapping boundary can be underestimated because the visible `Tablo n: ` prefix is omitted during the keep-with-next decision.
+- heading `KeepWithNext` minimum-height estimation measured raw `TableContentNode.Caption`;
+- a long caption near a wrapping boundary could therefore be underestimated because the visible `Tablo n: ` prefix was omitted during the keep-with-next decision.
 
-Planned correction:
+Implemented:
 
-- preserve the existing Engine-owned keep-with-next decision path;
-- peek the next semantic caption sequence number without consuming the counter;
-- measure the same visible numbered caption text used by actual fragment layout;
-- keep blank-caption and per-identifier counter behavior unchanged;
-- add a focused boundary regression before changing broader pagination behavior.
+- `TableCaptionSequenceFormatter.PeekNextSequenceNumber` returns the next per-identifier sequence number without mutating the counter.
+- `ResolveNextSequenceNumber` reuses the same shared next-number rule and remains the only consuming path.
+- `GeneratedDocumentPaginator` passes the current caption counter state into heading keep-with-next estimation.
+- when the following node is a table, the estimator builds the same visible numbered caption text used by actual table fragment layout.
+- actual table layout consumes the caption number only when the table node is laid out.
+- blank captions and per-`SequenceIdentifier` counter semantics remain unchanged.
+- WPF and Word production paths were not changed by P0-C.
 
-Acceptance:
+Regression coverage:
 
-- resolved `KeepWithNext` semantics remain honored by Engine.
-- Preview and generated Word do not leave an isolated heading/caption at the bottom of a page when the following content can be moved as a unit.
-- long caption minimum-fragment measurement uses the same visible numbered caption text rendered in Preview.
-- Word keeps real caption SEQ fields.
+- sequence peek returns the next number without consuming it;
+- blank caption peek does not create or advance a counter;
+- a deterministic wrap-boundary fixture finds a heading/table page boundary using the fully visible caption text;
+- the automatic sequence version must produce the same page placement as the equivalent visible caption while preserving raw authored caption text and structured sequence metadata.
 
-Status: root cause source-triaged; implementation intentionally deferred until the first P0-A/P0-B Windows gate so failure attribution remains narrow.
+Status: implemented and source-reviewed. Current-head Windows gate pending.
 
-## P0-D — Canonical generated-DOCX fidelity fixture
+## P0-D — Canonical product-pipeline generated DOCX fidelity fixture
 
-Add one deterministic generated-document fixture/test path covering:
+Implemented one deterministic Infrastructure regression that starts from real Domain authoring objects and executes:
 
-- A4 page geometry and margins;
-- primary/secondary headings;
-- body text;
-- automatic numbered table caption;
-- six-column unequal widths;
-- fixed table layout;
-- borders and cell margins;
-- repeated header;
-- serial/quantity vertical merge semantics;
-- continuation across multiple pages where applicable.
+```text
+Project / Report / Page / Section / ReportElement tree
+        ↓
+ReportContentBuilder
+        ↓
+SerialQuantityTableContentRowComposer
+        ↓
+OpenXmlReferenceDocumentFormatProvider
+        ↓
+ReferenceReportContentFormatResolver
+        ↓
+WordExporter
+        ↓
+Generated DOCX reopened with WordprocessingDocument
+```
 
-The fixture is generated by the product pipeline. Do not replace it with a hand-authored DOCX that bypasses `ReportContentBuilder` or the Word writers.
+The canonical report contains:
+
+- primary heading;
+- secondary heading;
+- body paragraph;
+- automatic numbered caption;
+- six-column 70-row table;
+- explicit stable Serial/Quantity grouping role IDs;
+- a two-serial product at semantic rows 21/22.
+
+The test first validates the real `ReportContentBuilder` semantic table:
+
+- 70 projected semantic rows;
+- `SER-A` / `SER-B` remain separate rows;
+- canonical merged quantity is `2` on the first row and blank on the continuation row;
+- five non-serial spans exist;
+- no Serial-column span exists;
+- the row group keeps the two serial rows together when possible.
+
+The same Project/Report is then exported through the real `WordExporter` and the generated package is reopened. OpenXML assertions cover:
+
+- built-in A4 portrait page size;
+- page margins plus header/footer distances;
+- Heading 1 / Heading 2 paragraph styles;
+- Arial 12 primary and secondary heading formatting, primary italic and both keep-next;
+- reference secondary-heading indent;
+- Arial 10 body text;
+- real `SEQ Tablo \\* ARABIC` caption field with cached result `1`;
+- `Tablo 1: ...` initial caption text;
+- centered Arial 8 bold caption with keep-next;
+- 100% table width and fixed layout;
+- six unequal grid widths from the first built-in table profile;
+- 0.5 pt borders;
+- resolved left/right cell margins;
+- repeated Word table header;
+- resolved preferred row height;
+- `w:vMerge restart/continue` on columns 0, 1, 2, 3 and 5 for the grouped product;
+- no vertical merge on the Serial column;
+- separate `SER-A` / `SER-B` cell text and canonical merged quantity `2`.
+
+Word itself remains responsible for physical page breaking inside a long Word table. Engine multi-page fragment fidelity is covered independently by P0-B; the DOCX fixture does not invent explicit Word page fragments.
+
+Status: canonical product-pipeline fixture implemented and source-reviewed. Current-head Windows gate pending.
+
+## Captured non-Sprint-18 Windows output — not closure evidence
+
+The user supplied successful Windows `restore/build/test` output on 2026-07-11, but the command prompt path was:
+
+```text
+C:\Users\PC_4461\Desktop\KKL-Word-Studio-3-main>
+```
+
+The output also showed Sprint 17 baseline counts (`Application 185`, `Engine 58`). It therefore validates the merged `main` baseline, not the Sprint 18 branch. It must not be used to mark P0-A/P0-B/P0-C/P0-D GREEN.
 
 ## Closure gates
 
-1. Exact current-head Windows:
+1. Exact current-head Windows on `sprint18/document-authoring-fidelity`:
+   - `git rev-parse HEAD`
    - `dotnet restore`
    - `dotnet build`
    - `dotnet test`
@@ -130,7 +190,7 @@ The fixture is generated by the product pipeline. Do not replace it with a hand-
    - automatic option names the effective profile;
    - explicit profile selection changes Preview and Word consistently;
    - returning to automatic does not persist a resolved key.
-3. Three-page Preview smoke:
+3. Three-page Preview smoke with enough real rows:
    - repeated headers;
    - caption first fragment only;
    - grouped serial rows survive page boundaries.
