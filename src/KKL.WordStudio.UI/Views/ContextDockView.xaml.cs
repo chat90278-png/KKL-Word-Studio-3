@@ -9,6 +9,7 @@ public partial class ContextDockView : UserControl
         DockViewModel dockViewModel,
         ContentsView contentsView,
         PropertiesView propertiesView,
+        WarningCenterView warningCenterView,
         ChangeBindingView changeBindingView)
     {
         InitializeComponent();
@@ -16,6 +17,7 @@ public partial class ContextDockView : UserControl
 
         ContentsHost.Content = contentsView;
         PropertiesHost.Content = propertiesView;
+        WarningsHost.Content = warningCenterView;
         ChangeBindingHost.Content = changeBindingView;
     }
 }
