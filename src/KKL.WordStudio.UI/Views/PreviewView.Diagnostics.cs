@@ -13,9 +13,15 @@ public partial class PreviewView
     private bool _diagnosticNavigationAttached;
     private TextBlock? _surfaceStatusTextBlock;
 
-    protected override void OnInitialized(EventArgs e)
+    public override void OnApplyTemplate()
     {
-        base.OnInitialized(e);
+        base.OnApplyTemplate();
+
+        // PreviewView already has another partial lifecycle implementation.
+        // Use template application only to attach the Loaded/Unloaded pair and
+        // remove first so repeated template application cannot duplicate hooks.
+        Loaded -= PreviewView_DiagnosticsLoaded;
+        Unloaded -= PreviewView_DiagnosticsUnloaded;
         Loaded += PreviewView_DiagnosticsLoaded;
         Unloaded += PreviewView_DiagnosticsUnloaded;
     }
