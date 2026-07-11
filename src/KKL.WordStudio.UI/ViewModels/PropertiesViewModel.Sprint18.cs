@@ -27,7 +27,15 @@ public sealed partial class PropertiesViewModel
         }
     }
 
-    partial void OnTableFormatStatusTextChanged(string value)
+    partial void OnTableFormatStatusTextChanged(string value) =>
+        NotifyEffectiveTableFormatProjectionChanged();
+
+    partial void OnSelectedTableFormatOptionChanged(
+        TableFormatOptionViewModel? oldValue,
+        TableFormatOptionViewModel? newValue) =>
+        NotifyEffectiveTableFormatProjectionChanged();
+
+    private void NotifyEffectiveTableFormatProjectionChanged()
     {
         OnPropertyChanged(nameof(AutomaticTableFormatDisplayName));
         OnPropertyChanged(nameof(EffectiveTableFormatStatusText));
