@@ -99,8 +99,9 @@ Regression coverage:
 
 - sequence peek returns the next number without consuming it;
 - blank caption peek does not create or advance a counter;
-- a deterministic wrap-boundary fixture finds a heading/table page boundary using the fully visible caption text;
-- the automatic sequence version must produce the same page placement as the equivalent visible caption while preserving raw authored caption text and structured sequence metadata.
+- the Engine fixture dynamically finds a deterministic boundary where raw-caption estimation leaves the heading on page 1 while the table starts page 2;
+- the equivalent fully visible `Tablo 1: ...` caption moves both heading and table to page 2;
+- the automatic-sequence version must match the fully visible caption placement while preserving raw authored caption text and structured sequence metadata.
 
 Status: implemented and source-reviewed. Current-head Windows gate pending.
 
