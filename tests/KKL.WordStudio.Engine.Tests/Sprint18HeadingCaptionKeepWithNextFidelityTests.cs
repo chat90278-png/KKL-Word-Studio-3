@@ -17,17 +17,29 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
         var visibleCaption = TableCaptionSequenceFormatter.BuildDisplayText(description, sequence, 1);
         var ids = new FixtureIds(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
-        var boundaryWordCount = await FindRawCaptionUnderestimationBoundaryAsync(
+        var rawLayout = await LayoutAsync(
             profile,
             ids,
             description,
-            visibleCaption);
+            sequence: null);
+        var visibleLayout = await LayoutAsync(
+            profile,
+            ids,
+            visibleCaption,
+            sequence: null);
         var automaticLayout = await LayoutAsync(
             profile,
             ids,
-            boundaryWordCount,
             description,
             sequence);
+
+        Assert.Equal(1, LastPageFor(rawLayout, ids.FillerId));
+        Assert.Equal(1, FirstPageFor(rawLayout, ids.HeadingId));
+        Assert.Equal(2, FirstPageFor(rawLayout, ids.TableId));
+
+        Assert.Equal(1, LastPageFor(visibleLayout, ids.FillerId));
+        Assert.Equal(2, FirstPageFor(visibleLayout, ids.HeadingId));
+        Assert.Equal(2, FirstPageFor(visibleLayout, ids.TableId));
 
         Assert.Equal(1, LastPageFor(automaticLayout, ids.FillerId));
         Assert.Equal(2, FirstPageFor(automaticLayout, ids.HeadingId));
@@ -49,46 +61,9 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
                 tablePayload.CaptionSequenceNumber));
     }
 
-    private static async Task<int> FindRawCaptionUnderestimationBoundaryAsync(
-        DocumentFormatProfile profile,
-        FixtureIds ids,
-        string rawCaption,
-        string visibleCaption)
-    {
-        for (var wordCount = 1; wordCount <= 240; wordCount++)
-        {
-            var rawLayout = await LayoutAsync(
-                profile,
-                ids,
-                wordCount,
-                rawCaption,
-                sequence: null);
-            var visibleLayout = await LayoutAsync(
-                profile,
-                ids,
-                wordCount,
-                visibleCaption,
-                sequence: null);
-
-            var rawUnderestimates = LastPageFor(rawLayout, ids.FillerId) == 1
-                && FirstPageFor(rawLayout, ids.HeadingId) == 1
-                && FirstPageFor(rawLayout, ids.TableId) == 2;
-            var visibleKeepsTogether = LastPageFor(visibleLayout, ids.FillerId) == 1
-                && FirstPageFor(visibleLayout, ids.HeadingId) == 2
-                && FirstPageFor(visibleLayout, ids.TableId) == 2;
-
-            if (rawUnderestimates && visibleKeepsTogether)
-                return wordCount;
-        }
-
-        throw new Xunit.Sdk.XunitException(
-            "Could not reproduce the deterministic raw-caption keep-with-next underestimation boundary within 240 filler words.");
-    }
-
     private static async Task<DocumentLayoutResult> LayoutAsync(
         DocumentFormatProfile profile,
         FixtureIds ids,
-        int fillerWordCount,
         string caption,
         TableCaptionSequenceProfile? sequence)
     {
@@ -97,12 +72,11 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
             HeaderNodes = [],
             BodyNodes =
             [
-                new TextContentNode
+                new ImageContentNode
                 {
                     ElementId = ids.FillerId,
-                    Kind = ReportContentKind.Paragraph,
-                    Text = string.Join(" ", Enumerable.Repeat("dolgu", fillerWordCount)),
-                    Format = profile.BodyText
+                    Kind = ReportContentKind.Image,
+                    Name = "Fixed forty millimeter boundary filler"
                 },
                 new TextContentNode
                 {
@@ -130,7 +104,7 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
             PageLayout = new PageLayout
             {
                 WidthMillimeters = 80d,
-                HeightMillimeters = 90d,
+                HeightMillimeters = 128d,
                 MarginTopMillimeters = 10d,
                 MarginBottomMillimeters = 10d,
                 MarginLeftMillimeters = 10d,
