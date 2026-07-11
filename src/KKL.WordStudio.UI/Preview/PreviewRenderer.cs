@@ -6,28 +6,30 @@ using KKL.WordStudio.Application.Layout;
 using KKL.WordStudio.Application.Preview;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
+using KKL.WordStudio.UI.ViewModels;
 
 /// <summary>
 /// Preview orchestration boundary. Generated report semantics still come from
 /// IReportContentBuilder; imported front matter is read through its Application
 /// contract; pagination/layout is delegated to IDocumentLayoutEngine.
-/// Compatibility PreviewBlock lists remain until Team B switches the UI to
-/// PreviewSnapshot.Layout.Pages.
 /// </summary>
 public sealed class PreviewRenderer : IReportPreviewRenderer
 {
     private readonly IReportContentBuilder _contentBuilder;
     private readonly IDocumentLayoutEngine _layoutEngine;
     private readonly IImportedDocumentPreviewProvider _importedDocumentPreviewProvider;
+    private readonly PreviewDiagnosticsStore _diagnosticsStore;
 
     public PreviewRenderer(
         IReportContentBuilder contentBuilder,
         IDocumentLayoutEngine layoutEngine,
-        IImportedDocumentPreviewProvider importedDocumentPreviewProvider)
+        IImportedDocumentPreviewProvider importedDocumentPreviewProvider,
+        PreviewDiagnosticsStore diagnosticsStore)
     {
         _contentBuilder = contentBuilder;
         _layoutEngine = layoutEngine;
         _importedDocumentPreviewProvider = importedDocumentPreviewProvider;
+        _diagnosticsStore = diagnosticsStore;
     }
 
     public async Task<PreviewSnapshot> RenderAsync(
@@ -59,6 +61,9 @@ public sealed class PreviewRenderer : IReportPreviewRenderer
             };
         }
 
+        var diagnostics = PreviewDiagnosticFactory.Build(project, report, document, layout.Warnings);
+        _diagnosticsStore.Replace(diagnostics);
+
         return new PreviewSnapshot
         {
             HeaderBlocks = BuildBlocks(document.HeaderNodes),
@@ -67,7 +72,7 @@ public sealed class PreviewRenderer : IReportPreviewRenderer
             TableOfContents = document.TableOfContents,
             PageLayout = document.PageLayout,
             Layout = layout,
-            Diagnostics = PreviewDiagnosticFactory.Build(project, report, document, layout.Warnings)
+            Diagnostics = diagnostics
         };
     }
 
