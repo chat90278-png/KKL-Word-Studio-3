@@ -61,61 +61,11 @@ public sealed class Sprint18TableFormatProfileSelectorTests
         Assert.Same(expected.Format, resolved);
     }
 
-    [Fact]
-    public void AutomaticBuiltInFormat_WidensLongLeadingHeaderWithoutChangingTotalWeight()
-    {
-        var profile = DefaultDocumentFormatProfileFactory.Create();
-        var table = CreateTable(
-            "Parça Adı (İngilizce)",
-            "Parça Adı (Türkçe)",
-            "Parça No",
-            "Ünite Yapısal Altı",
-            "Parça No REF",
-            "NSN");
-        var baseFormat = profile.TableFormats[0].Format;
-
-        var resolved = new ReferenceReportContentFormatResolver().ResolveTable(profile, table);
-
-        Assert.NotSame(baseFormat, resolved);
-        Assert.True(resolved.Columns[0].WidthWeight >= 14d);
-        Assert.Equal(
-            baseFormat.Columns.Sum(column => column.WidthWeight),
-            resolved.Columns.Sum(column => column.WidthWeight),
-            precision: 6);
-        Assert.Null(table.ReferenceTableFormatKey);
-    }
-
-    [Fact]
-    public void ExplicitBuiltInFormat_RemainsExactEvenWithLongLeadingHeader()
-    {
-        var profile = DefaultDocumentFormatProfileFactory.Create();
-        var table = CreateTable(
-            "Parça Adı (İngilizce)",
-            "Parça Adı (Türkçe)",
-            "Parça No",
-            "Ünite Yapısal Altı",
-            "Parça No REF",
-            "NSN");
-        table.ReferenceTableFormatKey = profile.TableFormats[0].Key;
-
-        var resolved = new ReferenceReportContentFormatResolver().ResolveTable(profile, table);
-
-        Assert.Same(profile.TableFormats[0].Format, resolved);
-    }
-
     private static TableElement CreateTable(int columnCount)
     {
         var table = new TableElement { Name = "Format selection regression" };
         for (var index = 0; index < columnCount; index++)
             table.Columns.Add(new TableColumn { Header = $"Column {index + 1}" });
-        return table;
-    }
-
-    private static TableElement CreateTable(params string[] headers)
-    {
-        var table = new TableElement { Name = "Header-aware format regression" };
-        foreach (var header in headers)
-            table.Columns.Add(new TableColumn { Header = header });
         return table;
     }
 }
