@@ -4,10 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 /// <summary>
-/// Owns the right Context Dock's physical state (Normal/Collapsed/Expanded)
-/// and which page it's showing (Contents/Properties/ChangeBinding).
-/// Deliberately UI-only — the Variant 2.5 task is explicit that dock state
-/// does not belong in Domain.
+/// Owns the right Context Dock's physical state and active page. This state is
+/// UI-only and is never persisted in the report/project model.
 /// </summary>
 public sealed partial class DockViewModel : ViewModelBase
 {
@@ -22,13 +20,16 @@ public sealed partial class DockViewModel : ViewModelBase
     public double ExpandedWidth => 440;
 
     [RelayCommand]
-    private void ShowContents() => Page = DockPage.Contents;
+    private void ShowContents() => Show(DockPage.Contents);
 
     [RelayCommand]
-    private void ShowProperties() => Page = DockPage.Properties;
+    private void ShowProperties() => Show(DockPage.Properties);
 
     [RelayCommand]
-    private void ShowChangeBinding() => Page = DockPage.ChangeBinding;
+    private void ShowWarnings() => Show(DockPage.Warnings);
+
+    [RelayCommand]
+    private void ShowChangeBinding() => Show(DockPage.ChangeBinding);
 
     [RelayCommand]
     private void Collapse() => State = DockState.Collapsed;
@@ -37,16 +38,17 @@ public sealed partial class DockViewModel : ViewModelBase
     private void Expand() => State = State == DockState.Expanded ? DockState.Normal : DockState.Expanded;
 
     [RelayCommand]
-    private void RestoreToContents()
-    {
-        State = DockState.Normal;
-        Page = DockPage.Contents;
-    }
+    private void RestoreToContents() => Show(DockPage.Contents);
 
     [RelayCommand]
-    private void RestoreToProperties()
+    private void RestoreToProperties() => Show(DockPage.Properties);
+
+    [RelayCommand]
+    private void RestoreToWarnings() => Show(DockPage.Warnings);
+
+    private void Show(DockPage page)
     {
         State = DockState.Normal;
-        Page = DockPage.Properties;
+        Page = page;
     }
 }
