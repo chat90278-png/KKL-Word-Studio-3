@@ -15,12 +15,7 @@ public sealed class Sprint20PreviewDiagnosticFactoryTests
     public void TableWarning_AttachesElementKeyAndOrderedExcelSourceMetadata()
     {
         const string warning = "PN/key '55' için geçerli Adet değeri bulunamadı; satırlar birleştirilmedi.";
-        var tableId = Guid.NewGuid();
-        var table = new TableElement
-        {
-            Name = "Table 1"
-        };
-        typeof(ReportElement).GetProperty(nameof(ReportElement.Id))!.SetValue(table, tableId);
+        var table = new TableElement { Name = "Table 1" };
         table.Sources.Add(new TableSourceBinding
         {
             DataSourceName = "source-1",
@@ -39,7 +34,7 @@ public sealed class Sprint20PreviewDiagnosticFactoryTests
         var project = BuildProject(report);
         var document = BuildDocument(new TableContentNode
         {
-            ElementId = tableId,
+            ElementId = table.Id,
             Kind = ReportContentKind.Table,
             Name = table.Name,
             ColumnHeaders = ["No", "Tr İsim", "Parça Numarası", "NSN", "Seri Numarası", "Adet"],
@@ -54,7 +49,7 @@ public sealed class Sprint20PreviewDiagnosticFactoryTests
         Assert.Equal(PreviewDiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Equal("Adet değeri eksik veya geçersiz", diagnostic.Title);
         Assert.Equal(warning, diagnostic.Message);
-        Assert.Equal(tableId, diagnostic.ElementId);
+        Assert.Equal(table.Id, diagnostic.ElementId);
         Assert.Equal("Table 1", diagnostic.ElementName);
         Assert.Equal("55", diagnostic.KeyValue);
 
@@ -69,7 +64,7 @@ public sealed class Sprint20PreviewDiagnosticFactoryTests
     public void ExistingTableMessage_IsNotDuplicatedAndGenericLayoutWarningIsPreserved()
     {
         const string tableWarning = "PN/key '2354' için 'NSN' alanında çelişkili değerler var; satırlar birleştirilmedi.";
-        const string layoutWarning = "İçindekiler sayfa numaraları yakınsamadi.";
+        const string layoutWarning = "İçindekiler sayfa numaraları yakınsamadı.";
         var table = new TableElement { Name = "Table 1" };
         var report = BuildReport(table);
         var project = BuildProject(report);
