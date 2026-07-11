@@ -49,9 +49,7 @@ public partial class App : Application
 
                 services.AddSingleton<ExcelWorkspaceViewModel>();
                 services.AddSingleton<ExcelWorkspaceView>();
-
-                services.AddSingleton<ProjectExplorerViewModel>();
-                services.AddSingleton<ProjectExplorerView>();
+                services.AddSingleton<LoadedSourcesView>();
 
                 // Shared by MainWindow (column width), ContextDockView, and every
                 // dock page ViewModel — registered once as a singleton so they

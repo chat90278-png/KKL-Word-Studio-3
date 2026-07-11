@@ -168,17 +168,18 @@ public sealed class Sprint16ReferenceFidelityArchitectureGuardTests
     }
 
     [Fact]
-    public void ProjectExplorer_RemainsSeparateFromKaynakVeriSurface()
+    public void LoadedSourcesSelector_RemainsSeparateFromKaynakVeriSurface()
     {
         var root = SolutionRootLocator.Find();
         var excelWorkspacePath = Path.Combine(root, "src", "KKL.WordStudio.UI", "Views", "ExcelWorkspaceView.xaml");
-        var projectExplorerPath = Path.Combine(root, "src", "KKL.WordStudio.UI", "Views", "ProjectExplorerView.xaml");
+        var loadedSourcesPath = Path.Combine(root, "src", "KKL.WordStudio.UI", "Views", "LoadedSourcesView.xaml");
         var excelWorkspace = SourceScan.ReadWithoutComments(excelWorkspacePath);
-        var projectExplorer = SourceScan.ReadWithoutComments(projectExplorerPath);
+        var loadedSources = SourceScan.ReadWithoutComments(loadedSourcesPath);
 
         Assert.Contains("KAYNAK VERİ", excelWorkspace, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProjectExplorer", excelWorkspace, StringComparison.Ordinal);
-        Assert.DoesNotContain("KAYNAK VERİ", projectExplorer, StringComparison.Ordinal);
+        Assert.DoesNotContain("Yüklenen Kaynaklar", excelWorkspace, StringComparison.Ordinal);
+        Assert.Contains("Yüklenen Kaynaklar", loadedSources, StringComparison.Ordinal);
+        Assert.DoesNotContain("KAYNAK VERİ", loadedSources, StringComparison.Ordinal);
     }
 
     [Fact]

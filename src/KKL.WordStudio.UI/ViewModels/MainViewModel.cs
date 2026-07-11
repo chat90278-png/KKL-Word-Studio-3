@@ -11,14 +11,12 @@ using System.IO;
 
 /// <summary>
 /// Shell-level ViewModel: owns the active Project and pushes it into
-/// IWorkspace, which every other panel reacts to. Also owns the Variant
-/// 2.5 shell's own state — which the Project Explorer overlay is open, and
-/// the last-saved file path (used so "Save" doesn't need to re-prompt).
+/// IWorkspace, which every other panel reacts to. It also owns the
+/// last-saved file path so "Save" does not need to re-prompt.
 ///
 /// Deliberately does NOT fake a dirty-state indicator ("*") — no reliable
-/// dirty-tracking mechanism exists yet (see final report's remaining UX
-/// gaps), so the title bar simply omits it rather than showing a marker
-/// that might be wrong.
+/// dirty-tracking mechanism exists yet, so the title bar simply omits it
+/// rather than showing a marker that might be wrong.
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase
 {
@@ -46,9 +44,6 @@ public sealed partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string? _currentProjectFilePath;
 
-    [ObservableProperty]
-    private bool _isProjectExplorerOpen;
-
     public MainViewModel(
         IProjectService projectService,
         IReportExporterRegistry exporterRegistry,
@@ -70,9 +65,6 @@ public sealed partial class MainViewModel : ViewModelBase
         _workspace.SetActiveProject(_currentProject);
         _workspace.SetActiveReport(_currentProject.Reports.FirstOrDefault());
     }
-
-    [RelayCommand]
-    private void ToggleProjectExplorer() => IsProjectExplorerOpen = !IsProjectExplorerOpen;
 
     [RelayCommand]
     private void NewProject()

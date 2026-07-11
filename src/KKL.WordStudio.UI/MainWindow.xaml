@@ -33,8 +33,9 @@
                     <Button Content="Aç" Style="{StaticResource Btn.Base}" Command="{Binding OpenProjectCommand}" Margin="0,0,4,0" />
                     <Border Width="1" Height="24" Background="{DynamicResource Brush.Border}" Margin="4,0" />
                     <Button Content="Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectCommand}" Margin="0,0,4,0" />
-                    <Button Content="Farklı Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectAsCommand}" Margin="0,0,4,0" />
-                    <Button Content="Proje Gezgini" Style="{StaticResource Btn.Base}" Command="{Binding ToggleProjectExplorerCommand}" />
+                    <Button Content="Farklı Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectAsCommand}" Margin="0,0,12,0" />
+                    <Border Width="1" Height="24" Background="{DynamicResource Brush.Border}" Margin="0,0,12,0" />
+                    <ContentControl x:Name="LoadedSourcesHost" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
@@ -87,19 +88,6 @@
 
             <!-- Right Context Dock -->
             <ContentControl x:Name="ContextDockHost" Grid.Column="4" />
-
-            <!-- Project Explorer slide-out overlay, launched from the top command bar. -->
-            <Border Grid.Column="0" Grid.ColumnSpan="5" Background="#22141D2B"
-                    Visibility="{Binding IsProjectExplorerOpen, Converter={StaticResource BoolToVisibility}}"
-                    MouseLeftButtonUp="ProjectExplorerScrim_MouseLeftButtonUp" />
-            <Border Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Left" Margin="16,10,0,10" Width="300"
-                    Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="12"
-                    Visibility="{Binding IsProjectExplorerOpen, Converter={StaticResource BoolToVisibility}}">
-                <Border.Effect>
-                    <DropShadowEffect Color="#FF1E2A3D" Direction="270" ShadowDepth="8" BlurRadius="28" Opacity="0.2" />
-                </Border.Effect>
-                <ContentControl x:Name="ProjectExplorerHost" />
-            </Border>
         </Grid>
     </DockPanel>
 </Window>
