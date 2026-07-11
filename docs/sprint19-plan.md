@@ -7,60 +7,76 @@
 - Baseline commit: `cc518145de6be653d7c78b29bc7bc8249f3d2b04`
 - Working branch: `sprint19/source-tabs-grid-focus`
 - Windows restore/build/test output remains execution truth.
+- Do not mark the current branch GREEN from source review alone.
 
 ## Product direction
 
 KKL Word Studio remains a fast Excel-to-Word accelerator. Sprint 19 removes project-management chrome that does not contribute to the immediate workflow and strengthens keyboard continuity in the Excel working surface.
 
+No persistent recent-source history, database, cloud sync, recovery engine or complex preference memory is introduced.
+
 ## P0-A — Remove Project Explorer and expose loaded sources directly
 
-Remove the Project Explorer feature and its shell remnants:
+Removed:
 
-- top command-bar button;
+- the `Proje Gezgini` top-bar command;
 - dimmed scrim and slide-out overlay;
-- `IsProjectExplorerOpen` / toggle command;
-- `ProjectExplorerView`, ViewModel, generic node type and DI registrations;
-- MainWindow constructor dependencies and visual event handler.
+- `IsProjectExplorerOpen` and toggle command;
+- `ProjectExplorerView`, code-behind, ViewModel and generic node type;
+- Project Explorer DI registrations and MainWindow dependency.
 
-Replace it with a compact always-available loaded-source selector in the top command bar:
+Added:
 
-- binds directly to `ExcelWorkspaceViewModel.OpenWorkbooks`;
+- a compact `Yüklenen Kaynaklar` selector in the top command bar;
+- direct binding to `ExcelWorkspaceViewModel.OpenWorkbooks`;
 - two-way selection through `SelectedWorkbook`;
-- shows every currently loaded workbook with sheet count;
-- exposes a compact add-source button that reuses `OpenExcelFileCommand`;
-- selecting a workbook activates its current worksheet and refreshes the Excel workspace through the existing ViewModel path;
+- workbook name and worksheet-count display;
+- a compact add button reusing `OpenExcelFileCommand`;
 - existing sheet tabs remain the worksheet selector for the active workbook.
 
-No new persistent project memory, database, source-history store or recovery framework is introduced.
+The selector is session-only and does not persist a recent-file history.
 
 ## P0-B — Preserve DataGrid keyboard flow after working-data operations
 
-Observed issue:
+Implemented in a UI-only partial class:
 
-- toolbar Copy/Paste/Clear buttons take keyboard focus away from `WorkingDataGrid`;
-- Paste/Clear rebuild `PreviewTable`, which resets `DataGrid.CurrentCell`;
-- the user must click a cell again before arrow-key navigation resumes.
+- remember active row and stable bound-column identity;
+- after Copy, return focus without collapsing the copied selection;
+- after Paste/Clear/Undo/Redo/Reset and Delete, restore `CurrentCell`, selection, scroll position and keyboard focus;
+- restore again after asynchronous `PreviewTable` replacement;
+- Ctrl+V, Ctrl+Z and Ctrl+Y use the same path;
+- normal arrow-key navigation remains native WPF DataGrid behavior;
+- all data mutation remains in the existing ViewModel/Application services.
 
-Acceptance:
+## First Windows gate
 
-- remember the active row and stable column identity before clipboard/mutation commands;
-- after Copy, return keyboard focus to the existing grid selection;
-- after Paste/Clear/Undo/Redo and other table-refreshing toolbar actions, rebuild `CurrentCell` against the refreshed ItemsSource;
-- select and scroll the restored cell into view;
-- return keyboard focus to the DataGrid at input dispatcher priority;
-- Ctrl+V follows the same restore path;
-- normal arrow-key navigation is left to the native WPF DataGrid;
-- no mutation logic moves into code-behind; only focus/selection restoration lives there.
+The first exact branch run reported:
+
+- restore: success;
+- build: success, 0 warnings / 0 errors;
+- Domain 18/18;
+- Application 191/191;
+- Engine 60/60;
+- Infrastructure 122/122;
+- Architecture 63/64 with one failure.
+
+The architecture failure was a stale Sprint 16 guard that attempted to read the intentionally removed `ProjectExplorerView.xaml`. The guard was preserved and updated to verify that `LoadedSourcesView` remains separate from the `KAYNAK VERİ` Excel workspace surface.
+
+The same run exposed a startup-only lifecycle bug. `ExcelWorkspaceView.KeyboardFlow.cs` originally subscribed to `_viewModel` from `OnInitialized`; WPF can invoke that override during `InitializeComponent`, before the constructor assigns the injected ViewModel. The hook setup now occurs in `Loaded`, while `OnInitialized` only registers the lifecycle events. The new architecture guard verifies that `_viewModel` is not dereferenced from `OnInitialized`.
+
+Status: fixes applied; exact current-head Windows gate and application smoke pending.
 
 ## Regression guards
 
-Add source-level architecture guards verifying:
+Architecture tests verify:
 
 - no Project Explorer shell/view/DI remnants remain;
 - loaded-source selector binds to `OpenWorkbooks` and `SelectedWorkbook`;
 - source add reuses `OpenExcelFileCommand`;
+- loaded-source selector and `KAYNAK VERİ` remain separate surfaces;
 - grid focus restoration uses stable column identity, `CurrentCell`, dispatcher input priority and `Keyboard.Focus`;
-- clipboard/mutation actions arm the restore path.
+- clipboard/mutation actions arm the restore path;
+- ViewModel-dependent keyboard hooks are attached in `Loaded`, not during `InitializeComponent`.
 
 ## Closure gate
 
@@ -69,12 +85,14 @@ Add source-level architecture guards verifying:
    - `dotnet build`
    - `dotnet test`
    - 0 warnings / 0 errors and no skipped/weakened tests.
-2. Source selector smoke:
+2. Startup smoke:
+   - `dotnet run --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj` opens the main window.
+3. Source selector smoke:
    - load two Excel files;
    - both appear in `Yüklenen Kaynaklar`;
    - switch between them without opening an overlay;
    - sheet tabs follow the selected source.
-3. Grid keyboard smoke:
+4. Grid keyboard smoke:
    - select a cell/block;
    - Copy from toolbar and continue with arrow keys;
    - Paste to another location and continue with arrow keys without clicking the grid;
