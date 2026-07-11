@@ -15,6 +15,11 @@ public sealed partial class DockViewModel : ViewModelBase
     [ObservableProperty]
     private DockPage _page = DockPage.Contents;
 
+    public DockViewModel()
+        : this(new PreviewDiagnosticsStore())
+    {
+    }
+
     public DockViewModel(PreviewDiagnosticsStore diagnostics)
     {
         Diagnostics = diagnostics;
