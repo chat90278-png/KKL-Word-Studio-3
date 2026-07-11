@@ -15,20 +15,35 @@ public static class TableFormatProfileSelector
         TableElement table)
     {
         ArgumentNullException.ThrowIfNull(table);
+        return Select(profile, table.Columns.Count, table.ReferenceTableFormatKey);
+    }
 
+    public static ReferenceTableFormatProfile? SelectAutomatic(
+        DocumentFormatProfile? profile,
+        TableElement table)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        return Select(profile, table.Columns.Count, referenceTableFormatKey: null);
+    }
+
+    private static ReferenceTableFormatProfile? Select(
+        DocumentFormatProfile? profile,
+        int columnCount,
+        string? referenceTableFormatKey)
+    {
         if (profile is null || profile.TableFormats.Count == 0)
             return null;
 
-        if (!string.IsNullOrWhiteSpace(table.ReferenceTableFormatKey))
+        if (!string.IsNullOrWhiteSpace(referenceTableFormatKey))
         {
             var explicitSelection = profile.TableFormats.FirstOrDefault(candidate =>
-                string.Equals(candidate.Key, table.ReferenceTableFormatKey, StringComparison.Ordinal));
+                string.Equals(candidate.Key, referenceTableFormatKey, StringComparison.Ordinal));
             if (explicitSelection is not null)
                 return explicitSelection;
         }
 
         return profile.TableFormats.FirstOrDefault(candidate =>
-                   candidate.ReferenceHeaders.Count == table.Columns.Count)
+                   candidate.ReferenceHeaders.Count == columnCount)
                ?? profile.TableFormats.FirstOrDefault();
     }
 }
