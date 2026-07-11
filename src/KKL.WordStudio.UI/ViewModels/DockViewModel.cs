@@ -15,6 +15,12 @@ public sealed partial class DockViewModel : ViewModelBase
     [ObservableProperty]
     private DockPage _page = DockPage.Contents;
 
+    public DockViewModel(PreviewDiagnosticsStore diagnostics)
+    {
+        Diagnostics = diagnostics;
+    }
+
+    public PreviewDiagnosticsStore Diagnostics { get; }
     public double NormalWidth => 350;
     public double CollapsedWidth => 46;
     public double ExpandedWidth => 440;
