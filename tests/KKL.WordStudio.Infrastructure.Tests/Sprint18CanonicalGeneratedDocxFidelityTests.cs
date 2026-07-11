@@ -15,6 +15,7 @@ using KKL.WordStudio.Infrastructure.Export.Exporters;
 using KKL.WordStudio.Infrastructure.ReferenceFormatting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using DomainTableRow = KKL.WordStudio.Domain.Elements.TableRow;
 using OpenXmlTable = DocumentFormat.OpenXml.Wordprocessing.Table;
 using OpenXmlTableRow = DocumentFormat.OpenXml.Wordprocessing.TableRow;
 
@@ -99,8 +100,10 @@ public sealed class Sprint18CanonicalGeneratedDocxFidelityTests
         var caption = body.Elements<Paragraph>()
             .Single(paragraph => paragraph.Descendants<SimpleField>().Any());
         var field = Assert.Single(caption.Descendants<SimpleField>());
-        Assert.True(field.Instruction!.Value.Contains("SEQ Tablo", StringComparison.Ordinal));
-        Assert.True(field.Instruction.Value.Contains("ARABIC", StringComparison.Ordinal));
+        var instruction = field.Instruction?.Value;
+        Assert.NotNull(instruction);
+        Assert.Contains("SEQ Tablo", instruction, StringComparison.Ordinal);
+        Assert.Contains("ARABIC", instruction, StringComparison.Ordinal);
         Assert.Equal("1", field.InnerText);
         Assert.Equal("Tablo 1: Canonical grouped long table", caption.InnerText);
         Assert.Equal(
@@ -113,7 +116,7 @@ public sealed class Sprint18CanonicalGeneratedDocxFidelityTests
     private static void AssertCanonicalTable(Body body, DocumentFormatProfile profile)
     {
         var table = Assert.Single(body.Elements<OpenXmlTable>());
-        var properties = table.TableProperties!;
+        var properties = Assert.IsType<TableProperties>(table.GetFirstChild<TableProperties>());
         Assert.Equal(TableLayoutValues.Fixed, properties.GetFirstChild<TableLayout>()!.Type!.Value);
         Assert.Equal(TableWidthUnitValues.Pct, properties.GetFirstChild<TableWidth>()!.Type!.Value);
         Assert.Equal("5000", properties.GetFirstChild<TableWidth>()!.Width!.Value);
@@ -134,7 +137,7 @@ public sealed class Sprint18CanonicalGeneratedDocxFidelityTests
 
         var gridWidths = table.GetFirstChild<TableGrid>()!
             .Elements<GridColumn>()
-            .Select(column => uint.Parse(column.Width!.Value))
+            .Select(ParseGridWidth)
             .ToArray();
         Assert.Equal(6, gridWidths.Length);
         Assert.True(gridWidths.Distinct().Count() > 1);
@@ -193,6 +196,13 @@ public sealed class Sprint18CanonicalGeneratedDocxFidelityTests
 
     private static TableCell GetCell(OpenXmlTableRow row, int columnIndex) =>
         row.Elements<TableCell>().ElementAt(columnIndex);
+
+    private static uint ParseGridWidth(GridColumn column)
+    {
+        var width = column.Width?.Value;
+        Assert.NotNull(width);
+        return uint.Parse(width);
+    }
 
     private static uint ToTwips(double millimeters) =>
         (uint)Math.Round(millimeters * TwipsPerMillimeter);
@@ -278,7 +288,7 @@ public sealed class Sprint18CanonicalGeneratedDocxFidelityTests
 
     private static void AddDetailRow(TableElement table, params string[] values)
     {
-        var row = new TableRow { Kind = TableRowKind.Detail };
+        var row = new DomainTableRow { Kind = TableRowKind.Detail };
         foreach (var value in values)
         {
             var cell = new Container();
