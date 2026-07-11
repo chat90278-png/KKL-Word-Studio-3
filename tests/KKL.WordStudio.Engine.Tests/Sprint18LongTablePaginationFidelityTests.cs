@@ -91,7 +91,9 @@ public sealed class Sprint18LongTablePaginationFidelityTests
             Assert.Equal(2, span.RowSpan);
         });
         Assert.DoesNotContain(boundaryFragment.CellSpans, span => span.ColumnIndex == 4);
-        Assert.Equal(new[] { 0, 1, 2, 3, 5 }, boundaryFragment.CellSpans.Select(span => span.ColumnIndex).Order());
+        Assert.Equal(
+            new[] { 0, 1, 2, 3, 5 },
+            boundaryFragment.CellSpans.Select(span => span.ColumnIndex).Order().ToArray());
 
         var projectedRowCount = payloads.Sum(payload => payload.Rows.Count);
         Assert.Equal(rows.Count, projectedRowCount);
