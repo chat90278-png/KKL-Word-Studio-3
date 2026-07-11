@@ -99,8 +99,8 @@ public sealed class Sprint18CanonicalGeneratedDocxFidelityTests
         var caption = body.Elements<Paragraph>()
             .Single(paragraph => paragraph.Descendants<SimpleField>().Any());
         var field = Assert.Single(caption.Descendants<SimpleField>());
-        Assert.Contains("SEQ Tablo", field.Instruction!.Value, StringComparison.Ordinal);
-        Assert.Contains("ARABIC", field.Instruction.Value, StringComparison.Ordinal);
+        Assert.True(field.Instruction!.Value.Contains("SEQ Tablo", StringComparison.Ordinal));
+        Assert.True(field.Instruction.Value.Contains("ARABIC", StringComparison.Ordinal));
         Assert.Equal("1", field.InnerText);
         Assert.Equal("Tablo 1: Canonical grouped long table", caption.InnerText);
         Assert.Equal(
