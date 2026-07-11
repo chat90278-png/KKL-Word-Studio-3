@@ -170,9 +170,12 @@ public partial class PreviewView
         {
             if (current is FrameworkElement
                 {
+                    Name: "TableBlockHost",
                     DataContext: PreviewTablePageBlockViewModel
                 } element)
+            {
                 return element;
+            }
 
             current = current switch
             {
