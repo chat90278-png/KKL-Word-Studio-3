@@ -40,6 +40,7 @@ public partial class App : Application
                 services.AddWordStudioEngine();
                 services.AddWordStudioInfrastructure();
 
+                services.AddSingleton<PreviewDiagnosticsStore>();
                 services.AddSingleton<IReportPreviewRenderer, PreviewRenderer>();
 
                 services.AddSingleton<IDialogService, DialogService>();
@@ -63,10 +64,12 @@ public partial class App : Application
                 services.AddSingleton<PropertiesView>();
                 services.AddSingleton<ChangeBindingView>();
 
-                services.AddSingleton<ContextDockView>();
-
                 services.AddSingleton<PreviewViewModel>();
                 services.AddSingleton<PreviewView>();
+
+                services.AddSingleton<WarningCenterViewModel>();
+                services.AddSingleton<WarningCenterView>();
+                services.AddSingleton<ContextDockView>();
 
                 services.AddSingleton<MainWindow>();
 
