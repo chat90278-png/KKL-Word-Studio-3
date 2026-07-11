@@ -66,7 +66,8 @@ public sealed class PreviewRenderer : IReportPreviewRenderer
             FooterBlocks = BuildBlocks(document.FooterNodes),
             TableOfContents = document.TableOfContents,
             PageLayout = document.PageLayout,
-            Layout = layout
+            Layout = layout,
+            Diagnostics = PreviewDiagnosticFactory.Build(project, report, document, layout.Warnings)
         };
     }
 
