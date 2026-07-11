@@ -73,8 +73,11 @@ public sealed class PreviewRenderer : IReportPreviewRenderer
             };
         }
 
-        var diagnostics = PreviewDiagnosticFactory.Build(project, report, document, layout.Warnings);
-        _diagnosticsStore.Replace(diagnostics);
+        // Diagnostics are runtime UI projection state. Publishing through the
+        // singleton store keeps PreviewSnapshot's frozen compatibility shape
+        // untouched while the Context Dock observes the current render result.
+        _diagnosticsStore.Replace(
+            PreviewDiagnosticFactory.Build(project, report, document, layout.Warnings));
 
         return new PreviewSnapshot
         {
@@ -83,8 +86,7 @@ public sealed class PreviewRenderer : IReportPreviewRenderer
             FooterBlocks = BuildBlocks(document.FooterNodes),
             TableOfContents = document.TableOfContents,
             PageLayout = document.PageLayout,
-            Layout = layout,
-            Diagnostics = diagnostics
+            Layout = layout
         };
     }
 
