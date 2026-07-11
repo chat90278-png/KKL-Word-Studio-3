@@ -5,6 +5,9 @@ using Xunit;
 
 public sealed class Sprint17TruePrintPreviewArchitectureTests
 {
+    private const string TableInteractionMarker =
+        "<!-- Interaction layer: table. Empty-caption editing remains available";
+
     [Fact]
     public void TableFinalDocumentLayer_DoesNotContainBlockLevelDesignerChrome()
     {
@@ -12,7 +15,7 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         var finalTableLayer = ExtractSegment(
             source,
             "<!-- Final document layer: table -->",
-            "<!-- Interaction layer: table");
+            TableInteractionMarker);
 
         Assert.Contains("CaptionRuns", finalTableLayer, StringComparison.Ordinal);
         Assert.Contains("PreviewTableGridControl", finalTableLayer, StringComparison.Ordinal);
@@ -68,7 +71,7 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         var finalTableLayer = ExtractSegment(
             xaml,
             "<!-- Final document layer: table -->",
-            "<!-- Interaction layer: table");
+            TableInteractionMarker);
 
         Assert.DoesNotContain("Tablo başlığı eklemek", finalTableLayer, StringComparison.Ordinal);
         Assert.Contains("tableBlock.ShowCaptionArea", codeBehind, StringComparison.Ordinal);
@@ -78,9 +81,16 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
     }
 
     [Fact]
-    public void TableDesignerChrome_DoesNotUseFloatingPopupOrCoverDocumentCells()
+    public void EmptyCaptionHint_IsNonStickyAndNeverCoversDocumentCells()
     {
+        var root = SolutionRootLocator.Find();
         var xaml = ReadPreviewXaml();
+        var hintSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.UI",
+            "Views",
+            "PreviewView.CaptionHint.cs"));
         var tableTemplate = ExtractSegment(
             xaml,
             "<DataTemplate DataType=\"{x:Type vm:PreviewTablePageBlockViewModel}\"",
@@ -88,14 +98,18 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         var finalTableLayer = ExtractSegment(
             tableTemplate,
             "<!-- Final document layer: table -->",
-            "<!-- Interaction layer: table");
+            TableInteractionMarker);
 
-        Assert.DoesNotContain("TargetType=\"Popup\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("<Popup", tableTemplate, StringComparison.Ordinal);
-        Assert.DoesNotContain("+ Tablo başlığı", tableTemplate, StringComparison.Ordinal);
         Assert.DoesNotContain("PageBlockDesignerBadge", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ContinuationText", tableTemplate, StringComparison.Ordinal);
-        Assert.Contains("bounded host double-click gesture", tableTemplate, StringComparison.Ordinal);
+        Assert.Contains("new Popup", hintSource, StringComparison.Ordinal);
+        Assert.Contains("StaysOpen = false", hintSource, StringComparison.Ordinal);
+        Assert.Contains("Placement = PlacementMode.Top", hintSource, StringComparison.Ordinal);
+        Assert.Contains("+ Tablo başlığı", hintSource, StringComparison.Ordinal);
+        Assert.Contains("Tablo başlığı eklemek için çift tıklayın", hintSource, StringComparison.Ordinal);
+        Assert.Contains("BeginTableCaptionEdit(block)", hintSource, StringComparison.Ordinal);
+        Assert.Contains("Deactivated += CaptionHintOwnerWindow_Deactivated", hintSource, StringComparison.Ordinal);
         Assert.Contains("<StackPanel ClipToBounds=\"True\">", finalTableLayer, StringComparison.Ordinal);
         Assert.DoesNotContain("ClipToBounds=\"False\"", tableTemplate, StringComparison.Ordinal);
     }
