@@ -90,7 +90,7 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
                 {
                     ElementId = ids.FillerId,
                     Kind = ReportContentKind.Paragraph,
-                    Text = string.Join(' ', Enumerable.Repeat("dolgu", fillerWordCount)),
+                    Text = string.Join(" ", Enumerable.Repeat("dolgu", fillerWordCount)),
                     Format = profile.BodyText
                 },
                 new TextContentNode
