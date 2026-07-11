@@ -81,7 +81,7 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
     }
 
     [Fact]
-    public void EmptyCaptionHint_IsNonStickyAndNeverCoversDocumentCells()
+    public void EmptyCaptionHint_IsNonStickyAndAuthoredCaptionIsDirectlyEditable()
     {
         var root = SolutionRootLocator.Find();
         var xaml = ReadPreviewXaml();
@@ -107,8 +107,10 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         Assert.Contains("StaysOpen = false", hintSource, StringComparison.Ordinal);
         Assert.Contains("Placement = PlacementMode.Top", hintSource, StringComparison.Ordinal);
         Assert.Contains("+ Tablo başlığı", hintSource, StringComparison.Ordinal);
-        Assert.Contains("Tablo başlığı eklemek için çift tıklayın", hintSource, StringComparison.Ordinal);
-        Assert.Contains("BeginTableCaptionEdit(block)", hintSource, StringComparison.Ordinal);
+        Assert.Contains("Tablo başlığı eklemek için tıklayın", hintSource, StringComparison.Ordinal);
+        Assert.Contains("OnPreviewMouseLeftButtonDown", hintSource, StringComparison.Ordinal);
+        Assert.Contains("HasCaption: true", hintSource, StringComparison.Ordinal);
+        Assert.Contains("_viewModel.BeginTableCaptionEdit(block)", hintSource, StringComparison.Ordinal);
         Assert.Contains("Deactivated += CaptionHintOwnerWindow_Deactivated", hintSource, StringComparison.Ordinal);
         Assert.Contains("<StackPanel ClipToBounds=\"True\">", finalTableLayer, StringComparison.Ordinal);
         Assert.DoesNotContain("ClipToBounds=\"False\"", tableTemplate, StringComparison.Ordinal);
