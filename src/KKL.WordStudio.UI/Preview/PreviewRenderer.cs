@@ -23,6 +23,18 @@ public sealed class PreviewRenderer : IReportPreviewRenderer
     public PreviewRenderer(
         IReportContentBuilder contentBuilder,
         IDocumentLayoutEngine layoutEngine,
+        IImportedDocumentPreviewProvider importedDocumentPreviewProvider)
+        : this(
+            contentBuilder,
+            layoutEngine,
+            importedDocumentPreviewProvider,
+            new PreviewDiagnosticsStore())
+    {
+    }
+
+    public PreviewRenderer(
+        IReportContentBuilder contentBuilder,
+        IDocumentLayoutEngine layoutEngine,
         IImportedDocumentPreviewProvider importedDocumentPreviewProvider,
         PreviewDiagnosticsStore diagnosticsStore)
     {
