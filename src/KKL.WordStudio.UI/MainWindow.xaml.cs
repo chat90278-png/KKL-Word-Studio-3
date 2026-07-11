@@ -1,8 +1,6 @@
 namespace KKL.WordStudio.UI;
 
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using KKL.WordStudio.UI.ViewModels;
 using KKL.WordStudio.UI.Views;
 
@@ -12,7 +10,7 @@ public partial class MainWindow : Window
 
     public MainWindow(
         MainViewModel viewModel,
-        ProjectExplorerView projectExplorerView,
+        LoadedSourcesView loadedSourcesView,
         ExcelWorkspaceView excelWorkspaceView,
         PreviewView previewView,
         ContextDockView contextDockView)
@@ -21,7 +19,7 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         DataContext = viewModel;
 
-        ProjectExplorerHost.Content = projectExplorerView;
+        LoadedSourcesHost.Content = loadedSourcesView;
         ExcelWorkspaceHost.Content = excelWorkspaceView;
         PreviewHost.Content = previewView;
         ContextDockHost.Content = contextDockView;
@@ -48,10 +46,4 @@ public partial class MainWindow : Window
             _ => new GridLength(350)
         };
     }
-
-    // Purely visual: clicking the dimmed scrim behind the Project Explorer
-    // overlay closes it. No product logic — just toggles the existing
-    // IsProjectExplorerOpen flag the rail button also controls.
-    private void ProjectExplorerScrim_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) =>
-        _viewModel.ToggleProjectExplorerCommand.Execute(null);
 }
