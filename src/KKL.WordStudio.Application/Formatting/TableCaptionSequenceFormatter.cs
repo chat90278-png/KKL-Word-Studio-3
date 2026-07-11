@@ -7,7 +7,7 @@ namespace KKL.WordStudio.Application.Formatting;
 /// </summary>
 public static class TableCaptionSequenceFormatter
 {
-    public static int? ResolveNextSequenceNumber(
+    public static int? PeekNextSequenceNumber(
         string? caption,
         TableCaptionSequenceProfile? sequence,
         IDictionary<string, int> sequenceCounters)
@@ -21,10 +21,22 @@ public static class TableCaptionSequenceFormatter
             return null;
         }
 
-        var identifier = sequence.SequenceIdentifier;
-        sequenceCounters.TryGetValue(identifier, out var current);
-        var next = current + 1;
-        sequenceCounters[identifier] = next;
+        sequenceCounters.TryGetValue(sequence.SequenceIdentifier, out var current);
+        return current + 1;
+    }
+
+    public static int? ResolveNextSequenceNumber(
+        string? caption,
+        TableCaptionSequenceProfile? sequence,
+        IDictionary<string, int> sequenceCounters)
+    {
+        ArgumentNullException.ThrowIfNull(sequenceCounters);
+
+        var next = PeekNextSequenceNumber(caption, sequence, sequenceCounters);
+        if (next is null || sequence is null)
+            return null;
+
+        sequenceCounters[sequence.SequenceIdentifier] = next.Value;
         return next;
     }
 

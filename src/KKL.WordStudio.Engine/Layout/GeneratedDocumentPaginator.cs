@@ -46,7 +46,8 @@ internal sealed class GeneratedDocumentPaginator
                 KeepTextWithFollowingBlockWhenPossible(
                     flow,
                     text,
-                    document.BodyNodes[nodeIndex + 1]);
+                    document.BodyNodes[nodeIndex + 1],
+                    captionSequenceCounters);
             }
 
             LayoutNode(flow, node, captionSequenceCounters, warnings, cancellationToken);
@@ -343,21 +344,11 @@ internal sealed class GeneratedDocumentPaginator
 
     private static int? ResolveCaptionSequenceNumber(
         TableContentNode table,
-        IDictionary<string, int> captionSequenceCounters)
-    {
-        if (string.IsNullOrWhiteSpace(table.Caption)
-            || table.CaptionSequence is null
-            || string.IsNullOrWhiteSpace(table.CaptionSequence.SequenceIdentifier))
-        {
-            return null;
-        }
-
-        var identifier = table.CaptionSequence.SequenceIdentifier;
-        captionSequenceCounters.TryGetValue(identifier, out var current);
-        var next = current + 1;
-        captionSequenceCounters[identifier] = next;
-        return next;
-    }
+        IDictionary<string, int> captionSequenceCounters) =>
+        TableCaptionSequenceFormatter.ResolveNextSequenceNumber(
+            table.Caption,
+            table.CaptionSequence,
+            captionSequenceCounters);
 
     private static void LayoutImage(
         LayoutPageFlow flow,
@@ -423,7 +414,8 @@ internal sealed class GeneratedDocumentPaginator
     private void KeepTextWithFollowingBlockWhenPossible(
         LayoutPageFlow flow,
         TextContentNode text,
-        ReportContentNode followingNode)
+        ReportContentNode followingNode,
+        IDictionary<string, int> captionSequenceCounters)
     {
         if (flow.IsAtBodyTop)
             return;
@@ -438,7 +430,8 @@ internal sealed class GeneratedDocumentPaginator
         var followingMinimumHeight = EstimateMinimumFragmentHeight(
             followingNode,
             flow.ContentWidthMillimeters,
-            flow.BodyHeightMillimeters);
+            flow.BodyHeightMillimeters,
+            captionSequenceCounters);
         var combinedHeight = textHeight + followingMinimumHeight;
 
         if (combinedHeight > flow.RemainingBodyHeightMillimeters
@@ -451,12 +444,13 @@ internal sealed class GeneratedDocumentPaginator
     private double EstimateMinimumFragmentHeight(
         ReportContentNode node,
         double contentWidthMillimeters,
-        double freshBodyHeightMillimeters) =>
+        double freshBodyHeightMillimeters,
+        IDictionary<string, int> captionSequenceCounters) =>
         node switch
         {
             TextContentNode text => EstimateMinimumTextFragmentHeight(text, contentWidthMillimeters),
             TableContentNode table => _tablePaginator.EstimateMinimumFragmentHeight(
-                table.Caption,
+                ResolveVisibleCaptionForMeasurement(table, captionSequenceCounters),
                 table.CaptionFormat,
                 table.ColumnHeaders,
                 table.Rows,
@@ -467,6 +461,23 @@ internal sealed class GeneratedDocumentPaginator
             ImageContentNode => Math.Min(40d, contentWidthMillimeters),
             _ => 8d
         };
+
+    private static string? ResolveVisibleCaptionForMeasurement(
+        TableContentNode table,
+        IDictionary<string, int> captionSequenceCounters)
+    {
+        if (table.Caption is null)
+            return null;
+
+        var sequenceNumber = TableCaptionSequenceFormatter.PeekNextSequenceNumber(
+            table.Caption,
+            table.CaptionSequence,
+            captionSequenceCounters);
+        return TableCaptionSequenceFormatter.BuildDisplayText(
+            table.Caption,
+            table.CaptionSequence,
+            sequenceNumber);
+    }
 
     private double EstimateMinimumTextFragmentHeight(
         TextContentNode text,

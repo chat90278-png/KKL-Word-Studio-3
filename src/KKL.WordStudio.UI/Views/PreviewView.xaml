@@ -7,7 +7,7 @@
              PreviewKeyDown="PreviewView_PreviewKeyDown">
     <UserControl.Resources>
         <!-- The positioned block owns hit testing and gestures only. Final document
-             visuals and designer chrome are rendered by separate child layers. -->
+             visuals and interaction feedback are rendered by separate child layers. -->
         <Style x:Key="PageBlockInteractionHost" TargetType="Grid">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="ClipToBounds" Value="True" />
@@ -65,59 +65,6 @@
                     <Setter Property="BorderThickness" Value="0,0,0,2.5" />
                     <Setter Property="Background" Value="#0C2F6FEB" />
                 </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="PageBlockDesignerBadge" TargetType="Border">
-            <Setter Property="Visibility" Value="Collapsed" />
-            <Setter Property="IsHitTestVisible" Value="False" />
-            <Setter Property="Background" Value="#EEFFFFFF" />
-            <Setter Property="BorderBrush" Value="#557EA6E8" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="Padding" Value="4,2" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                    <Setter Property="Visibility" Value="Visible" />
-                </DataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding CanInteract}" Value="True" />
-                        <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=IsMouseOver}" Value="True" />
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Visibility" Value="Visible" />
-                </MultiDataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- Empty captions keep zero document-flow height. The compact hint is a
-             designer-only Popup placed above the table block on hover/selection. -->
-        <Style x:Key="EmptyCaptionHintPopup" TargetType="Popup">
-            <Setter Property="IsOpen" Value="False" />
-            <Setter Property="AllowsTransparency" Value="True" />
-            <Setter Property="Placement" Value="Top" />
-            <Setter Property="HorizontalOffset" Value="4" />
-            <Setter Property="VerticalOffset" Value="-2" />
-            <Setter Property="StaysOpen" Value="True" />
-            <Style.Triggers>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding ShowCaptionArea}" Value="True" />
-                        <Condition Binding="{Binding HasCaption}" Value="False" />
-                        <Condition Binding="{Binding CanEditCaption}" Value="True" />
-                        <Condition Binding="{Binding IsSelected}" Value="True" />
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="IsOpen" Value="True" />
-                </MultiDataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding ShowCaptionArea}" Value="True" />
-                        <Condition Binding="{Binding HasCaption}" Value="False" />
-                        <Condition Binding="{Binding CanEditCaption}" Value="True" />
-                        <Condition Binding="{Binding IsMouseOver, ElementName=TableBlockHost}" Value="True" />
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="IsOpen" Value="True" />
-                </MultiDataTrigger>
             </Style.Triggers>
         </Style>
 
@@ -242,27 +189,9 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Interaction layer: table -->
+                <!-- Interaction layer: table. Empty-caption editing remains available
+                     through the bounded host double-click gesture without floating chrome. -->
                 <Border Style="{StaticResource PageBlockInteractionOverlay}" />
-
-                <Popup Style="{StaticResource EmptyCaptionHintPopup}"
-                       PlacementTarget="{Binding ElementName=TableBlockHost}"
-                       DataContext="{Binding DataContext, ElementName=TableBlockHost}">
-                    <Border Background="#F2FFFFFF"
-                            BorderBrush="#887EA6E8"
-                            BorderThickness="1"
-                            CornerRadius="3"
-                            Padding="4,1"
-                            Cursor="IBeam"
-                            ToolTip="Tablo başlığı eklemek için çift tıklayın"
-                            MouseLeftButtonDown="TableCaption_MouseLeftButtonDown">
-                        <TextBlock Text="+ Tablo başlığı"
-                                   FontSize="8.5"
-                                   FontWeight="SemiBold"
-                                   Foreground="#FF6F9FE8"
-                                   IsHitTestVisible="False" />
-                    </Border>
-                </Popup>
 
                 <Canvas>
                     <TextBox Text="{Binding CaptionEditText, UpdateSourceTrigger=PropertyChanged}"
@@ -285,16 +214,6 @@
                              KeyDown="TableCaptionEditor_KeyDown"
                              LostFocus="TableCaptionEditor_LostFocus" />
                 </Canvas>
-
-                <Border Style="{StaticResource PageBlockDesignerBadge}"
-                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding ContinuationText}" FontSize="8.5"
-                                   Foreground="#FF8A93A3" FontStyle="Italic" Margin="8,0,0,0" />
-                        <TextBlock Text="{Binding Name}" FontSize="9" Foreground="#FF6D7788"
-                                   MaxWidth="190" TextTrimming="CharacterEllipsis" />
-                    </DockPanel>
-                </Border>
 
                 <Border Background="#F8FFF4E5" BorderBrush="#FFF0C06A" BorderThickness="1"
                         Padding="5,3" Margin="4" HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
