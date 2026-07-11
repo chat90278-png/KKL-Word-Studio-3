@@ -2,6 +2,7 @@ namespace KKL.WordStudio.UI.ViewModels;
 
 using KKL.WordStudio.Application.Preview;
 using KKL.WordStudio.Application.WorkingData;
+using KKL.WordStudio.Domain.DataSources;
 
 public sealed partial class ExcelWorkspaceViewModel
 {
@@ -27,8 +28,9 @@ public sealed partial class ExcelWorkspaceViewModel
             return false;
         }
 
-        // Ensure the DataTable used by the grid is ready before searching and
-        // before the view receives the cell-navigation request.
+        // NavigateToWorksheetAsync may switch the selected workbook through a
+        // generated property-change hook. Await one explicit load so the grid
+        // projection is definitely ready before cell resolution.
         await LoadPreviewAsync();
 
         if (string.IsNullOrWhiteSpace(keyValue))
@@ -38,18 +40,15 @@ public sealed partial class ExcelWorkspaceViewModel
         }
 
         var worksheet = GetCurrentWorksheet();
-        var matches = worksheet?.WorkingData is not null
-            ? _workingDataService.Find(worksheet, keyValue)
-            : FindInPreview(keyValue);
+        var matches = FindDiagnosticMatches(worksheet, keyValue);
         if (matches.Count == 0)
             return false;
 
         var expectedColumnIndex = ResolveWorkingColumnIndex(source.KeyColumnIdentity);
-        var match = expectedColumnIndex >= 0
-            ? matches.FirstOrDefault(candidate => candidate.ColumnIndex == expectedColumnIndex)
-            : default;
-        if (match == default)
-            match = matches[0];
+        var preferredMatches = expectedColumnIndex >= 0
+            ? matches.Where(candidate => candidate.ColumnIndex == expectedColumnIndex).ToList()
+            : [];
+        var match = preferredMatches.Count > 0 ? preferredMatches[0] : matches[0];
 
         var displayRowIndex = ResolveDiagnosticDisplayRow(worksheet, match.RowIndex);
         if (displayRowIndex < 0)
@@ -67,8 +66,51 @@ public sealed partial class ExcelWorkspaceViewModel
         return true;
     }
 
+    private IReadOnlyList<WorkingDataCell> FindDiagnosticMatches(
+        Worksheet? worksheet,
+        string keyValue)
+    {
+        var allMatches = worksheet?.WorkingData is not null
+            ? _workingDataService.Find(worksheet, keyValue)
+            : FindInPreview(keyValue);
+
+        // Existing Find intentionally uses contains semantics. Diagnostic
+        // navigation first prefers exact cell text so key 55 does not jump to
+        // 9555, then falls back to the existing search behavior.
+        var exactMatches = allMatches
+            .Where(match => string.Equals(
+                ReadDiagnosticCellText(worksheet, match),
+                keyValue,
+                StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        return exactMatches.Count > 0 ? exactMatches : allMatches;
+    }
+
+    private string? ReadDiagnosticCellText(Worksheet? worksheet, WorkingDataCell cell)
+    {
+        if (worksheet?.WorkingData is { } workingData
+            && cell.RowIndex >= 0
+            && cell.RowIndex < workingData.Rows.Count
+            && cell.ColumnIndex >= 0
+            && cell.ColumnIndex < workingData.Columns.Count)
+        {
+            return workingData.Rows[cell.RowIndex].Values[cell.ColumnIndex];
+        }
+
+        if (_currentPreview is not null
+            && cell.RowIndex >= 0
+            && cell.RowIndex < _currentPreview.Rows.Count
+            && cell.ColumnIndex >= 0
+            && cell.ColumnIndex < _currentPreview.Rows[cell.RowIndex].Count)
+        {
+            return _currentPreview.Rows[cell.RowIndex][cell.ColumnIndex];
+        }
+
+        return null;
+    }
+
     private int ResolveDiagnosticDisplayRow(
-        Domain.DataSources.Worksheet? worksheet,
+        Worksheet? worksheet,
         int workingRowIndex)
     {
         if (worksheet?.WorkingData is not { } workingData)
@@ -93,7 +135,7 @@ public sealed partial class ExcelWorkspaceViewModel
     }
 
     private string? ResolveDiagnosticColumnIdentity(
-        Domain.DataSources.Worksheet? worksheet,
+        Worksheet? worksheet,
         int columnIndex)
     {
         if (worksheet?.WorkingData is { } workingData
