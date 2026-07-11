@@ -92,7 +92,7 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         Assert.Contains("tableNode.CompositionWarnings", factory, StringComparison.Ordinal);
         Assert.Contains("Message = message", factory, StringComparison.Ordinal);
         Assert.Contains("PN/key", factory, StringComparison.Ordinal);
-        Assert.Contains("TableSourceBinding", factory, StringComparison.Ordinal);
+        Assert.Contains("table.Sources", factory, StringComparison.Ordinal);
         Assert.Contains("Workbook.SourcePath", factory, StringComparison.Ordinal);
         Assert.Contains("WorksheetName", factory, StringComparison.Ordinal);
         Assert.Contains("RangeReference", factory, StringComparison.Ordinal);
