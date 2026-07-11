@@ -85,11 +85,17 @@ public partial class PreviewView
             return;
 
         pagesControl.UpdateLayout();
-        if (pagesControl.ItemContainerGenerator.ContainerFromItem(page) is FrameworkElement pageContainer)
-        {
-            pageContainer.BringIntoView();
-            Scroller.Focus();
-        }
+        if (pagesControl.ItemContainerGenerator.ContainerFromItem(page) is not FrameworkElement pageContainer)
+            return;
+
+        pageContainer.BringIntoView();
+        pageContainer.UpdateLayout();
+
+        var blockHost = FindVisualDescendants<FrameworkElement>(pageContainer)
+            .FirstOrDefault(element => element.DataContext is PreviewPageBlockViewModel block
+                && block.ElementId == elementId);
+        (blockHost ?? pageContainer).BringIntoView();
+        Scroller.Focus();
     }
 
     private static IEnumerable<T> FindVisualDescendants<T>(DependencyObject root)
