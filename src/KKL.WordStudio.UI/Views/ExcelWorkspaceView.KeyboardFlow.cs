@@ -12,10 +12,23 @@ public partial class ExcelWorkspaceView
 {
     private GridKeyboardAnchor? _lastGridKeyboardAnchor;
     private bool _restoreGridFocusAfterPreviewRefresh;
+    private bool _keyboardFlowAttached;
 
     protected override void OnInitialized(EventArgs e)
     {
         base.OnInitialized(e);
+
+        // InitializeComponent can raise Initialized before the constructor has
+        // assigned the injected ViewModel. Defer every hook that touches
+        // _viewModel or named XAML controls until Loaded.
+        Loaded += ExcelWorkspaceView_KeyboardFlowLoaded;
+        Unloaded += ExcelWorkspaceView_KeyboardFlowUnloaded;
+    }
+
+    private void ExcelWorkspaceView_KeyboardFlowLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_keyboardFlowAttached)
+            return;
 
         WorkingDataGrid.CurrentCellChanged += WorkingDataGrid_CurrentCellChanged;
         WorkingDataGrid.AddHandler(
@@ -27,7 +40,7 @@ public partial class ExcelWorkspaceView
             new RoutedEventHandler(WorkspaceButton_KeyboardFlowClick),
             handledEventsToo: true);
         _viewModel.PropertyChanged += ViewModel_KeyboardFlowPropertyChanged;
-        Unloaded += ExcelWorkspaceView_KeyboardFlowUnloaded;
+        _keyboardFlowAttached = true;
     }
 
     private void WorkingDataGrid_CurrentCellChanged(object? sender, EventArgs e)
@@ -158,9 +171,18 @@ public partial class ExcelWorkspaceView
 
     private void ExcelWorkspaceView_KeyboardFlowUnloaded(object sender, RoutedEventArgs e)
     {
+        if (!_keyboardFlowAttached)
+            return;
+
         WorkingDataGrid.CurrentCellChanged -= WorkingDataGrid_CurrentCellChanged;
+        WorkingDataGrid.RemoveHandler(
+            Keyboard.PreviewKeyDownEvent,
+            new KeyEventHandler(WorkingDataGrid_KeyboardFlowPreviewKeyDown));
+        RemoveHandler(
+            ButtonBase.ClickEvent,
+            new RoutedEventHandler(WorkspaceButton_KeyboardFlowClick));
         _viewModel.PropertyChanged -= ViewModel_KeyboardFlowPropertyChanged;
-        Unloaded -= ExcelWorkspaceView_KeyboardFlowUnloaded;
+        _keyboardFlowAttached = false;
     }
 
     private readonly record struct GridKeyboardAnchor(int RowIndex, string ColumnIdentity);
