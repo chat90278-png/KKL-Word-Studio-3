@@ -6,14 +6,9 @@ using Xunit;
 public sealed class Sprint20DiagnosticsArchitectureTests
 {
     [Fact]
-    public void PreviewSnapshotDiagnostics_RemainOptionalRuntimeProjectionMetadata()
+    public void PreviewSnapshot_FrozenContractRemainsUntouchedByRuntimeDiagnostics()
     {
-        var property = typeof(PreviewSnapshot).GetProperty(nameof(PreviewSnapshot.Diagnostics));
-
-        Assert.NotNull(property);
-        Assert.Equal(typeof(IReadOnlyList<PreviewDiagnostic>), property!.PropertyType);
-        Assert.False(property.CustomAttributes.Any(attribute =>
-            string.Equals(attribute.AttributeType.Name, "RequiredMemberAttribute", StringComparison.Ordinal)));
+        Assert.Null(typeof(PreviewSnapshot).GetProperty("Diagnostics"));
     }
 
     [Fact]
@@ -53,6 +48,7 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         Assert.Contains("Text=\"{Binding SourceText}\"", warningCenter, StringComparison.Ordinal);
         Assert.Contains("PreviewDiagnosticFactory.Build", renderer, StringComparison.Ordinal);
         Assert.Contains("_diagnosticsStore.Replace", renderer, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diagnostics =", renderer, StringComparison.Ordinal);
     }
 
     [Fact]
