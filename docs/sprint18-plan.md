@@ -31,6 +31,7 @@ Implemented:
 - `SelectAutomatic` exposes the automatic choice without mutating authored table state.
 - Properties UI renders the null-key option as `Otomatik — <effective profile>` when a profile is available.
 - Properties UI separately reports the current effective profile.
+- effective-format projections raise notifications when the async selected option/profile refresh completes and when the selected option changes.
 - existing warning/status text remains a separate channel.
 - explicit stable-key selection continues to use `ITableFormatSelectionService` and invalid selections remain rejected.
 - imported profiles remain the source profile supplied to the shared selector.
