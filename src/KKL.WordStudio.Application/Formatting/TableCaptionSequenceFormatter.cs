@@ -10,7 +10,7 @@ public static class TableCaptionSequenceFormatter
     public static int? PeekNextSequenceNumber(
         string? caption,
         TableCaptionSequenceProfile? sequence,
-        IReadOnlyDictionary<string, int> sequenceCounters)
+        IDictionary<string, int> sequenceCounters)
     {
         ArgumentNullException.ThrowIfNull(sequenceCounters);
 
@@ -32,11 +32,7 @@ public static class TableCaptionSequenceFormatter
     {
         ArgumentNullException.ThrowIfNull(sequenceCounters);
 
-        var next = PeekNextSequenceNumber(
-            caption,
-            sequence,
-            sequenceCounters as IReadOnlyDictionary<string, int>
-            ?? new Dictionary<string, int>(sequenceCounters, StringComparer.Ordinal));
+        var next = PeekNextSequenceNumber(caption, sequence, sequenceCounters);
         if (next is null || sequence is null)
             return null;
 
