@@ -17,9 +17,10 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
         var visibleCaption = TableCaptionSequenceFormatter.BuildDisplayText(description, sequence, 1);
         var ids = new FixtureIds(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
-        var boundaryWordCount = await FindBoundaryWordCountAsync(
+        var boundaryWordCount = await FindRawCaptionUnderestimationBoundaryAsync(
             profile,
             ids,
+            description,
             visibleCaption);
         var automaticLayout = await LayoutAsync(
             profile,
@@ -48,30 +49,40 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
                 tablePayload.CaptionSequenceNumber));
     }
 
-    private static async Task<int> FindBoundaryWordCountAsync(
+    private static async Task<int> FindRawCaptionUnderestimationBoundaryAsync(
         DocumentFormatProfile profile,
         FixtureIds ids,
+        string rawCaption,
         string visibleCaption)
     {
-        for (var wordCount = 1; wordCount <= 120; wordCount++)
+        for (var wordCount = 1; wordCount <= 240; wordCount++)
         {
-            var layout = await LayoutAsync(
+            var rawLayout = await LayoutAsync(
+                profile,
+                ids,
+                wordCount,
+                rawCaption,
+                sequence: null);
+            var visibleLayout = await LayoutAsync(
                 profile,
                 ids,
                 wordCount,
                 visibleCaption,
                 sequence: null);
 
-            if (LastPageFor(layout, ids.FillerId) == 1
-                && FirstPageFor(layout, ids.HeadingId) == 2
-                && FirstPageFor(layout, ids.TableId) == 2)
-            {
+            var rawUnderestimates = LastPageFor(rawLayout, ids.FillerId) == 1
+                && FirstPageFor(rawLayout, ids.HeadingId) == 1
+                && FirstPageFor(rawLayout, ids.TableId) == 2;
+            var visibleKeepsTogether = LastPageFor(visibleLayout, ids.FillerId) == 1
+                && FirstPageFor(visibleLayout, ids.HeadingId) == 2
+                && FirstPageFor(visibleLayout, ids.TableId) == 2;
+
+            if (rawUnderestimates && visibleKeepsTogether)
                 return wordCount;
-            }
         }
 
         throw new Xunit.Sdk.XunitException(
-            "Could not find the deterministic heading/table keep-with-next boundary within 120 filler words.");
+            "Could not reproduce the deterministic raw-caption keep-with-next underestimation boundary within 240 filler words.");
     }
 
     private static async Task<DocumentLayoutResult> LayoutAsync(
