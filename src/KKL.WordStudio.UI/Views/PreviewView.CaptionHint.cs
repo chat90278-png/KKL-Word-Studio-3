@@ -12,7 +12,7 @@ using KKL.WordStudio.UI.ViewModels;
 public partial class PreviewView
 {
     private const string EmptyCaptionHintText = "+ Tablo başlığı";
-    private const string EmptyCaptionHintToolTip = "Tablo başlığı eklemek için çift tıklayın";
+    private const string EmptyCaptionHintToolTip = "Tablo başlığı eklemek için tıklayın";
 
     private Popup? _emptyCaptionHintPopup;
     private FrameworkElement? _emptyCaptionHintTarget;
@@ -42,6 +42,34 @@ public partial class PreviewView
         }
 
         ShowEmptyCaptionHint(host, block);
+    }
+
+    protected override void OnPreviewMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseLeftButtonDown(e);
+
+        if (e.Handled)
+            return;
+
+        var host = FindCaptionHintTableHost(e.OriginalSource as DependencyObject);
+        if (host?.DataContext is not PreviewTablePageBlockViewModel
+            {
+                CanEditCaption: true,
+                ShowCaptionArea: true,
+                HasCaption: true
+            } block)
+        {
+            return;
+        }
+
+        var pointerY = e.GetPosition(host).Y;
+        var captionInteractionHeight = Math.Max(24d, block.CaptionLineHeight);
+        if (pointerY > captionInteractionHeight)
+            return;
+
+        CloseEmptyCaptionHint();
+        _viewModel.BeginTableCaptionEdit(block);
+        e.Handled = true;
     }
 
     private void ShowEmptyCaptionHint(
