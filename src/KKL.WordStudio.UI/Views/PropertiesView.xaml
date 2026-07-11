@@ -44,19 +44,7 @@
                 <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,11" />
 
                 <TextBlock Text="Tablo Başlığı" Style="{StaticResource FieldLabel}" />
-                <TextBox Text="{Binding TableCaption, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-                <Grid Margin="0,0,0,11">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ComboBox Grid.Column="0" ItemsSource="{Binding HeadingCaptionCandidates}"
-                              SelectedItem="{Binding SelectedHeadingCaptionCandidate}"
-                              DisplayMemberPath="DisplayText" MinWidth="150" Margin="0,0,6,0"
-                              ToolTip="Mevcut Başlık 1 / Başlık 2 öğelerinden birini seçin" />
-                    <Button Grid.Column="1" Content="Başlıktan Al" Style="{StaticResource Btn.Mini}"
-                            Command="{Binding UseSelectedHeadingAsTableCaptionCommand}" />
-                </Grid>
+                <TextBox Text="{Binding TableCaption, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,11" />
 
                 <StackPanel Style="{StaticResource Section}">
                     <TextBlock Text="TABLO BİÇİMİ" FontSize="10" FontWeight="Bold" Foreground="#FF7B8798" Margin="0,0,0,9" />
