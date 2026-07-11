@@ -62,6 +62,14 @@ public sealed class Sprint19FastSourceWorkspaceArchitectureTests
         Assert.Contains("case \"Kopyala\"", source, StringComparison.Ordinal);
         Assert.Contains("case \"Yapıştır\"", source, StringComparison.Ordinal);
         Assert.Contains("e.Key is Key.V or Key.Z or Key.Y", source, StringComparison.Ordinal);
+
+        var initializedStart = source.IndexOf("protected override void OnInitialized", StringComparison.Ordinal);
+        var loadedStart = source.IndexOf("private void ExcelWorkspaceView_KeyboardFlowLoaded", StringComparison.Ordinal);
+        Assert.True(initializedStart >= 0 && loadedStart > initializedStart);
+        var initializedSegment = source[initializedStart..loadedStart];
+        Assert.Contains("Loaded += ExcelWorkspaceView_KeyboardFlowLoaded", initializedSegment, StringComparison.Ordinal);
+        Assert.DoesNotContain("_viewModel.", initializedSegment, StringComparison.Ordinal);
+        Assert.Contains("_viewModel.PropertyChanged += ViewModel_KeyboardFlowPropertyChanged", source, StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] parts) =>
