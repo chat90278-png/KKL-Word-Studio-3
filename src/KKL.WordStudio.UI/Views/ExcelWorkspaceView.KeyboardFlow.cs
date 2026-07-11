@@ -40,6 +40,7 @@ public partial class ExcelWorkspaceView
             new RoutedEventHandler(WorkspaceButton_KeyboardFlowClick),
             handledEventsToo: true);
         _viewModel.PropertyChanged += ViewModel_KeyboardFlowPropertyChanged;
+        _viewModel.DiagnosticGridNavigationRequested += ViewModel_DiagnosticGridNavigationRequested;
         _keyboardFlowAttached = true;
     }
 
@@ -97,6 +98,49 @@ public partial class ExcelWorkspaceView
 
         _restoreGridFocusAfterPreviewRefresh = false;
         ScheduleGridKeyboardRestore(replaceSelection: true);
+    }
+
+    private void ViewModel_DiagnosticGridNavigationRequested(ExcelGridNavigationRequest request)
+    {
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() => NavigateToDiagnosticCell(request)));
+    }
+
+    private void NavigateToDiagnosticCell(ExcelGridNavigationRequest request)
+    {
+        if (!IsLoaded
+            || !WorkingDataGrid.IsVisible
+            || request.DisplayRowIndex < 0
+            || request.DisplayRowIndex >= WorkingDataGrid.Items.Count)
+        {
+            return;
+        }
+
+        var column = !string.IsNullOrWhiteSpace(request.ColumnIdentity)
+            ? WorkingDataGrid.Columns.FirstOrDefault(candidate => string.Equals(
+                GetColumnIdentity(candidate),
+                request.ColumnIdentity,
+                StringComparison.OrdinalIgnoreCase))
+            : null;
+        column ??= WorkingDataGrid.Columns
+            .OrderBy(candidate => candidate.DisplayIndex)
+            .ElementAtOrDefault(request.ColumnIndex);
+        if (column is null)
+            return;
+
+        var item = WorkingDataGrid.Items[request.DisplayRowIndex];
+        var cell = new DataGridCellInfo(item, column);
+        WorkingDataGrid.CurrentCell = cell;
+        WorkingDataGrid.UnselectAllCells();
+        WorkingDataGrid.SelectedCells.Add(cell);
+        WorkingDataGrid.ScrollIntoView(item, column);
+        WorkingDataGrid.Focus();
+        Keyboard.Focus(WorkingDataGrid);
+
+        var identity = GetColumnIdentity(column);
+        if (!string.IsNullOrWhiteSpace(identity))
+            _lastGridKeyboardAnchor = new GridKeyboardAnchor(request.DisplayRowIndex, identity);
     }
 
     private void ArmGridKeyboardRestore()
@@ -182,6 +226,7 @@ public partial class ExcelWorkspaceView
             ButtonBase.ClickEvent,
             new RoutedEventHandler(WorkspaceButton_KeyboardFlowClick));
         _viewModel.PropertyChanged -= ViewModel_KeyboardFlowPropertyChanged;
+        _viewModel.DiagnosticGridNavigationRequested -= ViewModel_DiagnosticGridNavigationRequested;
         _keyboardFlowAttached = false;
     }
 

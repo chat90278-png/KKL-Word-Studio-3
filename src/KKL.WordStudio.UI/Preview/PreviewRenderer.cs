@@ -6,28 +6,42 @@ using KKL.WordStudio.Application.Layout;
 using KKL.WordStudio.Application.Preview;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
+using KKL.WordStudio.UI.ViewModels;
 
 /// <summary>
 /// Preview orchestration boundary. Generated report semantics still come from
 /// IReportContentBuilder; imported front matter is read through its Application
 /// contract; pagination/layout is delegated to IDocumentLayoutEngine.
-/// Compatibility PreviewBlock lists remain until Team B switches the UI to
-/// PreviewSnapshot.Layout.Pages.
 /// </summary>
 public sealed class PreviewRenderer : IReportPreviewRenderer
 {
     private readonly IReportContentBuilder _contentBuilder;
     private readonly IDocumentLayoutEngine _layoutEngine;
     private readonly IImportedDocumentPreviewProvider _importedDocumentPreviewProvider;
+    private readonly PreviewDiagnosticsStore _diagnosticsStore;
 
     public PreviewRenderer(
         IReportContentBuilder contentBuilder,
         IDocumentLayoutEngine layoutEngine,
         IImportedDocumentPreviewProvider importedDocumentPreviewProvider)
+        : this(
+            contentBuilder,
+            layoutEngine,
+            importedDocumentPreviewProvider,
+            new PreviewDiagnosticsStore())
+    {
+    }
+
+    public PreviewRenderer(
+        IReportContentBuilder contentBuilder,
+        IDocumentLayoutEngine layoutEngine,
+        IImportedDocumentPreviewProvider importedDocumentPreviewProvider,
+        PreviewDiagnosticsStore diagnosticsStore)
     {
         _contentBuilder = contentBuilder;
         _layoutEngine = layoutEngine;
         _importedDocumentPreviewProvider = importedDocumentPreviewProvider;
+        _diagnosticsStore = diagnosticsStore;
     }
 
     public async Task<PreviewSnapshot> RenderAsync(
@@ -58,6 +72,12 @@ public sealed class PreviewRenderer : IReportPreviewRenderer
                 Warnings = mergedWarnings
             };
         }
+
+        // Diagnostics are runtime UI projection state. Publishing through the
+        // singleton store keeps PreviewSnapshot's frozen compatibility shape
+        // untouched while the Context Dock observes the current render result.
+        _diagnosticsStore.Replace(
+            PreviewDiagnosticFactory.Build(project, report, document, layout.Warnings));
 
         return new PreviewSnapshot
         {

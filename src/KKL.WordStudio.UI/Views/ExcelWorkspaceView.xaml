@@ -15,7 +15,6 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                         <TextBlock Text="KAYNAK VERİ" FontSize="10" FontWeight="Bold" Foreground="#FF7B8798" />
@@ -25,12 +24,11 @@
                             <Run Text="{Binding SelectedWorkbook.SelectedSheetName}" />
                         </TextBlock>
                     </StackPanel>
-                    <Button Grid.Column="1" Content="Excel Dosyası Aç..." Style="{StaticResource Btn.Mini}" Command="{Binding OpenExcelFileCommand}" Margin="0,0,8,0" />
-                    <Button Grid.Column="2" Content="Sütunları Eşle" Style="{StaticResource Btn.Mini}" Command="{Binding OpenMappingDrawerCommand}" Margin="0,0,8,0"
+                    <Button Grid.Column="1" Content="Sütunları Eşle" Style="{StaticResource Btn.Mini}" Command="{Binding OpenMappingDrawerCommand}" Margin="0,0,8,0"
                             ToolTip="İsteğe bağlı: sütunları anlamsal alan adlarıyla eşleyin. Aktarım için gerekli değildir." />
                     <!-- Sprint 7: THE primary action of the Excel Workspace — transfers the
                          current sheet's configured range directly into the report design. -->
-                    <Button Grid.Column="3" Content="Word'e Aktar →" Style="{StaticResource Btn.Primary}" Height="32" Padding="14,0"
+                    <Button Grid.Column="2" Content="Word'e Aktar →" Style="{StaticResource Btn.Primary}" Height="32" Padding="14,0"
                             Command="{Binding TransferToReportCommand}"
                             ToolTip="Etkin sayfanın yapılandırılmış veri aralığını rapora aktarır" />
                 </Grid>
@@ -172,10 +170,9 @@
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="330">
                         <TextBlock Text="Excel dosyasını buraya sürükleyip bırakın" FontSize="16" FontWeight="SemiBold"
                                    TextAlignment="Center" TextWrapping="Wrap" />
-                        <TextBlock Text=".xlsx ve .xlsm · kaynak dosya değiştirilmez" Margin="0,7,0,16"
-                                   Foreground="{DynamicResource Brush.Text.Secondary}" TextAlignment="Center" />
-                        <Button Content="veya Excel Dosyası Aç" Style="{StaticResource Btn.Primary}"
-                                Command="{Binding OpenExcelFileCommand}" HorizontalAlignment="Center" Padding="16,0" Height="32" />
+                        <TextBlock Text=".xlsx ve .xlsm · üstteki Excel ekle düğmesini de kullanabilirsiniz · kaynak dosya değiştirilmez"
+                                   Margin="0,7,0,0" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                   TextAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -282,7 +279,6 @@
                         Command="{Binding CancelTransferChoiceCommand}" HorizontalAlignment="Right" Padding="14,0" />
             </StackPanel>
         </Border>
-
 
         <!-- Sprint 10: compact field matching surface, shown only when an
              additional source cannot be normalized safely by logical/header
