@@ -86,6 +86,7 @@ public sealed class Sprint16PreviewFormatStaticTests
         var projection = ReadSource("src/KKL.WordStudio.UI/ViewModels/PreviewPageProjection.cs");
         var viewModel = ReadSource("src/KKL.WordStudio.UI/ViewModels/PreviewPageViewModel.cs");
         var xaml = ReadSource("src/KKL.WordStudio.UI/Views/PreviewView.xaml");
+        var hint = ReadSource("src/KKL.WordStudio.UI/Views/PreviewView.CaptionHint.cs");
 
         Assert.Contains("ResolvedTextFormat? CaptionFormat", payload, StringComparison.Ordinal);
         Assert.Contains("CaptionFormat = table.CaptionFormat", projection, StringComparison.Ordinal);
@@ -95,7 +96,9 @@ public sealed class Sprint16PreviewFormatStaticTests
         Assert.Contains("TextAlignment=\"{Binding CaptionAlignment}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("LineHeight=\"{Binding CaptionLineHeight}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("FirstLineIndent=\"{Binding CaptionFirstLineIndent}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Tablo başlığı eklemek için çift tıklayın", xaml, StringComparison.Ordinal);
+        Assert.Contains("Tablo başlığı eklemek için çift tıklayın", hint, StringComparison.Ordinal);
+        Assert.Contains("StaysOpen = false", hint, StringComparison.Ordinal);
+        Assert.Contains("BeginTableCaptionEdit(block)", hint, StringComparison.Ordinal);
     }
 
     [Fact]
