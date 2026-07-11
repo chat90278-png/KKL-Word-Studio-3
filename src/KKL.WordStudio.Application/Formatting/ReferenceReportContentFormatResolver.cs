@@ -64,19 +64,7 @@ public sealed class ReferenceReportContentFormatResolver : IReportContentFormatR
         ArgumentNullException.ThrowIfNull(table);
 
         var effectiveProfile = profile ?? DefaultDocumentFormatProfileFactory.Create();
-        if (effectiveProfile.TableFormats.Count == 0)
-            return compatibilityResolver.ResolveTable(null, table);
-
-        ReferenceTableFormatProfile? selected = null;
-        if (!string.IsNullOrWhiteSpace(table.ReferenceTableFormatKey))
-        {
-            selected = effectiveProfile.TableFormats.FirstOrDefault(candidate =>
-                string.Equals(candidate.Key, table.ReferenceTableFormatKey, StringComparison.Ordinal));
-        }
-
-        selected ??= effectiveProfile.TableFormats.FirstOrDefault(candidate =>
-            candidate.ReferenceHeaders.Count == table.Columns.Count);
-        selected ??= effectiveProfile.TableFormats.FirstOrDefault();
+        var selected = TableFormatProfileSelector.Select(effectiveProfile, table);
 
         return selected?.Format ?? compatibilityResolver.ResolveTable(null, table);
     }
