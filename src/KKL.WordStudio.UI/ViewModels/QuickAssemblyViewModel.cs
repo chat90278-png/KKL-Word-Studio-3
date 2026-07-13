@@ -93,7 +93,8 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         }
 
         _transferCancellation?.Dispose();
-        _transferCancellation = new CancellationTokenSource();
+        using var transferCancellation = new CancellationTokenSource();
+        _transferCancellation = transferCancellation;
         CompletedCount = 0;
         TotalCount = selectedTargets.Count;
         CurrentItemText = "Toplu aktarım hazırlanıyor…";
@@ -107,7 +108,7 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
             var result = await _orchestrator.ExecuteAsync(
                 selectedTargets,
                 _excelWorkspace.TransferQuickAssemblyTargetAsync,
-                _transferCancellation.Token,
+                transferCancellation.Token,
                 progress);
 
             ApplyTargetResults(result);
@@ -125,8 +126,8 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         }
         finally
         {
-            _transferCancellation.Dispose();
-            _transferCancellation = null;
+            if (ReferenceEquals(_transferCancellation, transferCancellation))
+                _transferCancellation = null;
             IsBusy = false;
             RefreshSelectionState();
             RefreshCommandStates();
