@@ -70,7 +70,7 @@ public sealed class Sprint22QuickAssemblyProgressTests
         Assert.Single(result.Targets);
         Assert.Equal("A1", Assert.Single(called));
         Assert.Equal(1, result.CreatedCount);
-        var cancelled = Assert.IsType<QuickAssemblyProgress>(reports[^1]);
+        var cancelled = reports[^1];
         Assert.True(cancelled.IsCancelled);
         Assert.Equal(1, cancelled.CompletedCount);
         Assert.Equal(3, cancelled.TotalCount);
