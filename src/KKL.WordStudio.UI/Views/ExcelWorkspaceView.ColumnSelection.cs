@@ -35,6 +35,9 @@ public partial class ExcelWorkspaceView
             return;
 
         _columnSelectionUiInstalled = true;
+        if (FindVisualAncestor<Border>(mappingGrid) is { } drawer && Math.Abs(drawer.Width - 440d) < 0.1d)
+            drawer.Width = 540d;
+
         mappingGrid.Columns.Insert(0, new DataGridCheckBoxColumn
         {
             Header = "Aktar",
@@ -117,6 +120,18 @@ public partial class ExcelWorkspaceView
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 5, 0, 0)
         });
+    }
+
+    private static T? FindVisualAncestor<T>(DependencyObject current) where T : DependencyObject
+    {
+        var parent = VisualTreeHelper.GetParent(current);
+        while (parent is not null)
+        {
+            if (parent is T match)
+                return match;
+            parent = VisualTreeHelper.GetParent(parent);
+        }
+        return null;
     }
 
     private static IEnumerable<DependencyObject> EnumerateVisualDescendants(DependencyObject parent)
