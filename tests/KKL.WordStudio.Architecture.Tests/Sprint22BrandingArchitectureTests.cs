@@ -5,19 +5,23 @@ using Xunit;
 public sealed class Sprint22BrandingArchitectureTests
 {
     [Fact]
-    public void Branding_UsesBuildTimeApplicationIconAndSafePngWindowMark()
+    public void Branding_UsesBuildTimeFallbackAndSafePngRuntimeIcon()
     {
         var root = SolutionRootLocator.Find();
         var project = Read(root, "src", "KKL.WordStudio.UI", "KKL.WordStudio.UI.csproj");
         var shell = Read(root, "src", "KKL.WordStudio.UI", "MainWindow.xaml");
+        var shellCode = Read(root, "src", "KKL.WordStudio.UI", "MainWindow.xaml.cs");
 
         Assert.Contains("<ApplicationIcon>Assets\\Brand\\AppIcon.ico</ApplicationIcon>", project, StringComparison.Ordinal);
         Assert.Contains("<Resource Include=\"Assets\\Brand\\BrandMark.png\" />", project, StringComparison.Ordinal);
+        Assert.Contains("<Resource Include=\"Assets\\Brand\\BrandMarkSmall.png\" />", project, StringComparison.Ordinal);
         Assert.Contains("Source=\"Assets/Brand/BrandMark.png\"", shell, StringComparison.Ordinal);
+        Assert.Contains("BrandMarkSmall.png", shellCode, StringComparison.Ordinal);
+        Assert.Contains("BitmapFrame.Create", shellCode, StringComparison.Ordinal);
+        Assert.Contains("Branding must never block application startup", shellCode, StringComparison.Ordinal);
 
-        // The executable icon is inherited from ApplicationIcon. Loading the ICO
-        // again through Window.Icon invokes WPF's runtime TypeConverter and can
-        // fail before MainWindow is shown.
+        // Loading the ICO again through Window.Icon invokes WPF's runtime
+        // TypeConverter and previously failed before MainWindow was shown.
         Assert.DoesNotContain("Icon=\"Assets/Brand/AppIcon.ico\"", shell, StringComparison.Ordinal);
     }
 
