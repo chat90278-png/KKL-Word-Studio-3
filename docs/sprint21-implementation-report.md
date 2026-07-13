@@ -60,6 +60,14 @@ Architecture guards cover the compact UI, DI registration, reuse of `OpenWorkboo
 
 ## Pending final gate
 
+Expected head:
+
+```text
+66928fb5d33afeaa1831284db95bf0190eb7bc11
+```
+
+Run:
+
 ```bat
 git checkout sprint21/multi-source-quick-assembly
 git pull
