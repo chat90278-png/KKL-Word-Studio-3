@@ -65,7 +65,7 @@ Infrastructure tests additionally require pre-cancelled workbook-open, sheet-pre
 Exact corrected implementation head:
 
 ```text
-714d78a2d732c80516bd222d1c20eb7303c99dcd
+d972b1df658a7c80f7c501a7bc09fcd73e2f74f1
 ```
 
 The implementation head is **not GREEN yet**. Windows execution remains final truth.
