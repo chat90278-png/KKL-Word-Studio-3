@@ -29,12 +29,19 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
 
     public OpenXmlExcelWorkbookReader(ILogger<OpenXmlExcelWorkbookReader> logger) => _logger = logger;
 
-    public Task<Result<DomainWorkbook>> OpenWorkbookAsync(string filePath, CancellationToken cancellationToken = default)
+    public Task<Result<DomainWorkbook>> OpenWorkbookAsync(
+        string filePath,
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => OpenWorkbook(filePath, cancellationToken), cancellationToken);
+
+    private Result<DomainWorkbook> OpenWorkbook(string filePath, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (!File.Exists(filePath))
-                return Task.FromResult(Result.Failure<DomainWorkbook>($"Excel dosyası bulunamadı: {filePath}"));
+                return Result.Failure<DomainWorkbook>($"Excel dosyası bulunamadı: {filePath}");
 
             using var document = SpreadsheetDocument.Open(filePath, false);
             var workbookPart = document.WorkbookPart
@@ -49,25 +56,44 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
             var sheets = workbookPart.Workbook.Sheets?.Elements<Sheet>() ?? Enumerable.Empty<Sheet>();
             foreach (var sheet in sheets)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (sheet.Name is null) continue;
                 workbook.Worksheets.Add(new DomainWorksheet { Name = sheet.Name.Value! });
             }
 
-            return Task.FromResult(Result.Success(workbook));
+            return Result.Success(workbook);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open workbook {FilePath}", filePath);
-            return Task.FromResult(Result.Failure<DomainWorkbook>(
-                $"Excel dosyası açılamadı: '{Path.GetFileName(filePath)}'. Geçerli bir .xlsx veya .xlsm dosyası olduğundan ve başka bir programda açık olmadığından emin olun."));
+            return Result.Failure<DomainWorkbook>(
+                $"Excel dosyası açılamadı: '{Path.GetFileName(filePath)}'. Geçerli bir .xlsx veya .xlsm dosyası olduğundan ve başka bir programda açık olmadığından emin olun.");
         }
     }
 
     public Task<Result<SheetPreview>> GetSheetPreviewAsync(
-        string filePath, string worksheetName, int maxPreviewRows = 100, CancellationToken cancellationToken = default)
+        string filePath,
+        string worksheetName,
+        int maxPreviewRows = 100,
+        CancellationToken cancellationToken = default) =>
+        Task.Run(
+            () => GetSheetPreview(filePath, worksheetName, maxPreviewRows, cancellationToken),
+            cancellationToken);
+
+    private Result<SheetPreview> GetSheetPreview(
+        string filePath,
+        string worksheetName,
+        int maxPreviewRows,
+        CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             using var document = SpreadsheetDocument.Open(filePath, false);
             var (worksheetPart, sharedStrings) = OpenWorksheetPart(document, worksheetName);
 
@@ -80,6 +106,8 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
 
             foreach (var row in sheetData.Elements<Row>())
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (readCount >= maxPreviewRows)
                 {
                     truncated = true;
@@ -104,18 +132,25 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
                 IsTruncated = truncated
             };
 
-            return Task.FromResult(Result.Success(preview));
+            return Result.Success(preview);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to preview sheet {Sheet} in {FilePath}", worksheetName, filePath);
-            return Task.FromResult(Result.Failure<SheetPreview>(
-                $"'{worksheetName}' sayfası okunamadı. Sayfa yeniden adlandırılmış veya silinmiş olabilir — dosyayı yeniden açmayı deneyin."));
+            return Result.Failure<SheetPreview>(
+                $"'{worksheetName}' sayfası okunamadı. Sayfa yeniden adlandırılmış veya silinmiş olabilir — dosyayı yeniden açmayı deneyin.");
         }
     }
 
     public Task<Result<WorksheetWorkingData>> ReadWorkingDataAsync(
-        string filePath, string worksheetName, DataRange range, CancellationToken cancellationToken = default) =>
+        string filePath,
+        string worksheetName,
+        DataRange range,
+        CancellationToken cancellationToken = default) =>
         Task.Run(
             () => ReadWorkingData(filePath, worksheetName, range, cancellationToken),
             cancellationToken);
@@ -176,6 +211,8 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
             var workingData = new WorksheetWorkingData();
             for (var columnIndex = startColumn; columnIndex <= endColumn; columnIndex++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var letter = ColumnLetterConverter.ToLetters(columnIndex);
                 var header = headerValues.TryGetValue(columnIndex, out var headerText) && !string.IsNullOrWhiteSpace(headerText)
                     ? headerText.Trim()
@@ -213,18 +250,62 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
     }
 
     public Task<Result<DataRange>> DetectDataRangeAsync(
-        string filePath, string worksheetName, int dataStartRow, CancellationToken cancellationToken = default) =>
-        DetectDataRangeCoreAsync(filePath, worksheetName, dataStartRow, startColumn: null, endColumn: null, cancellationToken);
+        string filePath,
+        string worksheetName,
+        int dataStartRow,
+        CancellationToken cancellationToken = default) =>
+        DetectDataRangeCoreAsync(
+            filePath,
+            worksheetName,
+            dataStartRow,
+            startColumn: null,
+            endColumn: null,
+            cancellationToken);
 
     public Task<Result<DataRange>> DetectDataRangeAsync(
-        string filePath, string worksheetName, int dataStartRow, int startColumn, int endColumn, CancellationToken cancellationToken = default) =>
-        DetectDataRangeCoreAsync(filePath, worksheetName, dataStartRow, startColumn, endColumn, cancellationToken);
+        string filePath,
+        string worksheetName,
+        int dataStartRow,
+        int startColumn,
+        int endColumn,
+        CancellationToken cancellationToken = default) =>
+        DetectDataRangeCoreAsync(
+            filePath,
+            worksheetName,
+            dataStartRow,
+            startColumn,
+            endColumn,
+            cancellationToken);
 
     private Task<Result<DataRange>> DetectDataRangeCoreAsync(
-        string filePath, string worksheetName, int dataStartRow, int? startColumn, int? endColumn, CancellationToken cancellationToken)
+        string filePath,
+        string worksheetName,
+        int dataStartRow,
+        int? startColumn,
+        int? endColumn,
+        CancellationToken cancellationToken) =>
+        Task.Run(
+            () => DetectDataRangeCore(
+                filePath,
+                worksheetName,
+                dataStartRow,
+                startColumn,
+                endColumn,
+                cancellationToken),
+            cancellationToken);
+
+    private Result<DataRange> DetectDataRangeCore(
+        string filePath,
+        string worksheetName,
+        int dataStartRow,
+        int? startColumn,
+        int? endColumn,
+        CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             using var document = SpreadsheetDocument.Open(filePath, false);
             var (worksheetPart, sharedStrings) = OpenWorksheetPart(document, worksheetName);
             var sheetData = worksheetPart.Worksheet.Elements<SheetData>().First();
@@ -271,17 +352,23 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
                 WasAutoDetected = true
             };
 
-            return Task.FromResult(Result.Success(range));
+            return Result.Success(range);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to detect data range in {Sheet} of {FilePath}", worksheetName, filePath);
-            return Task.FromResult(Result.Failure<DataRange>(
-                "Veri aralığı otomatik olarak algılanamadı. Aralığı elle ayarlamayı deneyin."));
+            return Result.Failure<DataRange>(
+                "Veri aralığı otomatik olarak algılanamadı. Aralığı elle ayarlamayı deneyin.");
         }
     }
 
-    private static (WorksheetPart Part, SharedStringTable? SharedStrings) OpenWorksheetPart(SpreadsheetDocument document, string worksheetName)
+    private static (WorksheetPart Part, SharedStringTable? SharedStrings) OpenWorksheetPart(
+        SpreadsheetDocument document,
+        string worksheetName)
     {
         var workbookPart = document.WorkbookPart
             ?? throw new InvalidDataException("The workbook has no WorkbookPart.");
@@ -296,7 +383,9 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
         return (worksheetPart, sharedStrings);
     }
 
-    private static Dictionary<int, string> ReadRowCellsByColumn(Row row, SharedStringTable? sharedStrings)
+    private static Dictionary<int, string> ReadRowCellsByColumn(
+        Row row,
+        SharedStringTable? sharedStrings)
     {
         var cells = new Dictionary<int, string>();
         var nextColumn = 1;
