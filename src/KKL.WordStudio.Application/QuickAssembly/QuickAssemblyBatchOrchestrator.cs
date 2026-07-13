@@ -22,9 +22,26 @@ public sealed class QuickAssemblyTargetResult
     public Guid? CreatedElementId { get; init; }
 }
 
+/// <summary>
+/// One deterministic progress snapshot. A snapshot with a current target and no
+/// last status means that target is about to start; a last status means it has
+/// completed. Cancellation is reported separately and never fabricates a
+/// success/failure result for a target that did not finish.
+/// </summary>
+public sealed class QuickAssemblyProgress
+{
+    public required int CompletedCount { get; init; }
+    public required int TotalCount { get; init; }
+    public QuickAssemblyTarget? CurrentTarget { get; init; }
+    public QuickAssemblyTransferStatus? LastStatus { get; init; }
+    public bool IsCancelled { get; init; }
+}
+
 public sealed class QuickAssemblyBatchResult
 {
     public required IReadOnlyList<QuickAssemblyTargetResult> Targets { get; init; }
+    public int TotalTargetCount { get; init; }
+    public bool IsCancelled { get; init; }
     public int CreatedCount => Targets.Count(target => target.Status == QuickAssemblyTransferStatus.Created);
     public int SkippedCount => Targets.Count(target => target.Status == QuickAssemblyTransferStatus.Skipped);
     public int FailedCount => Targets.Count(target => target.Status == QuickAssemblyTransferStatus.Failed);
@@ -34,13 +51,18 @@ public sealed class QuickAssemblyBatchResult
 /// Orders and accounts for a multi-target operation while delegating each real
 /// import to the existing single-target transfer seam supplied by the caller.
 /// It never reads Excel or creates report tables directly.
+///
+/// Cancellation is cooperative and bounded: an already-running target gets the
+/// token and may stop at its own safe checkpoints; otherwise cancellation takes
+/// effect before the next target. Completed target results are always retained.
 /// </summary>
 public sealed class QuickAssemblyBatchOrchestrator
 {
     public async Task<QuickAssemblyBatchResult> ExecuteAsync(
         IEnumerable<QuickAssemblyTarget> targets,
         Func<QuickAssemblyTarget, CancellationToken, Task<QuickAssemblyTransferOutcome>> transferSingleTargetAsync,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<QuickAssemblyProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(targets);
         ArgumentNullException.ThrowIfNull(transferSingleTargetAsync);
@@ -53,38 +75,86 @@ public sealed class QuickAssemblyBatchOrchestrator
         RejectDuplicates(orderedTargets);
 
         var results = new List<QuickAssemblyTargetResult>(orderedTargets.Count);
+        ReportProgress(progress, results.Count, orderedTargets.Count);
+
         foreach (var target in orderedTargets)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            if (cancellationToken.IsCancellationRequested)
+                return Cancelled(results, orderedTargets.Count, progress);
 
+            ReportProgress(progress, results.Count, orderedTargets.Count, target);
+
+            QuickAssemblyTargetResult targetResult;
             try
             {
                 var outcome = await transferSingleTargetAsync(target, cancellationToken);
-                results.Add(new QuickAssemblyTargetResult
+                targetResult = new QuickAssemblyTargetResult
                 {
                     Target = target,
                     Status = outcome.Status,
                     Message = outcome.Message,
                     CreatedElementId = outcome.CreatedElementId
-                });
+                };
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                throw;
+                return Cancelled(results, orderedTargets.Count, progress);
             }
             catch (Exception exception)
             {
-                results.Add(new QuickAssemblyTargetResult
+                targetResult = new QuickAssemblyTargetResult
                 {
                     Target = target,
                     Status = QuickAssemblyTransferStatus.Failed,
                     Message = exception.Message
-                });
+                };
             }
+
+            results.Add(targetResult);
+            ReportProgress(
+                progress,
+                results.Count,
+                orderedTargets.Count,
+                target,
+                targetResult.Status);
         }
 
-        return new QuickAssemblyBatchResult { Targets = results };
+        return new QuickAssemblyBatchResult
+        {
+            Targets = results,
+            TotalTargetCount = orderedTargets.Count
+        };
     }
+
+    private static QuickAssemblyBatchResult Cancelled(
+        IReadOnlyList<QuickAssemblyTargetResult> results,
+        int totalCount,
+        IProgress<QuickAssemblyProgress>? progress)
+    {
+        ReportProgress(progress, results.Count, totalCount, isCancelled: true);
+        return new QuickAssemblyBatchResult
+        {
+            Targets = results.ToList(),
+            TotalTargetCount = totalCount,
+            IsCancelled = true
+        };
+    }
+
+    private static void ReportProgress(
+        IProgress<QuickAssemblyProgress>? progress,
+        int completedCount,
+        int totalCount,
+        QuickAssemblyTarget? currentTarget = null,
+        QuickAssemblyTransferStatus? lastStatus = null,
+        bool isCancelled = false) =>
+        progress?.Report(new QuickAssemblyProgress
+        {
+            CompletedCount = completedCount,
+            TotalCount = totalCount,
+            CurrentTarget = currentTarget,
+            LastStatus = lastStatus,
+            IsCancelled = isCancelled
+        });
 
     private static void RejectDuplicates(IReadOnlyList<QuickAssemblyTarget> targets)
     {

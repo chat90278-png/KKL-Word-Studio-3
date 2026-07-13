@@ -12,6 +12,7 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
     private readonly QuickAssemblySelection _selection = new();
     private readonly QuickAssemblyBatchOrchestrator _orchestrator = new();
     private readonly HashSet<OpenWorkbookViewModel> _subscribedWorkbooks = [];
+    private CancellationTokenSource? _transferCancellation;
 
     public ExcelWorkspaceViewModel ExcelWorkspace => _excelWorkspace;
     public ObservableCollection<QuickAssemblyWorkbookItemViewModel> Sources { get; } = new();
@@ -25,8 +26,20 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusText = "Yüklü Excel sayfalarını seçerek tek işlemde rapora ekleyin.";
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ProgressPercent))]
+    private int _completedCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ProgressPercent))]
+    private int _totalCount;
+
+    [ObservableProperty]
+    private string _currentItemText = string.Empty;
+
     public bool HasSources => Sources.Count > 0;
     public int SelectedCount => Sources.Sum(source => source.SelectedCount);
+    public double ProgressPercent => TotalCount <= 0 ? 0 : CompletedCount * 100d / TotalCount;
 
     public QuickAssemblyViewModel(ExcelWorkspaceViewModel excelWorkspace)
     {
@@ -46,7 +59,9 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
     [RelayCommand]
     private void ClosePanel() => IsOpen = false;
 
-    [RelayCommand]
+    private bool CanModifySelection() => !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanModifySelection))]
     private void SelectAll()
     {
         foreach (var source in Sources)
@@ -54,7 +69,7 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         RefreshSelectionState();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanModifySelection))]
     private void ClearSelection()
     {
         foreach (var source in Sources)
@@ -67,54 +82,132 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanTransferSelected))]
     private async Task TransferSelectedAsync()
     {
-        if (SelectedCount == 0)
+        if (IsBusy)
+            return;
+
+        var selectedTargets = _selection.SelectedTargets.ToList();
+        if (selectedTargets.Count == 0)
         {
             StatusText = "Rapora aktarılacak en az bir sayfa seçin.";
             return;
         }
 
+        _transferCancellation?.Dispose();
+        using var transferCancellation = new CancellationTokenSource();
+        _transferCancellation = transferCancellation;
+        CompletedCount = 0;
+        TotalCount = selectedTargets.Count;
+        CurrentItemText = "Toplu aktarım hazırlanıyor…";
         IsBusy = true;
-        TransferSelectedCommand.NotifyCanExecuteChanged();
-        StatusText = $"{SelectedCount} sayfa rapora aktarılıyor…";
+        RefreshCommandStates();
+        StatusText = $"{selectedTargets.Count} sayfa rapora aktarılıyor…";
 
         try
         {
+            var progress = new InlineProgress<QuickAssemblyProgress>(ApplyProgress);
             var result = await _orchestrator.ExecuteAsync(
-                _selection.SelectedTargets,
-                _excelWorkspace.TransferQuickAssemblyTargetAsync);
+                selectedTargets,
+                _excelWorkspace.TransferQuickAssemblyTargetAsync,
+                transferCancellation.Token,
+                progress);
 
-            foreach (var item in result.Targets)
-            {
-                var sheet = Sources
-                    .SelectMany(source => source.Sheets)
-                    .FirstOrDefault(candidate => string.Equals(candidate.Key, item.Target.Key, StringComparison.OrdinalIgnoreCase));
-                if (sheet is null)
-                    continue;
-
-                sheet.LastResultText = item.Status switch
-                {
-                    QuickAssemblyTransferStatus.Created => "Oluşturuldu",
-                    QuickAssemblyTransferStatus.Skipped => $"Atlandı · {item.Message}",
-                    _ => $"Başarısız · {item.Message}"
-                };
-
-                // Successful targets are deselected so a second click cannot
-                // accidentally create duplicate report tables. Failed/skipped
-                // targets remain selected for correction and retry.
-                if (item.Status == QuickAssemblyTransferStatus.Created)
-                    sheet.IsSelected = false;
-            }
-
-            StatusText = $"{result.CreatedCount} tablo oluşturuldu · {result.SkippedCount} atlandı · {result.FailedCount} başarısız";
+            ApplyTargetResults(result);
+            StatusText = result.IsCancelled
+                ? $"İptal edildi · {result.CreatedCount} tablo oluşturuldu · {result.SkippedCount} atlandı · {result.FailedCount} başarısız"
+                : $"{result.CreatedCount} tablo oluşturuldu · {result.SkippedCount} atlandı · {result.FailedCount} başarısız";
+            CurrentItemText = result.IsCancelled
+                ? $"{result.Targets.Count}/{result.TotalTargetCount} hedef tamamlandı; kalanlar seçili bırakıldı."
+                : $"{result.TotalTargetCount}/{result.TotalTargetCount} hedef tamamlandı.";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"Toplu aktarım başlatılamadı · {exception.Message}";
+            CurrentItemText = "Tamamlanan hedefler korunur; başarısız hedefleri yeniden deneyin.";
         }
         finally
         {
+            if (ReferenceEquals(_transferCancellation, transferCancellation))
+                _transferCancellation = null;
             IsBusy = false;
             RefreshSelectionState();
+            RefreshCommandStates();
         }
     }
 
-    partial void OnIsBusyChanged(bool value) => TransferSelectedCommand.NotifyCanExecuteChanged();
+    private bool CanCancelTransferSelected() =>
+        IsBusy && _transferCancellation is { IsCancellationRequested: false };
+
+    [RelayCommand(CanExecute = nameof(CanCancelTransferSelected))]
+    private void CancelTransferSelected()
+    {
+        if (_transferCancellation is null || _transferCancellation.IsCancellationRequested)
+            return;
+
+        _transferCancellation.Cancel();
+        StatusText = $"İptal isteği alındı · {CompletedCount}/{TotalCount} hedef tamamlandı";
+        CurrentItemText = "Çalışan hedef güvenli iptal noktasında durduruluyor…";
+        CancelTransferSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ApplyProgress(QuickAssemblyProgress progress)
+    {
+        CompletedCount = progress.CompletedCount;
+        TotalCount = progress.TotalCount;
+
+        if (progress.IsCancelled)
+        {
+            CurrentItemText = $"{progress.CompletedCount}/{progress.TotalCount} hedef tamamlandı · iptal edildi";
+            return;
+        }
+
+        if (progress.CurrentTarget is null)
+        {
+            CurrentItemText = progress.TotalCount == 0
+                ? "Aktarılacak hedef yok."
+                : $"0/{progress.TotalCount} hedef · başlanıyor…";
+            return;
+        }
+
+        var targetName = $"{progress.CurrentTarget.WorkbookDisplayName} / {progress.CurrentTarget.WorksheetName}";
+        CurrentItemText = progress.LastStatus is null
+            ? $"{targetName} işleniyor…"
+            : $"{targetName} tamamlandı · {progress.CompletedCount}/{progress.TotalCount}";
+    }
+
+    private void ApplyTargetResults(QuickAssemblyBatchResult result)
+    {
+        foreach (var item in result.Targets)
+        {
+            var sheet = Sources
+                .SelectMany(source => source.Sheets)
+                .FirstOrDefault(candidate => string.Equals(candidate.Key, item.Target.Key, StringComparison.OrdinalIgnoreCase));
+            if (sheet is null)
+                continue;
+
+            sheet.LastResultText = item.Status switch
+            {
+                QuickAssemblyTransferStatus.Created => "Oluşturuldu",
+                QuickAssemblyTransferStatus.Skipped => $"Atlandı · {item.Message}",
+                _ => $"Başarısız · {item.Message}"
+            };
+
+            // Successful targets are deselected so a second click cannot
+            // accidentally create duplicate report tables. Failed/skipped and
+            // not-yet-started cancelled targets remain selected for retry.
+            if (item.Status == QuickAssemblyTransferStatus.Created)
+                sheet.IsSelected = false;
+        }
+    }
+
+    partial void OnIsBusyChanged(bool value) => RefreshCommandStates();
+
+    private void RefreshCommandStates()
+    {
+        TransferSelectedCommand.NotifyCanExecuteChanged();
+        CancelTransferSelectedCommand.NotifyCanExecuteChanged();
+        SelectAllCommand.NotifyCanExecuteChanged();
+        ClearSelectionCommand.NotifyCanExecuteChanged();
+    }
 
     private void OpenWorkbooks_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
@@ -171,6 +264,11 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         foreach (var source in Sources)
             source.RefreshAggregateSelection();
         TransferSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
     }
 }
 
