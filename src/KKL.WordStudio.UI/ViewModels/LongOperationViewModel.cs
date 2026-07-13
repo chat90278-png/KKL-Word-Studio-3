@@ -131,8 +131,11 @@ public sealed partial class LongOperationViewModel : ViewModelBase
 
     private static void FlushPresentationIfAvailable()
     {
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null || !dispatcher.CheckAccess())
+        var application = Application.Current;
+        var dispatcher = application?.Dispatcher;
+        if (dispatcher is null
+            || !dispatcher.CheckAccess()
+            || application?.MainWindow is not { IsVisible: true })
             return;
 
         var frame = new DispatcherFrame();
