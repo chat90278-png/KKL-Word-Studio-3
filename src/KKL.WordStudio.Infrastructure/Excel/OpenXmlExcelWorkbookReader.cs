@@ -12,19 +12,17 @@ using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Reads .xlsx and .xlsm OpenXML workbooks using the OpenXML SDK — the same package already
-/// planned for Word export, so no extra dependency was introduced to
-/// support Excel import. Read-only: this class never writes to the
-/// workbook, matching the Sprint 2 scope ("henüz editing gerekmiyor").
-///
-/// Uses explicit DomainWorkbook/DomainWorksheet aliases because
-/// DocumentFormat.OpenXml.Spreadsheet also defines Workbook/Worksheet
-/// types — without the alias, "Workbook"/"Worksheet" is ambiguous between
-/// the OpenXML SDK's types and our own Domain types (a real build-breaking
-/// error caught during Sprint 5 stabilization; preserved during the
-/// Sprint 6 integration).
+/// planned for Word export, so no extra dependency was introduced to support Excel import.
+/// Read-only: this class never writes to the workbook.
 /// </summary>
 public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
 {
+    /// <summary>
+    /// A single accidental blank row must not truncate a real dataset. Five
+    /// consecutive empty worksheet rows are treated as a deliberate end marker.
+    /// </summary>
+    internal const int SustainedBlankGapRows = 5;
+
     private readonly ILogger<OpenXmlExcelWorkbookReader> _logger;
 
     public OpenXmlExcelWorkbookReader(ILogger<OpenXmlExcelWorkbookReader> logger) => _logger = logger;
@@ -78,7 +76,7 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
     public Task<Result<SheetPreview>> GetSheetPreviewAsync(
         string filePath,
         string worksheetName,
-        int maxPreviewRows = 100,
+        int maxPreviewRows = int.MaxValue,
         CancellationToken cancellationToken = default) =>
         Task.Run(
             () => GetSheetPreview(filePath, worksheetName, maxPreviewRows, cancellationToken),
@@ -93,6 +91,9 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (maxPreviewRows <= 0)
+                return Result.Failure<SheetPreview>("Önizleme satır sınırı sıfırdan büyük olmalıdır.");
 
             using var document = SpreadsheetDocument.Open(filePath, false);
             var (worksheetPart, sharedStrings) = OpenWorksheetPart(document, worksheetName);
@@ -310,35 +311,45 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
             var (worksheetPart, sharedStrings) = OpenWorksheetPart(document, worksheetName);
             var sheetData = worksheetPart.Worksheet.Elements<SheetData>().First();
 
-            int? lastNonBlankRow = null;
+            int? lastMeaningfulRow = null;
             var minColumn = int.MaxValue;
             var maxColumn = 0;
-            var sawBlankAfterData = false;
+            var previousPhysicalRow = dataStartRow - 1;
+            var consecutiveBlankRows = 0;
 
             foreach (var row in sheetData.Elements<Row>())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var rowIndex = (int)(row.RowIndex?.Value ?? 0);
                 if (rowIndex < dataStartRow) continue;
-                if (sawBlankAfterData) break;
-                if (lastNonBlankRow.HasValue && rowIndex > lastNonBlankRow.Value + 1) break;
 
-                var valuesByColumn = ReadRowCellsByColumn(row, sharedStrings);
-                var occupiedColumns = valuesByColumn
-                    .Where(pair => !string.IsNullOrWhiteSpace(pair.Value))
-                    .Select(pair => pair.Key)
-                    .Where(column => (!startColumn.HasValue || column >= startColumn.Value)
-                                     && (!endColumn.HasValue || column <= endColumn.Value))
-                    .ToList();
-                var hasAnyValue = occupiedColumns.Count > 0;
-
-                if (!hasAnyValue)
+                if (lastMeaningfulRow.HasValue && rowIndex > previousPhysicalRow + 1)
                 {
-                    if (lastNonBlankRow.HasValue) sawBlankAfterData = true;
+                    consecutiveBlankRows += rowIndex - previousPhysicalRow - 1;
+                    if (consecutiveBlankRows >= SustainedBlankGapRows)
+                        break;
+                }
+
+                var occupiedColumns = ReadMeaningfulOccupiedColumns(
+                    row,
+                    sharedStrings,
+                    startColumn,
+                    endColumn);
+                previousPhysicalRow = rowIndex;
+
+                if (occupiedColumns.Count == 0)
+                {
+                    if (lastMeaningfulRow.HasValue)
+                    {
+                        consecutiveBlankRows++;
+                        if (consecutiveBlankRows >= SustainedBlankGapRows)
+                            break;
+                    }
                     continue;
                 }
 
-                lastNonBlankRow = rowIndex;
+                consecutiveBlankRows = 0;
+                lastMeaningfulRow = rowIndex;
                 minColumn = Math.Min(minColumn, occupiedColumns.Min());
                 maxColumn = Math.Max(maxColumn, occupiedColumns.Max());
             }
@@ -346,7 +357,7 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
             var range = new DataRange
             {
                 DataStartRow = dataStartRow,
-                DataEndRow = lastNonBlankRow,
+                DataEndRow = lastMeaningfulRow,
                 StartColumn = startColumn ?? (minColumn == int.MaxValue ? null : minColumn),
                 EndColumn = endColumn ?? (maxColumn == 0 ? null : maxColumn),
                 WasAutoDetected = true
@@ -396,6 +407,28 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
             nextColumn = columnIndex + 1;
         }
         return cells;
+    }
+
+    private static List<int> ReadMeaningfulOccupiedColumns(
+        Row row,
+        SharedStringTable? sharedStrings,
+        int? startColumn,
+        int? endColumn)
+    {
+        var occupied = new List<int>();
+        var nextColumn = 1;
+        foreach (var cell in row.Elements<Cell>())
+        {
+            var columnIndex = ResolveCellColumn(cell, nextColumn);
+            nextColumn = columnIndex + 1;
+            if (startColumn.HasValue && columnIndex < startColumn.Value) continue;
+            if (endColumn.HasValue && columnIndex > endColumn.Value) continue;
+
+            var displayValue = GetCellText(cell, sharedStrings);
+            if (!string.IsNullOrWhiteSpace(displayValue) || cell.CellFormula is not null)
+                occupied.Add(columnIndex);
+        }
+        return occupied;
     }
 
     private static IReadOnlyList<string> ReadRowCells(Row row, SharedStringTable? sharedStrings)
