@@ -5,17 +5,20 @@ using System.Text;
 using System.Windows;
 using System.Windows.Threading;
 using KKL.WordStudio.Application.DependencyInjection;
+using KKL.WordStudio.Application.Excel;
 using KKL.WordStudio.Application.Plugins;
 using KKL.WordStudio.Application.Preview;
 using KKL.WordStudio.Application.Transfer;
 using KKL.WordStudio.Engine.DependencyInjection;
 using KKL.WordStudio.Infrastructure.DependencyInjection;
+using KKL.WordStudio.Infrastructure.Excel;
 using KKL.WordStudio.UI.Preview;
 using KKL.WordStudio.UI.Services;
 using KKL.WordStudio.UI.ViewModels;
 using KKL.WordStudio.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 
 /// <summary>
@@ -48,14 +51,25 @@ public partial class App : Application
                     services.AddWordStudioEngine();
                     services.AddWordStudioInfrastructure();
 
+                    // The Infrastructure package remains the single OpenXML
+                    // implementation. This final composition-root registration
+                    // decorates that implementation with shell busy state and
+                    // linked cancellation; it never reads workbook bytes itself.
+                    services.AddSingleton<IExcelWorkbookReader>(provider =>
+                        new LongOperationExcelWorkbookReader(
+                            new OpenXmlExcelWorkbookReader(
+                                provider.GetRequiredService<ILogger<OpenXmlExcelWorkbookReader>>())));
+
                     // Last registration wins for single-service resolution. The
-                    // decorator is a transparent pass-through unless the user has
-                    // explicitly applied a session-only column inclusion selection.
+                    // column-selection service is still the authoritative transfer
+                    // engine; the outer decorator only publishes the shell loading
+                    // state around that same call.
                     services.AddSingleton<IColumnTransferSelectionSession>(
                         _ => ColumnTransferSelectionSession.Shared);
                     services.AddSingleton<IExcelReportTransferService>(provider =>
-                        new ColumnSelectionExcelReportTransferService(
-                            provider.GetRequiredService<IColumnTransferSelectionSession>()));
+                        new LongOperationExcelReportTransferService(
+                            new ColumnSelectionExcelReportTransferService(
+                                provider.GetRequiredService<IColumnTransferSelectionSession>())));
 
                     services.AddSingleton<PreviewDiagnosticsStore>();
                     services.AddSingleton<IReportPreviewRenderer, PreviewRenderer>();

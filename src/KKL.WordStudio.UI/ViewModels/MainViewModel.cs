@@ -30,6 +30,9 @@ public sealed partial class MainViewModel : ViewModelBase
     /// <summary>Shared with ContextDockView/ContentsViewModel/PropertiesViewModel via DI (registered as a singleton) — the shell's Grid column width binds to its State.</summary>
     public DockViewModel DockViewModel { get; }
 
+    /// <summary>Shared session-only busy state rendered by MainWindow as a full interaction shield.</summary>
+    public LongOperationViewModel LongOperation { get; } = LongOperationViewModel.Shared;
+
     [ObservableProperty]
     private Project _currentProject;
 
