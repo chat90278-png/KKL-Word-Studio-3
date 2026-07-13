@@ -2,7 +2,6 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="KKL Word Studio"
-        Icon="Assets/Brand/AppIcon.ico"
         Width="1600" Height="950"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.App.Background}">
