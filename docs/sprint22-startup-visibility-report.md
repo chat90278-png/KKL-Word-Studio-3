@@ -2,41 +2,48 @@
 
 ## Trigger
 
-The exact responsive-batch head passed Release build and all 494 tests on Windows, but:
+The responsive-batch head passed Release build and all 496 tests on Windows, but the WPF application did not open. Startup diagnostics exposed the concrete failure:
 
-- `dotnet run --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj` did not show the application window;
-- the terminal remained attached without printing a runtime error.
+```text
+'KKL.WordStudio.UI.ViewModels.QuickAssemblyViewModel' türünde 'ProgressPercent' salt okunur özelliğinde TwoWay veya OneWayToSource bağlama çalışamaz.
+```
 
-The lack of terminal output is expected for a WPF project whose output type is `WinExe`. The lack of a visible main window is not accepted as GREEN UI smoke.
+The terminal itself stayed quiet because the UI project is a `WinExe`; the diagnostic message box correctly surfaced the startup exception.
 
-## Hardening added
+## Root cause
 
-- Startup stages are written to a stable per-user log folder:
-  - `%LOCALAPPDATA%\KKL Word Studio\Logs\wordstudio-YYYYMMDD.log`
-- Last-resort startup failures are appended to:
-  - `%LOCALAPPDATA%\KKL Word Studio\Logs\startup-failures.log`
-- Stage markers distinguish:
-  - application startup entry;
-  - DI host construction;
-  - `MainWindow` resolution;
-  - `MainWindow.Show` completion;
-  - first content render.
-- Global failure capture covers:
-  - WPF dispatcher exceptions;
-  - AppDomain unhandled exceptions;
-  - unobserved task exceptions.
-- Fatal dispatcher/startup errors show a message box with the diagnostic path.
-- The application explicitly assigns `Application.MainWindow`.
-- The main window is forced out of a minimized state, shown in the taskbar, checked against the Windows virtual desktop, re-centered if off-screen, activated and focused.
+`QuickAssemblyView.xaml` bound `ProgressBar.Value` to the computed, read-only `QuickAssemblyViewModel.ProgressPercent` property without an explicit binding mode. `RangeBase.Value` requested a writable binding, so WPF attempted to write the control value back to the read-only source property while constructing `QuickAssemblyView`.
+
+The exception occurred during dependency-injection resolution of `MainWindow`, before `MainWindow.Show()`.
+
+## Fix
+
+The progress binding is now explicitly one-way:
+
+```xaml
+Value="{Binding ProgressPercent, Mode=OneWay}"
+```
+
+A regression assertion verifies that:
+
+- the explicit `Mode=OneWay` form exists;
+- the unsafe implicit `Value="{Binding ProgressPercent}"` form does not exist.
+
+## Existing startup hardening
+
+- Startup stages are written to `%LOCALAPPDATA%\KKL Word Studio\Logs\wordstudio-YYYYMMDD.log`.
+- Last-resort failures are appended to `%LOCALAPPDATA%\KKL Word Studio\Logs\startup-failures.log`.
+- Global failure capture covers WPF dispatcher, AppDomain and unobserved task exceptions.
+- Fatal startup errors show a message box with the diagnostic path.
+- The main window is assigned explicitly, checked against the Windows virtual desktop, centered if off-screen, activated and focused.
 
 ## Safety
 
 - No Excel, transfer, Preview, layout or Word pipeline was changed.
-- Startup logging is best-effort and cannot replace the original exception.
-- Emergency logging does not depend on the DI host being built.
-- Existing file logging moved from a working-directory-relative `logs` folder to a writable and discoverable per-user folder, matching the Sprint 22 release-readiness requirement.
+- The fix only corrects the UI binding direction.
+- Startup logging remains best-effort and independent of successful DI host construction.
 
-## Windows validation
+## Exact-head Windows validation
 
 ```bat
 git checkout sprint22/release-readiness-big-data
@@ -51,7 +58,7 @@ dotnet test -c Release --no-build
 dotnet run -c Release --no-build --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
 ```
 
-Expected test totals after the two startup architecture guards:
+Expected test totals:
 
 - Domain: 18
 - Application: 209
@@ -60,21 +67,4 @@ Expected test totals after the two startup architecture guards:
 - Infrastructure: 127
 - Total: 496
 
-Use the SHA printed by `git rev-parse HEAD` as the exact validation head; do not rely on an older copied SHA after additional documentation commits.
-
-## If the window is still not visible
-
-Stop the attached run with `Ctrl+C`, then print the two diagnostic files:
-
-```bat
-type "%LOCALAPPDATA%\KKL Word Studio\Logs\wordstudio-20260713.log"
-type "%LOCALAPPDATA%\KKL Word Studio\Logs\startup-failures.log"
-```
-
-Also verify whether the process remained alive:
-
-```bat
-tasklist | findstr /I "KKL.WordStudio"
-```
-
-The last startup stage in the log identifies whether the application is blocked during host construction, view resolution, window showing, or first render.
+Use the SHA printed by `git rev-parse HEAD` as the exact validation head. The UI gate is GREEN only after the main window visibly opens and the Hızlı Rapor progress/cancel smoke succeeds.
