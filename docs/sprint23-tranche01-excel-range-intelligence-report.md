@@ -47,6 +47,7 @@
 - Different worksheets in the same workbook retain independent ranges.
 - Existing WorkingData is not discarded when the range metadata is updated.
 - An unaccepted automatic candidate is not persisted as a manual range.
+- Cancelling after `Yeniden Algıla` restores the previously active range instead of leaving the temporary candidate on screen.
 
 ## Architecture constraints preserved
 
@@ -101,7 +102,8 @@ Expected:
 - application startup smoke GREEN;
 - source grid passes 100 rows;
 - one internal blank row no longer truncates the detected range;
-- manual range survives source/worksheet switching.
+- manual range survives source/worksheet switching;
+- cancelled redetection restores the prior range.
 
 ## Explicitly not included
 
