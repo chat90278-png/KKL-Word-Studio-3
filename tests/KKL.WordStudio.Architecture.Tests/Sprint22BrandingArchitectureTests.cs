@@ -5,7 +5,7 @@ using Xunit;
 public sealed class Sprint22BrandingArchitectureTests
 {
     [Fact]
-    public void Branding_UsesBuildTimeFallbackAndSafePngRuntimeIcon()
+    public void Branding_UsesSelectedSmallSizeMarkWithoutRuntimeIcoConversion()
     {
         var root = SolutionRootLocator.Find();
         var project = Read(root, "src", "KKL.WordStudio.UI", "KKL.WordStudio.UI.csproj");
@@ -15,7 +15,7 @@ public sealed class Sprint22BrandingArchitectureTests
         Assert.Contains("<ApplicationIcon>Assets\\Brand\\AppIcon.ico</ApplicationIcon>", project, StringComparison.Ordinal);
         Assert.Contains("<Resource Include=\"Assets\\Brand\\BrandMark.png\" />", project, StringComparison.Ordinal);
         Assert.Contains("<Resource Include=\"Assets\\Brand\\BrandMarkSmall.png\" />", project, StringComparison.Ordinal);
-        Assert.Contains("Source=\"Assets/Brand/BrandMark.png\"", shell, StringComparison.Ordinal);
+        Assert.Contains("Source=\"Assets/Brand/BrandMarkSmall.png\"", shell, StringComparison.Ordinal);
         Assert.Contains("BrandMarkSmall.png", shellCode, StringComparison.Ordinal);
         Assert.Contains("BitmapFrame.Create", shellCode, StringComparison.Ordinal);
         Assert.Contains("Branding must never block application startup", shellCode, StringComparison.Ordinal);
