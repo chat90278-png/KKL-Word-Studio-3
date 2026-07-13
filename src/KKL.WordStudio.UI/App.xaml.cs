@@ -4,6 +4,7 @@ using System.Windows;
 using KKL.WordStudio.Application.DependencyInjection;
 using KKL.WordStudio.Application.Plugins;
 using KKL.WordStudio.Application.Preview;
+using KKL.WordStudio.Application.Transfer;
 using KKL.WordStudio.Engine.DependencyInjection;
 using KKL.WordStudio.Infrastructure.DependencyInjection;
 using KKL.WordStudio.UI.Preview;
@@ -40,6 +41,15 @@ public partial class App : Application
                 services.AddWordStudioEngine();
                 services.AddWordStudioInfrastructure();
 
+                // Last registration wins for single-service resolution. The
+                // decorator is a transparent pass-through unless the user has
+                // explicitly applied a session-only column inclusion selection.
+                services.AddSingleton<IColumnTransferSelectionSession>(
+                    _ => ColumnTransferSelectionSession.Shared);
+                services.AddSingleton<IExcelReportTransferService>(provider =>
+                    new ColumnSelectionExcelReportTransferService(
+                        provider.GetRequiredService<IColumnTransferSelectionSession>()));
+
                 services.AddSingleton<PreviewDiagnosticsStore>();
                 services.AddSingleton<IReportPreviewRenderer, PreviewRenderer>();
 
@@ -50,6 +60,8 @@ public partial class App : Application
 
                 services.AddSingleton<ExcelWorkspaceViewModel>();
                 services.AddSingleton<ExcelWorkspaceView>();
+                services.AddSingleton<QuickAssemblyViewModel>();
+                services.AddSingleton<QuickAssemblyView>();
                 services.AddSingleton<LoadedSourcesView>();
 
                 // Shared by MainWindow (column width), ContextDockView, and every

@@ -81,7 +81,7 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
     }
 
     [Fact]
-    public void EmptyCaptionHint_IsNonStickyAndAuthoredCaptionIsDirectlyEditable()
+    public void EmptyCaptionHint_IsBoundedToPreviewAndAuthoredCaptionIsDirectlyEditable()
     {
         var root = SolutionRootLocator.Find();
         var xaml = ReadPreviewXaml();
@@ -103,9 +103,16 @@ public sealed class Sprint17TruePrintPreviewArchitectureTests
         Assert.DoesNotContain("<Popup", tableTemplate, StringComparison.Ordinal);
         Assert.DoesNotContain("PageBlockDesignerBadge", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ContinuationText", tableTemplate, StringComparison.Ordinal);
-        Assert.Contains("new Popup", hintSource, StringComparison.Ordinal);
-        Assert.Contains("StaysOpen = false", hintSource, StringComparison.Ordinal);
-        Assert.Contains("Placement = PlacementMode.Top", hintSource, StringComparison.Ordinal);
+
+        // The hint must remain inside the application/window visual tree. A WPF
+        // Popup owns a separate HWND and can stay above unrelated windows; the
+        // bounded Adorner is removed with its table host instead.
+        Assert.DoesNotContain("new Popup", hintSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("PlacementMode.Top", hintSource, StringComparison.Ordinal);
+        Assert.Contains("EmptyCaptionHintAdorner", hintSource, StringComparison.Ordinal);
+        Assert.Contains("AdornerLayer.GetAdornerLayer(host)", hintSource, StringComparison.Ordinal);
+        Assert.Contains("_emptyCaptionHintLayer.Remove(_emptyCaptionHintAdorner)", hintSource, StringComparison.Ordinal);
+        Assert.Contains("Clip = new RectangleGeometry", hintSource, StringComparison.Ordinal);
         Assert.Contains("+ Tablo başlığı", hintSource, StringComparison.Ordinal);
         Assert.Contains("Tablo başlığı eklemek için tıklayın", hintSource, StringComparison.Ordinal);
         Assert.Contains("OnPreviewMouseLeftButtonDown", hintSource, StringComparison.Ordinal);

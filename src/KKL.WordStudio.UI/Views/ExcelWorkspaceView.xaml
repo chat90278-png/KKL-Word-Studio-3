@@ -24,8 +24,12 @@
                             <Run Text="{Binding SelectedWorkbook.SelectedSheetName}" />
                         </TextBlock>
                     </StackPanel>
-                    <Button Grid.Column="1" Content="Sütunları Eşle" Style="{StaticResource Btn.Mini}" Command="{Binding OpenMappingDrawerCommand}" Margin="0,0,8,0"
-                            ToolTip="İsteğe bağlı: sütunları anlamsal alan adlarıyla eşleyin. Aktarım için gerekli değildir." />
+                    <Button Grid.Column="1"
+                            Content="Sütunları Eşle"
+                            Style="{StaticResource Btn.Mini}"
+                            Command="{Binding OpenColumnSelectionMappingDrawerCommand}"
+                            Margin="0,0,8,0"
+                            ToolTip="Rapora aktarılacak sütunları seçin ve anlamsal alan adlarını düzenleyin." />
                     <!-- Sprint 7: THE primary action of the Excel Workspace — transfers the
                          current sheet's configured range directly into the report design. -->
                     <Button Grid.Column="2" Content="Word'e Aktar →" Style="{StaticResource Btn.Primary}" Height="32" Padding="14,0"
@@ -211,10 +215,11 @@
             </StackPanel>
         </Border>
 
-        <!-- ============ Column Mapping drawer (Excel-side, not the right dock) ============ -->
-        <Border Background="#38141D2B" Visibility="{Binding IsMappingDrawerOpen, Converter={StaticResource BoolToVisibility}}"
+        <!-- ============ Column selection + mapping drawer ============ -->
+        <Border Background="#38141D2B"
+                Visibility="{Binding IsMappingDrawerOpen, Converter={StaticResource BoolToVisibility}}"
                 MouseLeftButtonUp="DrawerScrim_MouseLeftButtonUp" />
-        <Border HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="440" Margin="16"
+        <Border HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="540" Margin="16"
                 Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="12"
                 Visibility="{Binding IsMappingDrawerOpen, Converter={StaticResource BoolToVisibility}}">
             <Border.Effect>
@@ -223,28 +228,54 @@
             <DockPanel>
                 <Border DockPanel.Dock="Top" Padding="16" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
                     <StackPanel>
-                        <TextBlock Text="SÜTUN EŞLEME (İSTEĞE BAĞLI)" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        <TextBlock Text="SÜTUNLARI SEÇ VE EŞLE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Secondary}" />
                         <TextBlock Text="{Binding SelectedWorkbook.SelectedSheetName, StringFormat='{}{0} — anlamsal alanlar'}" FontSize="14" FontWeight="SemiBold" Margin="0,3,0,0" />
+                        <TextBlock Text="Yalnızca rapora aktarılacak sütunları işaretleyin. Kaynak Excel değişmez."
+                                   FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" Margin="0,5,0,0" />
                     </StackPanel>
                 </Border>
 
                 <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,1,0,0" Padding="14,10">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="İptal" Style="{StaticResource Btn.Mini}" Command="{Binding CancelMappingCommand}" Margin="0,0,8,0" />
-                        <Button Content="Eşlemeyi Uygula" Style="{StaticResource Btn.Primary}" Command="{Binding ApplyMappingCommand}" Padding="14,0" Height="32" />
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Tümünü seç" Style="{StaticResource Btn.Mini}" Command="{Binding SelectAllMappingColumnsCommand}" Margin="0,0,6,0" />
+                        <Button Grid.Column="1" Content="Hiçbirini seçme" Style="{StaticResource Btn.Mini}" Command="{Binding ClearMappingColumnSelectionCommand}" />
+                        <Button Grid.Column="3" Content="İptal" Style="{StaticResource Btn.Mini}" Command="{Binding CancelMappingCommand}" Margin="0,0,8,0" />
+                        <Button Grid.Column="4" Content="Seçimi ve Eşlemeyi Uygula" Style="{StaticResource Btn.Primary}"
+                                Command="{Binding ApplyColumnSelectionMappingCommand}" Padding="14,0" Height="32" />
+                    </Grid>
                 </Border>
 
-                <StackPanel DockPanel.Dock="Top" Margin="16,12,16,0">
-                    <TextBlock Text="Veri kaynağı adı" FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,0,0,4" />
-                    <TextBox Text="{Binding DataSourceName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
-                </StackPanel>
-
-                <DataGrid Margin="10" ItemsSource="{Binding ColumnMappings}" AutoGenerateColumns="False" CanUserAddRows="False">
+                <DataGrid Margin="10"
+                          ItemsSource="{Binding ColumnMappings}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserReorderColumns="False"
+                          SelectionUnit="Cell"
+                          HeadersVisibility="Column">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Excel Sütunu" Binding="{Binding SourceColumn}" IsReadOnly="True" Width="90" />
-                        <DataGridTextColumn Header="Anlamsal Alan" Binding="{Binding FieldName}" Width="*" />
-                        <DataGridTextColumn Header="Tür" Binding="{Binding DataType}" Width="90" />
+                        <DataGridTemplateColumn Header="Aktar" Width="58" IsReadOnly="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsIncluded, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              ClickMode="Press"
+                                              Focusable="False"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              ToolTip="Bu sütunu rapora aktar" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Excel Sütunu" Binding="{Binding SourceColumn}" IsReadOnly="True" Width="72" />
+                        <DataGridTextColumn Header="Anlamsal Alan" Binding="{Binding FieldName, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                        <DataGridTextColumn Header="Tür" Binding="{Binding DataType, UpdateSourceTrigger=PropertyChanged}" Width="64" />
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
