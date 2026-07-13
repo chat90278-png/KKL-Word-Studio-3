@@ -1,7 +1,7 @@
 <UserControl x:Class="KKL.WordStudio.UI.Views.LoadedSourcesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             MinWidth="390">
+             MinWidth="560">
     <UserControl.Resources>
         <Style x:Key="ModernSourceComboItem" TargetType="ComboBoxItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -13,12 +13,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBoxItem">
-                        <Border x:Name="ItemBorder"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="7"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="Center" />
+                        <Border x:Name="ItemBorder" Background="{TemplateBinding Background}" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -33,7 +29,7 @@
             </Setter>
         </Style>
 
-        <Style x:Key="SourceAddButton" TargetType="Button" BasedOn="{StaticResource Btn.Mini}">
+        <Style x:Key="SourceActionButton" TargetType="Button" BasedOn="{StaticResource Btn.Mini}">
             <Setter Property="Height" Value="36" />
             <Setter Property="Padding" Value="11,0" />
             <Setter Property="Background" Value="{DynamicResource Brush.Accent.Soft}" />
@@ -47,49 +43,32 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0"
-                Height="38"
-                MinWidth="285"
-                MaxWidth="340"
-                Background="{DynamicResource Brush.Soft}"
-                BorderBrush="{DynamicResource Brush.Border}"
-                BorderThickness="1"
-                CornerRadius="10"
-                Padding="4,0,5,0">
+        <Border Grid.Column="0" Height="38" MinWidth="285" MaxWidth="340"
+                Background="{DynamicResource Brush.Soft}" BorderBrush="{DynamicResource Brush.Border}"
+                BorderThickness="1" CornerRadius="10" Padding="4,0,5,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="34" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0"
-                        Width="26"
-                        Height="26"
-                        CornerRadius="7"
+                <Border Grid.Column="0" Width="26" Height="26" CornerRadius="7"
                         Background="{DynamicResource Brush.Accent.Soft}"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center">
-                    <TextBlock Text="▦"
-                               FontFamily="Segoe UI Symbol"
-                               FontSize="14"
-                               FontWeight="Bold"
+                        VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="▦" FontFamily="Segoe UI Symbol" FontSize="14" FontWeight="Bold"
                                Foreground="{DynamicResource Brush.Accent}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
 
                 <Grid Grid.Column="1">
                     <ComboBox ItemsSource="{Binding OpenWorkbooks}"
                               SelectedItem="{Binding SelectedWorkbook, Mode=TwoWay}"
                               ItemContainerStyle="{StaticResource ModernSourceComboItem}"
-                              MinWidth="235"
-                              MaxWidth="295"
-                              Height="34"
-                              Padding="4,0"
-                              Background="Transparent"
-                              BorderThickness="0"
+                              MinWidth="235" MaxWidth="295" Height="34" Padding="4,0"
+                              Background="Transparent" BorderThickness="0"
                               ToolTip="Yüklenen Excel kaynakları arasında geçiş yapın">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
@@ -98,27 +77,11 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0"
-                                                Orientation="Horizontal"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding DisplayName}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource Brush.Text.Primary}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxWidth="190"
-                                                   VerticalAlignment="Center" />
-                                    </StackPanel>
-
-                                    <Border Grid.Column="1"
-                                            Background="#FFE9EEF6"
-                                            CornerRadius="8"
-                                            Padding="7,2"
-                                            Margin="9,0,2,0"
-                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="190" VerticalAlignment="Center" />
+                                    <Border Grid.Column="1" Background="#FFE9EEF6" CornerRadius="8" Padding="7,2" Margin="9,0,2,0">
                                         <TextBlock Text="{Binding SheetNames.Count, StringFormat='{}{0} sayfa'}"
-                                                   FontSize="9.5"
-                                                   FontWeight="SemiBold"
+                                                   FontSize="9.5" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource Brush.Text.Secondary}" />
                                     </Border>
                                 </Grid>
@@ -126,32 +89,38 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
 
-                    <StackPanel Orientation="Horizontal"
-                                VerticalAlignment="Center"
-                                Margin="6,0,0,0"
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0"
                                 IsHitTestVisible="False"
                                 Visibility="{Binding HasOpenWorkbook, Converter={StaticResource InverseBoolToVisibility}}">
-                        <TextBlock Text="Yüklenen Kaynaklar"
-                                   FontSize="10.5"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource Brush.Text.Primary}" />
-                        <TextBlock Text="  ·  Henüz Excel kaynağı yok"
-                                   FontSize="10.5"
+                        <TextBlock Text="Yüklenen Kaynaklar" FontSize="10.5" FontWeight="SemiBold" />
+                        <TextBlock Text="  ·  Henüz Excel kaynağı yok" FontSize="10.5"
                                    Foreground="{DynamicResource Brush.Text.Secondary}" />
                     </StackPanel>
                 </Grid>
             </Grid>
         </Border>
 
-        <Button Grid.Column="1"
-                Style="{StaticResource SourceAddButton}"
-                Command="{Binding OpenExcelFileCommand}"
-                Margin="7,0,0,0"
-                ToolTip="Excel kaynağı ekle">
+        <Button Grid.Column="1" Style="{StaticResource SourceActionButton}"
+                Command="{Binding OpenExcelFileCommand}" Margin="7,0,0,0" ToolTip="Excel kaynağı ekle">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="＋" FontSize="13" Margin="0,-1,5,0" VerticalAlignment="Center" />
                 <TextBlock Text="Excel ekle" FontSize="10.5" VerticalAlignment="Center" />
             </StackPanel>
         </Button>
+
+        <Button x:Name="QuickAssemblyButton" Grid.Column="2" Style="{StaticResource SourceActionButton}"
+                Margin="7,0,0,0" ToolTip="Birden fazla Excel sayfasını tek işlemde rapora aktar">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="▤" FontFamily="Segoe UI Symbol" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center" />
+                <TextBlock Text="Hızlı Rapor" FontSize="10.5" VerticalAlignment="Center" />
+            </StackPanel>
+        </Button>
+
+        <Popup x:Name="QuickAssemblyPopup" Grid.ColumnSpan="3"
+               PlacementTarget="{Binding ElementName=QuickAssemblyButton}"
+               Placement="Bottom" HorizontalOffset="-360" VerticalOffset="7"
+               AllowsTransparency="True" StaysOpen="False">
+            <ContentControl x:Name="QuickAssemblyHost" />
+        </Popup>
     </Grid>
 </UserControl>
