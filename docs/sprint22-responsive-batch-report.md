@@ -3,8 +3,10 @@
 ## Status
 
 - Baseline GREEN head: `2d2892cc25e80985220f52839de4e1ed73c0f63f`
-- Responsive batch implementation landed after that baseline.
-- The exact branch head returned by `git rev-parse HEAD` requires Windows Release build/test and UI smoke before GREEN.
+- Responsive batch head tested on Windows: `c02d41774186225ff92dbf3bb1dd1b507658582e`
+- Release build and all 494 tests passed on that head.
+- UI smoke did not pass: the process remained attached after `dotnet run`, but the main window was not visible.
+- Startup visibility and diagnostics hardening now continues on top of that evidence.
 
 ## Implemented
 
@@ -31,6 +33,24 @@ Every real transfer still delegates through:
 
 Cancellation does not roll back already completed table creation. It stops future work and preserves completed results, which is the safe boundary supported by the existing transfer pipeline.
 
+## Windows evidence for responsive head
+
+- `dotnet restore`: SUCCESS
+- `dotnet build -c Release`: SUCCESS
+- Build warnings: 0
+- Build errors: 0
+- Domain: 18/18
+- Application: 209/209
+- Engine: 60/60
+- Architecture: 80/80
+- Infrastructure: 127/127
+- Total: 494/494
+- Failed: 0
+- Skipped: 0
+- UI startup: FAILED because no visible application window appeared.
+
+The responsive head is therefore not marked fully GREEN despite the successful build/test gate.
+
 ## Coverage
 
 Application tests cover:
@@ -49,37 +69,40 @@ Architecture tests guard:
 - existing transfer delegation;
 - absence of a second Excel reader, OpenXML writer, report builder or Word path.
 
-## Exact-head Windows gate
+## Next exact-head Windows gate
+
+The startup-hardening head must pass:
 
 ```bat
 git checkout sprint22/release-readiness-big-data
 git pull
 git rev-parse HEAD
 
+taskkill /IM KKL.WordStudio.exe /F 2>nul
+
 dotnet restore
 dotnet build -c Release
 dotnet test -c Release --no-build
-dotnet run --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
+dotnet run -c Release --no-build --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
 ```
 
-The tested SHA must be copied from `git rev-parse HEAD`; do not infer GREEN from an earlier implementation commit. The `dotnet run` command only proves launch; the Hızlı Rapor cancellation behavior still requires the manual UI smoke below.
-
-Expected test totals if no other changes land:
+Expected test totals:
 
 - Domain: 18
 - Application: 209
 - Engine: 60
-- Architecture: 80
+- Architecture: 82
 - Infrastructure: 127
-- Total: 494
+- Total: 496
 
-## UI smoke
+## UI smoke after startup recovery
 
-1. Load at least three worksheets.
-2. Select all in `Hızlı Rapor` and start transfer.
-3. Verify current workbook/sheet text and progress bar update.
-4. Verify transfer/select-all/clear cannot run again while active.
-5. Click `İptal` while a target is active.
-6. Verify completed tables remain correct and their targets are deselected.
-7. Verify remaining targets stay selected and can be retried.
-8. Verify Preview and Word output for completed tables remain unchanged.
+1. Verify the main window becomes visible and appears in the Windows taskbar.
+2. Load at least three worksheets.
+3. Select all in `Hızlı Rapor` and start transfer.
+4. Verify current workbook/sheet text and progress bar update.
+5. Verify transfer/select-all/clear cannot run again while active.
+6. Click `İptal` while a target is active.
+7. Verify completed tables remain correct and their targets are deselected.
+8. Verify remaining targets stay selected and can be retried.
+9. Verify Preview and Word output for completed tables remain unchanged.
