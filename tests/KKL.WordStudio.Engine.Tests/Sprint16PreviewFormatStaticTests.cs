@@ -97,7 +97,10 @@ public sealed class Sprint16PreviewFormatStaticTests
         Assert.Contains("LineHeight=\"{Binding CaptionLineHeight}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("FirstLineIndent=\"{Binding CaptionFirstLineIndent}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Tablo başlığı eklemek için tıklayın", hint, StringComparison.Ordinal);
-        Assert.Contains("StaysOpen = false", hint, StringComparison.Ordinal);
+        Assert.Contains("AdornerLayer.GetAdornerLayer(host)", hint, StringComparison.Ordinal);
+        Assert.Contains("EmptyCaptionHintAdorner", hint, StringComparison.Ordinal);
+        Assert.Contains("CaptionHintOwnerWindow_Deactivated", hint, StringComparison.Ordinal);
+        Assert.DoesNotContain("new Popup", hint, StringComparison.Ordinal);
         Assert.Contains("OnPreviewMouseLeftButtonDown", hint, StringComparison.Ordinal);
         Assert.Contains("BeginTableCaptionEdit(block)", hint, StringComparison.Ordinal);
     }
