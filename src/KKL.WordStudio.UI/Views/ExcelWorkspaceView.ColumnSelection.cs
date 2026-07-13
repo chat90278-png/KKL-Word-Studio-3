@@ -10,7 +10,7 @@ public partial class ExcelWorkspaceView
 {
     private bool _columnSelectionUiInstalled;
 
-    protected override void OnApplyTemplate()
+    public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
         Loaded -= ColumnSelectionUi_Loaded;
