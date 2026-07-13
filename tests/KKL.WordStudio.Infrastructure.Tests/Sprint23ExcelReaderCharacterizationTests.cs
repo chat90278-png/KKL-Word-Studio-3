@@ -14,7 +14,7 @@ public sealed class Sprint23ExcelReaderCharacterizationTests
         new(NullLogger<OpenXmlExcelWorkbookReader>.Instance);
 
     [Fact]
-    public async Task DefaultSheetPreview_LoadsTheCompleteSourceInsteadOfStoppingAtOneHundredRows()
+    public async Task DefaultSheetPreview_LoadsTheCompleteSourceAndShowsAnEndBuffer()
     {
         var scenario = Sprint22WorkbookScenario.NormalSixColumn;
         var filePath = Sprint22WorkbookFixtureFactory.Create(scenario);
@@ -25,8 +25,10 @@ public sealed class Sprint23ExcelReaderCharacterizationTests
                 Sprint22WorkbookFixtureFactory.WorksheetName(1));
 
             Assert.True(result.IsSuccess, result.Error);
-            Assert.Equal(scenario.DataRowCount + 1, result.Value.Rows.Count); // header + all data
+            Assert.Equal(scenario.DataRowCount + 1 + 5, result.Value.Rows.Count); // header + all data + visual buffer
+            Assert.Equal(scenario.DataRowCount + 1 + 5, result.Value.RowNumbers[^1]);
             Assert.False(result.Value.IsTruncated);
+            Assert.All(result.Value.Rows.TakeLast(5), row => Assert.Empty(row));
         }
         finally
         {
