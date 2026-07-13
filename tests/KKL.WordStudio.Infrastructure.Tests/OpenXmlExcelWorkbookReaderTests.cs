@@ -47,7 +47,7 @@ public class OpenXmlExcelWorkbookReaderTests
     }
 
     [Fact]
-    public async Task GetSheetPreviewAsync_ReadsHeaderAndDataRows()
+    public async Task GetSheetPreviewAsync_ReadsHeaderDataAndTrailingConfidenceRows()
     {
         var filePath = CreateSampleWorkbook();
         var reader = new OpenXmlExcelWorkbookReader(NullLogger<OpenXmlExcelWorkbookReader>.Instance);
@@ -55,9 +55,13 @@ public class OpenXmlExcelWorkbookReaderTests
         var result = await reader.GetSheetPreviewAsync(filePath, "Sales");
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(3, result.Value.Rows.Count); // header + 2 data rows
+        Assert.Equal(8, result.Value.Rows.Count); // header + 2 data rows + 5 visual blank rows
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8], result.Value.RowNumbers);
         Assert.Equal("CustomerName", result.Value.Rows[0][0]);
         Assert.Equal("Alice", result.Value.Rows[1][0]);
+        Assert.Equal("Bob", result.Value.Rows[2][0]);
+        Assert.All(result.Value.Rows.Skip(3), Assert.Empty);
+        Assert.False(result.Value.IsTruncated);
 
         File.Delete(filePath);
     }
