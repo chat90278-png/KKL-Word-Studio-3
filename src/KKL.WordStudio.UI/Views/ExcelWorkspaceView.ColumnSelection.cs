@@ -18,7 +18,7 @@ public partial class ExcelWorkspaceView
     }
 
     private void ColumnSelectionUi_Loaded(object sender, RoutedEventArgs e) =>
-        Dispatcher.BeginInvoke(InstallColumnSelectionUi, DispatcherPriority.Loaded);
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(InstallColumnSelectionUi));
 
     private void InstallColumnSelectionUi()
     {
