@@ -76,7 +76,8 @@ public sealed class Sprint22LongOperationOverlayArchitectureTests
         Assert.Contains("FlushPresentationIfAvailable", operationState, StringComparison.Ordinal);
         Assert.Contains("DispatcherFrame", operationState, StringComparison.Ordinal);
         Assert.Contains("DispatcherPriority.Loaded", operationState, StringComparison.Ordinal);
-        Assert.Contains("Application.Current?.Dispatcher", operationState, StringComparison.Ordinal);
+        Assert.Contains("var application = Application.Current", operationState, StringComparison.Ordinal);
+        Assert.Contains("application?.MainWindow is not { IsVisible: true }", operationState, StringComparison.Ordinal);
 
         Assert.Contains("Task.Run(() => OpenWorkbook", reader, StringComparison.Ordinal);
         Assert.Contains("() => GetSheetPreview", reader, StringComparison.Ordinal);
