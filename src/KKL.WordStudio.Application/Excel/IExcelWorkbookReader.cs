@@ -17,9 +17,16 @@ public interface IExcelWorkbookReader
     /// <summary>Opens the workbook and returns its structural description (sheet names) without reading cell data.</summary>
     Task<Result<Workbook>> OpenWorkbookAsync(string filePath, CancellationToken cancellationToken = default);
 
-    /// <summary>Reads up to <paramref name="maxPreviewRows"/> raw rows from a worksheet, for display while the user configures the data range.</summary>
+    /// <summary>
+    /// Reads raw worksheet rows for the source grid. The default no longer caps
+    /// the user at 100 rows; callers may still supply an explicit bound for a
+    /// diagnostic or specialised lightweight read.
+    /// </summary>
     Task<Result<SheetPreview>> GetSheetPreviewAsync(
-        string filePath, string worksheetName, int maxPreviewRows = 100, CancellationToken cancellationToken = default);
+        string filePath,
+        string worksheetName,
+        int maxPreviewRows = int.MaxValue,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads the complete configured dataset into a project-owned working-data
@@ -30,7 +37,7 @@ public interface IExcelWorkbookReader
 
     /// <summary>
     /// Scans the worksheet starting at <paramref name="dataStartRow"/> and returns a DataRange with
-    /// DataEndRow set to the last row of a contiguous non-blank block (WasAutoDetected = true).
+    /// DataEndRow set to the last meaningful row before a sustained blank gap (WasAutoDetected = true).
     /// The caller may subsequently overwrite DataEndRow manually, at which point it should also
     /// set WasAutoDetected = false to record that the value is no longer the system's guess.
     /// </summary>
@@ -52,4 +59,3 @@ public interface IExcelWorkbookReader
         return result;
     }
 }
-
