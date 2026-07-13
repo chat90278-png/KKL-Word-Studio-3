@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\Brand\BrandMark.png" />
+    <Resource Include="Assets\Brand\BrandMarkSmall.png" />
     <Resource Include="Assets\Brand\AppIcon.ico" />
   </ItemGroup>
 
