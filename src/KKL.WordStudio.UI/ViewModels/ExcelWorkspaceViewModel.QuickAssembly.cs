@@ -87,6 +87,12 @@ public sealed partial class ExcelWorkspaceViewModel
             var result = _transferService.Transfer(project, report, request);
             if (result.Outcome == TransferOutcome.Success && result.Table is not null)
             {
+                if (!result.CreatedNewTable)
+                {
+                    return CreateQuickAssemblyFailed(
+                        "Toplu aktarım yeni tablo oluşturmadığı için güvenlik amacıyla başarı sayılmadı.");
+                }
+
                 result.Table.Caption = string.IsNullOrWhiteSpace(target.Caption)
                     ? null
                     : target.Caption.Trim();
