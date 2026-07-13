@@ -50,6 +50,8 @@ public partial class App : Application
 
                 services.AddSingleton<ExcelWorkspaceViewModel>();
                 services.AddSingleton<ExcelWorkspaceView>();
+                services.AddSingleton<QuickAssemblyViewModel>();
+                services.AddSingleton<QuickAssemblyView>();
                 services.AddSingleton<LoadedSourcesView>();
 
                 // Shared by MainWindow (column width), ContextDockView, and every
