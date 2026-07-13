@@ -5,7 +5,6 @@
 - Sprint 22 code baseline: `aa51d76850ce77596ba4e37a64559a926b11629a`
 - Branch base: `main@8f7fd9781dd51a2ebded5214a6568154e0aea075`
 - Branch: `sprint23/00-contract-characterization`
-- Exact head for Windows validation: `c7c8fa92fb0d5ead56cdc3b2795e0eb0d663b5b1`
 
 The branch base contains no production-code difference from the Sprint 22 baseline. Two documentation-only `main` commits created and removed an accidental placeholder before this branch was opened.
 
@@ -34,7 +33,7 @@ This tranche intentionally changes no production behavior. It adds:
 
 ## Windows gate — pending
 
-Run on the final exact branch head:
+Run on the final exact branch head reported in the PR/check request:
 
 ```bat
 git fetch origin
