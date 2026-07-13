@@ -21,6 +21,8 @@ using KKL.WordStudio.UI.Services;
 /// </summary>
 public sealed partial class PreviewViewModel : ViewModelBase
 {
+    private const int PageProjectionBatchSize = 25;
+
     private readonly IWorkspace _workspace;
     private readonly IReportPreviewRenderer _renderer;
     private readonly IReportEditingService _editingService;
@@ -29,6 +31,7 @@ public sealed partial class PreviewViewModel : ViewModelBase
     private readonly IFileDialogService _fileDialogService;
     private readonly IReportStructureService _structureService;
     private readonly IDialogService _dialogService;
+    private readonly LongOperationViewModel _longOperation = LongOperationViewModel.Shared;
 
     private PreviewPageBlockViewModel? _dropIndicatorBlock;
     private int _refreshGeneration;
@@ -495,19 +498,51 @@ public sealed partial class PreviewViewModel : ViewModelBase
             return;
         }
 
+        using var operation = _longOperation.Begin(
+            "Rapor önizlemesi hazırlanıyor",
+            $"{report.Name} · içerik ve sayfa düzeni oluşturuluyor",
+            isCancellable: true);
+
         try
         {
-            var snapshot = await _renderer.RenderAsync(project, report);
+            // Give WPF one dispatcher turn so the click shield becomes visible
+            // before any renderer implementation performs synchronous setup.
+            await Task.Yield();
+            operation.Token.ThrowIfCancellationRequested();
+
+            var snapshot = await _renderer.RenderAsync(project, report, operation.Token);
             if (generation != _refreshGeneration)
                 return;
 
-            var projectedPages = snapshot.Layout.Pages
-                .Select(PreviewPageProjection.Project)
-                .ToList();
+            operation.ReportDetail($"{snapshot.Layout.Pages.Count:N0} sayfa ekrana hazırlanıyor…");
+            var projectedPages = await Task.Run(
+                () => snapshot.Layout.Pages
+                    .Select(page =>
+                    {
+                        operation.Token.ThrowIfCancellationRequested();
+                        return PreviewPageProjection.Project(page);
+                    })
+                    .ToList(),
+                operation.Token);
+
+            if (generation != _refreshGeneration)
+                return;
 
             Pages.Clear();
-            foreach (var page in projectedPages)
-                Pages.Add(page);
+            for (var index = 0; index < projectedPages.Count; index++)
+            {
+                operation.Token.ThrowIfCancellationRequested();
+                Pages.Add(projectedPages[index]);
+
+                var completed = index + 1;
+                if (completed % PageProjectionBatchSize == 0 && completed < projectedPages.Count)
+                {
+                    operation.ReportDetail($"Önizleme sayfaları yükleniyor · {completed:N0}/{projectedPages.Count:N0}");
+                    await Task.Yield();
+                    if (generation != _refreshGeneration)
+                        return;
+                }
+            }
 
             HasPages = Pages.Count > 0;
             WidestPageWidth = Pages.Count == 0
@@ -522,6 +557,14 @@ public sealed partial class PreviewViewModel : ViewModelBase
 
             SyncSelection();
             RecomputeZoom();
+        }
+        catch (OperationCanceledException) when (operation.Token.IsCancellationRequested)
+        {
+            if (generation != _refreshGeneration)
+                return;
+
+            InteractionStatusText = "Önizleme oluşturma iptal edildi.";
+            OnPropertyChanged(nameof(PageCountText));
         }
         catch (Exception ex)
         {
