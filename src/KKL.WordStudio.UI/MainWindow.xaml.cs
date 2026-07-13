@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.UI;
 
 using System.Windows;
+using System.Windows.Media.Imaging;
 using KKL.WordStudio.UI.ViewModels;
 using KKL.WordStudio.UI.Views;
 
@@ -16,6 +17,8 @@ public partial class MainWindow : Window
         ContextDockView contextDockView)
     {
         InitializeComponent();
+        ApplyRuntimeBrandIcon();
+
         _viewModel = viewModel;
         DataContext = viewModel;
 
@@ -35,6 +38,20 @@ public partial class MainWindow : Window
                 ApplyDockColumnWidth();
         };
         ApplyDockColumnWidth();
+    }
+
+    private void ApplyRuntimeBrandIcon()
+    {
+        try
+        {
+            Icon = BitmapFrame.Create(
+                new Uri("pack://application:,,,/Assets/Brand/BrandMarkSmall.png", UriKind.Absolute));
+        }
+        catch
+        {
+            // Branding must never block application startup. The build-time
+            // ApplicationIcon remains the safe fallback when a resource is missing.
+        }
     }
 
     private void ApplyDockColumnWidth()
