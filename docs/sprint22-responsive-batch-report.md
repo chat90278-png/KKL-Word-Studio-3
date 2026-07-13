@@ -3,8 +3,8 @@
 ## Status
 
 - Baseline GREEN head: `2d2892cc25e80985220f52839de4e1ed73c0f63f`
-- Current tranche head: `7741d9b6af50070580de9f0d9bd784eafa1dfc7e`
-- Current head requires exact Windows Release build/test and UI smoke before GREEN.
+- Responsive batch implementation landed after that baseline.
+- The exact branch head returned by `git rev-parse HEAD` requires Windows Release build/test and UI smoke before GREEN.
 
 ## Implemented
 
@@ -62,11 +62,7 @@ dotnet test -c Release --no-build
 dotnet run --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
 ```
 
-Expected head:
-
-```text
-7741d9b6af50070580de9f0d9bd784eafa1dfc7e
-```
+The tested SHA must be copied from `git rev-parse HEAD`; do not infer GREEN from an earlier implementation commit.
 
 Expected test totals if no other changes land:
 
