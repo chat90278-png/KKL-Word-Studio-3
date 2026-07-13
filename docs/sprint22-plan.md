@@ -33,16 +33,27 @@ No production optimization is approved until the baseline tranche records elapse
 
 ### Tranche 1
 
-- Add reusable long-operation measurement contracts for elapsed time, managed-heap before/after, total allocated-byte delta, completion state, and error text.
-- Record measurements on success, failure, and cancellation without swallowing the original result or exception.
-- Add deterministic OpenXML workbook fixtures for:
-  - thousands of rows;
-  - very wide worksheets;
-  - many worksheets;
-  - sparse/dirty rows;
-  - normal six-column data.
-- Add reader-focused tests that verify exact sheet/row/column boundaries, deterministic ordering, and unchanged source-file hashes.
-- Keep practical duration and allocation thresholds uncommitted until representative Windows runs provide evidence.
+Implemented:
+
+- reusable long-operation measurement contracts for elapsed time, managed-heap before/after, total allocated-byte delta, completion state, and error text;
+- measurements on success, failure, and cancellation without swallowing the original result or exception;
+- deterministic real OpenXML workbook fixtures for thousands of rows, very wide worksheets, many worksheets, sparse/dirty rows, and normal six-column data;
+- reader tests for exact sheet/row/column boundaries, deterministic ordering, and unchanged source-file hashes;
+- no guessed hard duration or allocation threshold.
+
+Windows exact-head gate for `2d2892cc25e80985220f52839de4e1ed73c0f63f`:
+
+- Release build: 0 warnings / 0 errors;
+- Domain: 18/18;
+- Application: 206/206;
+- Engine: 60/60;
+- Architecture: 78/78;
+- Infrastructure: 127/127;
+- total: 489/489;
+- failed/skipped: 0/0;
+- UI smoke: GREEN by user confirmation.
+
+Status: GREEN for the measurement-baseline head only.
 
 ### Later measurement targets
 
@@ -57,23 +68,39 @@ No production optimization is approved until the baseline tranche records elapse
 - Preview projection;
 - Word export.
 
-Status: in progress. No Sprint 22 head is GREEN yet.
-
 ## P0-B — Responsive long operations
+
+### Tranche 2 — Hızlı Rapor progress and safe cancellation
+
+Implemented on the existing batch orchestration seam:
+
+- deterministic target-level progress snapshots before and after each target;
+- visible completed/total progress and current workbook/sheet text;
+- explicit cancel action;
+- cooperative cancellation at the current target's safe checkpoints or before the next target;
+- completed target results are retained after cancellation;
+- not-yet-started targets remain selected for retry;
+- successful targets remain deselected to prevent accidental duplicate tables;
+- transfer, select-all, and clear-selection commands are disabled while the batch is active;
+- a second batch command is rejected while `IsBusy` is true;
+- no Excel reader, transfer service, report builder, Preview, layout, or Word pipeline was duplicated.
+
+Status: source-complete; exact-head Windows build/test and Hızlı Rapor cancellation smoke required before GREEN.
+
+### Remaining responsive operations
 
 After measurements identify real long operations:
 
-- introduce one shared operation-state model for Excel load, batch transfer, Preview generation, and Word export;
-- expose operation name, progress text, cancellability, completion/failure state, and duplicate-command suppression;
+- extend shared operation state to Excel load, Preview generation, and Word export;
 - move CPU/file traversal away from the UI dispatcher only at existing service seams;
 - honor cancellation only at safe boundaries;
-- never leave partially applied report state after cancellation.
+- never leave partially applied report or output-file state after cancellation.
 
 Do not add cosmetic progress bars around operations that complete below the measured threshold.
 
 ## P0-C — Controlled load and error isolation
 
-Candidate fixes must be justified by Tranche 1/2 evidence. Likely investigation points:
+Candidate fixes must be justified by measurement evidence. Likely investigation points:
 
 - avoid repeated complete worksheet scans;
 - avoid building a full row dictionary when only one header row is needed;
@@ -137,9 +164,7 @@ For every applicable scenario verify:
 - writable and discoverable log folder;
 - clean Windows-machine smoke test.
 
-## Windows measurement command shape
-
-Exact commands may be expanded as harnesses land:
+## Windows gate
 
 ```bat
 git checkout sprint22/release-readiness-big-data
@@ -149,9 +174,18 @@ git rev-parse HEAD
 dotnet restore
 dotnet build -c Release
 dotnet test -c Release --no-build
+dotnet run --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
 ```
 
-The measurement report must include machine/OS/SDK details, scenario dimensions, elapsed duration, allocation delta, result counts, and source hash checks.
+For Tranche 2 UI smoke:
+
+1. Load at least three worksheets and select all in `Hızlı Rapor`.
+2. Start transfer and verify the current workbook/sheet plus progress bar update.
+3. Verify transfer/select-all/clear cannot be triggered again while active.
+4. Click `İptal` while a target is running.
+5. Verify already-created tables remain valid and completed targets are deselected.
+6. Verify remaining targets stay selected and can be retried.
+7. Verify Preview and Word output for completed tables remain correct.
 
 ## Non-goals
 
