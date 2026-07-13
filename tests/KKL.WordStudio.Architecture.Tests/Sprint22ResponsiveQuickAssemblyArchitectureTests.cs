@@ -17,6 +17,8 @@ public sealed class Sprint22ResponsiveQuickAssemblyArchitectureTests
         Assert.Contains("CancelTransferSelectedCommand", viewModel, StringComparison.Ordinal);
         Assert.Contains("ProgressPercent", viewModel, StringComparison.Ordinal);
         Assert.Contains("ProgressBar", view, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{Binding ProgressPercent, Mode=OneWay}\"", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("Value=\"{Binding ProgressPercent}\"", view, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CancelTransferSelectedCommand}\"", view, StringComparison.Ordinal);
         Assert.Contains("Binding IsBusy", view, StringComparison.Ordinal);
 
