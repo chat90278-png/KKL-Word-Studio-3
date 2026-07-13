@@ -115,28 +115,63 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
     }
 
     public Task<Result<WorksheetWorkingData>> ReadWorkingDataAsync(
-        string filePath, string worksheetName, DataRange range, CancellationToken cancellationToken = default)
+        string filePath, string worksheetName, DataRange range, CancellationToken cancellationToken = default) =>
+        Task.Run(
+            () => ReadWorkingData(filePath, worksheetName, range, cancellationToken),
+            cancellationToken);
+
+    private Result<WorksheetWorkingData> ReadWorkingData(
+        string filePath,
+        string worksheetName,
+        DataRange range,
+        CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (range.DataEndRow is null || range.DataEndRow < range.DataStartRow)
-                return Task.FromResult(Result.Failure<WorksheetWorkingData>("Çalışma verisi için geçerli bir veri aralığı gerekli."));
+                return Result.Failure<WorksheetWorkingData>("Çalışma verisi için geçerli bir veri aralığı gerekli.");
 
             using var document = SpreadsheetDocument.Open(filePath, false);
             var (worksheetPart, sharedStrings) = OpenWorksheetPart(document, worksheetName);
             var sheetData = worksheetPart.Worksheet.Elements<SheetData>().First();
 
             var startColumn = range.StartColumn ?? 1;
-            var endColumn = range.EndColumn ?? ResolveMaxColumn(sheetData);
-            if (endColumn < startColumn)
-                return Task.FromResult(Result.Failure<WorksheetWorkingData>("Çalışma verisi için geçerli bir sütun aralığı bulunamadı."));
+            var explicitEndColumn = range.EndColumn;
+            var discoveredEndColumn = explicitEndColumn ?? 0;
+            var headerValues = new Dictionary<int, string>();
+            var bufferedRows = new List<(int RowIndex, Dictionary<int, string> Values)>();
 
-            var rowLookup = sheetData.Elements<Row>()
-                .Where(row => row.RowIndex?.Value is not null)
-                .ToDictionary(row => (int)row.RowIndex!.Value, row => row);
-            var headerValues = range.HeaderRowIndex is { } headerRowIndex && rowLookup.TryGetValue(headerRowIndex, out var headerRow)
-                ? ReadRowCellsByColumn(headerRow, sharedStrings)
-                : new Dictionary<int, string>();
+            var firstRelevantRow = Math.Min(range.HeaderRowIndex ?? range.DataStartRow, range.DataStartRow);
+            var lastRelevantRow = Math.Max(range.HeaderRowIndex ?? range.DataEndRow.Value, range.DataEndRow.Value);
+
+            foreach (var row in sheetData.Elements<Row>())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var rowIndex = (int)(row.RowIndex?.Value ?? 0);
+                if (rowIndex < firstRelevantRow) continue;
+                if (rowIndex > lastRelevantRow) break;
+
+                var isHeaderRow = range.HeaderRowIndex == rowIndex;
+                var isDataRow = rowIndex >= range.DataStartRow && rowIndex <= range.DataEndRow.Value;
+                if (!isHeaderRow && !isDataRow) continue;
+
+                var valuesByColumn = ReadRowCellsByColumn(row, sharedStrings);
+                if (!explicitEndColumn.HasValue && valuesByColumn.Count > 0)
+                    discoveredEndColumn = Math.Max(discoveredEndColumn, valuesByColumn.Keys.Max());
+
+                if (isHeaderRow)
+                    headerValues = valuesByColumn;
+
+                if (isDataRow)
+                    bufferedRows.Add((rowIndex, valuesByColumn));
+            }
+
+            var endColumn = explicitEndColumn ?? discoveredEndColumn;
+            if (endColumn < startColumn)
+                return Result.Failure<WorksheetWorkingData>("Çalışma verisi için geçerli bir sütun aralığı bulunamadı.");
 
             var workingData = new WorksheetWorkingData();
             for (var columnIndex = startColumn; columnIndex <= endColumn; columnIndex++)
@@ -153,27 +188,27 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
                 });
             }
 
-            foreach (var row in sheetData.Elements<Row>())
+            foreach (var bufferedRow in bufferedRows)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var rowIndex = (int)(row.RowIndex?.Value ?? 0);
-                if (rowIndex < range.DataStartRow) continue;
-                if (rowIndex > range.DataEndRow.Value) break;
 
-                var valuesByColumn = ReadRowCellsByColumn(row, sharedStrings);
-                var workingRow = new WorkingDataRow { OriginalRowNumber = rowIndex };
+                var workingRow = new WorkingDataRow { OriginalRowNumber = bufferedRow.RowIndex };
                 for (var columnIndex = startColumn; columnIndex <= endColumn; columnIndex++)
-                    workingRow.Values.Add(valuesByColumn.TryGetValue(columnIndex, out var value) ? value : null);
+                    workingRow.Values.Add(bufferedRow.Values.TryGetValue(columnIndex, out var value) ? value : null);
                 workingData.Rows.Add(workingRow);
             }
 
-            return Task.FromResult(Result.Success(workingData));
+            return Result.Success(workingData);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to read working data for sheet {Sheet} in {FilePath}", worksheetName, filePath);
-            return Task.FromResult(Result.Failure<WorksheetWorkingData>(
-                $"'{worksheetName}' sayfasının çalışma verisi hazırlanamadı. Kaynak Excel dosyasının erişilebilir olduğundan emin olun."));
+            return Result.Failure<WorksheetWorkingData>(
+                $"'{worksheetName}' sayfasının çalışma verisi hazırlanamadı. Kaynak Excel dosyasının erişilebilir olduğundan emin olun.");
         }
     }
 
@@ -259,22 +294,6 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
         var sharedStrings = workbookPart.SharedStringTablePart?.SharedStringTable;
 
         return (worksheetPart, sharedStrings);
-    }
-
-    private static int ResolveMaxColumn(SheetData sheetData)
-    {
-        var maxColumn = 0;
-        foreach (var row in sheetData.Elements<Row>())
-        {
-            var nextColumn = 1;
-            foreach (var cell in row.Elements<Cell>())
-            {
-                var columnIndex = ResolveCellColumn(cell, nextColumn);
-                maxColumn = Math.Max(maxColumn, columnIndex);
-                nextColumn = columnIndex + 1;
-            }
-        }
-        return maxColumn;
     }
 
     private static Dictionary<int, string> ReadRowCellsByColumn(Row row, SharedStringTable? sharedStrings)
