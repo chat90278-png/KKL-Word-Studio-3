@@ -42,6 +42,7 @@ public sealed class Sprint21QuickAssemblyArchitectureTests
         Assert.Contains("GetHeaderRowTexts", excelBatch, StringComparison.Ordinal);
         Assert.Contains("WorkingDataColumns", excelBatch, StringComparison.Ordinal);
         Assert.Contains("TargetElementId = null", excelBatch, StringComparison.Ordinal);
+        Assert.Contains("result.CreatedNewTable", excelBatch, StringComparison.Ordinal);
         Assert.Contains("result.Table.Caption", excelBatch, StringComparison.Ordinal);
         Assert.Contains("transferSingleTargetAsync", orchestrator, StringComparison.Ordinal);
         Assert.Contains("catch (Exception exception)", orchestrator, StringComparison.Ordinal);
