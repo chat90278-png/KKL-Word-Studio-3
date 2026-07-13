@@ -16,7 +16,7 @@
                            Height="24"
                            VerticalAlignment="Center"
                            Stretch="Uniform"
-                           Source="Assets/Brand/BrandMark.png"
+                           Source="Assets/Brand/BrandMarkSmall.png"
                            ToolTip="KKL Word Studio" />
                     <TextBlock Text="KKL Word Studio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="9,0,0,0" />
                     <TextBlock Text="{Binding CurrentProject.Name}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="10,0,0,0" />
