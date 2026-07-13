@@ -13,7 +13,7 @@ The branch base contains no production-code difference from the Sprint 22 baseli
 This tranche intentionally changes no production behavior. It adds:
 
 1. the detailed Sprint 23 dependency/tranche plan;
-2. the Word'e Aktar placement-confirmation workflow to the plan;
+2. the Word'e Aktar placement-confirmation workflow and its test matrix to the plan;
 3. four Application characterization tests for the existing range detector;
 4. two Infrastructure characterization tests for the current 100-row Preview limit and first-blank-row end detection;
 5. five Architecture characterization tests for:
