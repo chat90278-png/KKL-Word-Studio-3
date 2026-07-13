@@ -25,6 +25,23 @@ public sealed class Sprint22BrandingArchitectureTests
         Assert.DoesNotContain("Icon=\"Assets/Brand/AppIcon.ico\"", shell, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ApplicationIcon_HasAValidWindowsIconDirectoryHeader()
+    {
+        var root = SolutionRootLocator.Find();
+        var icon = File.ReadAllBytes(Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.UI",
+            "Assets",
+            "Brand",
+            "AppIcon.ico"));
+
+        Assert.True(icon.Length >= 6, "AppIcon.ico is too short to contain an ICONDIR header.");
+        Assert.Equal(new byte[] { 0, 0, 1, 0 }, icon[..4]);
+        Assert.InRange(BitConverter.ToUInt16(icon, 4), (ushort)1, (ushort)256);
+    }
+
     private static string Read(string root, params string[] parts) =>
         File.ReadAllText(Path.Combine(new[] { root }.Concat(parts).ToArray()));
 }
