@@ -30,6 +30,9 @@ public sealed partial class MainViewModel : ViewModelBase
     /// <summary>Shared with ContextDockView/ContentsViewModel/PropertiesViewModel via DI (registered as a singleton) — the shell's Grid column width binds to its State.</summary>
     public DockViewModel DockViewModel { get; }
 
+    /// <summary>Shared session-only busy state rendered by MainWindow as a full interaction shield.</summary>
+    public LongOperationViewModel LongOperation { get; }
+
     [ObservableProperty]
     private Project _currentProject;
 
@@ -51,6 +54,7 @@ public sealed partial class MainViewModel : ViewModelBase
         IFileDialogService fileDialogService,
         IShellLauncher shellLauncher,
         DockViewModel dockViewModel,
+        LongOperationViewModel longOperation,
         ILogger<MainViewModel> logger)
     {
         _projectService = projectService;
@@ -59,6 +63,7 @@ public sealed partial class MainViewModel : ViewModelBase
         _fileDialogService = fileDialogService;
         _shellLauncher = shellLauncher;
         DockViewModel = dockViewModel;
+        LongOperation = longOperation;
         _logger = logger;
 
         _currentProject = _projectService.CreateNew();
