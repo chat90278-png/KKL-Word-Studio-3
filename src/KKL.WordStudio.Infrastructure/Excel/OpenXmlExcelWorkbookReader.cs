@@ -23,6 +23,12 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
     /// </summary>
     internal const int SustainedBlankGapRows = 5;
 
+    /// <summary>
+    /// The source grid shows a small visual buffer below the final meaningful
+    /// source row so the user can see that the data has actually ended.
+    /// </summary>
+    internal const int PreviewTrailingBlankRows = 5;
+
     private readonly ILogger<OpenXmlExcelWorkbookReader> _logger;
 
     public OpenXmlExcelWorkbookReader(ILogger<OpenXmlExcelWorkbookReader> logger) => _logger = logger;
@@ -103,25 +109,56 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
             var rows = new List<IReadOnlyList<string>>();
             var maxColumnCount = 0;
             var truncated = false;
-            var readCount = 0;
+            var lastMeaningfulRowNumber = 0;
+
+            bool TryAppend(int rowNumber, IReadOnlyList<string> cells)
+            {
+                if (rows.Count >= maxPreviewRows)
+                {
+                    truncated = true;
+                    return false;
+                }
+
+                rowNumbers.Add(rowNumber);
+                rows.Add(cells);
+                maxColumnCount = Math.Max(maxColumnCount, cells.Count);
+                return true;
+            }
 
             foreach (var row in sheetData.Elements<Row>())
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (!HasMeaningfulContent(row, sharedStrings))
+                    continue;
 
-                if (readCount >= maxPreviewRows)
+                var rowIndex = (int)(row.RowIndex?.Value ?? (uint)(lastMeaningfulRowNumber + 1));
+                if (lastMeaningfulRowNumber > 0)
                 {
-                    truncated = true;
-                    break;
+                    var visualGap = Math.Min(
+                        PreviewTrailingBlankRows,
+                        Math.Max(0, rowIndex - lastMeaningfulRowNumber - 1));
+                    for (var offset = 1; offset <= visualGap; offset++)
+                    {
+                        if (!TryAppend(lastMeaningfulRowNumber + offset, Array.Empty<string>()))
+                            break;
+                    }
+                    if (truncated)
+                        break;
                 }
 
-                var rowIndex = (int)(row.RowIndex?.Value ?? (uint)(readCount + 1));
-                var cellsInRow = ReadRowCells(row, sharedStrings);
+                if (!TryAppend(rowIndex, ReadRowCells(row, sharedStrings)))
+                    break;
 
-                rowNumbers.Add(rowIndex);
-                rows.Add(cellsInRow);
-                maxColumnCount = Math.Max(maxColumnCount, cellsInRow.Count);
-                readCount++;
+                lastMeaningfulRowNumber = rowIndex;
+            }
+
+            if (!truncated && lastMeaningfulRowNumber > 0)
+            {
+                for (var offset = 1; offset <= PreviewTrailingBlankRows; offset++)
+                {
+                    if (!TryAppend(lastMeaningfulRowNumber + offset, Array.Empty<string>()))
+                        break;
+                }
             }
 
             var preview = new SheetPreview
@@ -430,6 +467,11 @@ public sealed class OpenXmlExcelWorkbookReader : IExcelWorkbookReader
         }
         return occupied;
     }
+
+    private static bool HasMeaningfulContent(Row row, SharedStringTable? sharedStrings) =>
+        row.Elements<Cell>().Any(cell =>
+            cell.CellFormula is not null
+            || !string.IsNullOrWhiteSpace(GetCellText(cell, sharedStrings)));
 
     private static IReadOnlyList<string> ReadRowCells(Row row, SharedStringTable? sharedStrings)
     {
