@@ -47,7 +47,7 @@ public class OpenXmlExcelWorkbookReaderTests
     }
 
     [Fact]
-    public async Task GetSheetPreviewAsync_ReadsHeaderDataAndTrailingConfidenceRows()
+    public async Task GetSheetPreviewAsync_ReadsHeaderAndDataRows()
     {
         var filePath = CreateSampleWorkbook();
         var reader = new OpenXmlExcelWorkbookReader(NullLogger<OpenXmlExcelWorkbookReader>.Instance);
