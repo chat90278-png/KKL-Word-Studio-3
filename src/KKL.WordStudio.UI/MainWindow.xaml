@@ -6,88 +6,152 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.App.Background}">
 
-    <DockPanel LastChildFill="True">
+    <Grid>
+        <DockPanel LastChildFill="True">
 
-        <!-- ===================== Title bar ===================== -->
-        <Border DockPanel.Dock="Top" Height="38" Background="#FFF9FBFD" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
-            <StackPanel Orientation="Horizontal" Margin="14,0">
-                <Border Width="22" Height="22" CornerRadius="6" VerticalAlignment="Center">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#FF1D4ED8" Offset="0" />
-                            <GradientStop Color="#FF60A5FA" Offset="1" />
-                        </LinearGradientBrush>
-                    </Border.Background>
-                    <TextBlock Text="K" Foreground="White" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <TextBlock Text="KKL Word Studio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0" />
-                <TextBlock Text="{Binding CurrentProject.Name}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="10,0,0,0" />
-            </StackPanel>
+            <!-- ===================== Title bar ===================== -->
+            <Border DockPanel.Dock="Top" Height="38" Background="#FFF9FBFD" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal" Margin="14,0">
+                    <Border Width="22" Height="22" CornerRadius="6" VerticalAlignment="Center">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FF1D4ED8" Offset="0" />
+                                <GradientStop Color="#FF60A5FA" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <TextBlock Text="K" Foreground="White" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="KKL Word Studio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <TextBlock Text="{Binding CurrentProject.Name}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="10,0,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- ===================== Command bar ===================== -->
+            <Border DockPanel.Dock="Top" Height="58" Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                <DockPanel Margin="16,0">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                        <Button Content="＋ Yeni" Style="{StaticResource Btn.Base}" Command="{Binding NewProjectCommand}" Margin="0,0,4,0" />
+                        <Button Content="Aç" Style="{StaticResource Btn.Base}" Command="{Binding OpenProjectCommand}" Margin="0,0,4,0" />
+                        <Border Width="1" Height="24" Background="{DynamicResource Brush.Border}" Margin="4,0" />
+                        <Button Content="Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectCommand}" Margin="0,0,4,0" />
+                        <Button Content="Farklı Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectAsCommand}" Margin="0,0,12,0" />
+                        <Border Width="1" Height="24" Background="{DynamicResource Brush.Border}" Margin="0,0,12,0" />
+                        <ContentControl x:Name="LoadedSourcesHost" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                        <Button Content="Word Dosyası Oluştur" Style="{StaticResource Btn.Primary}" Command="{Binding ExportToWordCommand}" />
+                    </StackPanel>
+
+                    <StackPanel />
+                </DockPanel>
+            </Border>
+
+            <!-- Compact status area at the very bottom of the window. -->
+            <StatusBar DockPanel.Dock="Bottom" Height="28" Background="{DynamicResource Brush.Surface}">
+                <StatusBarItem Content="{Binding StatusText}" />
+                <StatusBarItem Visibility="{Binding LastExportedFilePath, Converter={StaticResource StringToVisibility}}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="✓ Word dosyası oluşturuldu"
+                                   Foreground="{DynamicResource Brush.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,10,0" />
+                        <Button Content="Dosyayı Aç"
+                                Style="{StaticResource Btn.Link}"
+                                Command="{Binding OpenExportedFileCommand}"
+                                FontSize="11"
+                                Margin="0,0,10,0" />
+                        <Button Content="Klasörde Göster"
+                                Style="{StaticResource Btn.Link}"
+                                Command="{Binding OpenExportedFolderCommand}"
+                                FontSize="11" />
+                    </StackPanel>
+                </StatusBarItem>
+            </StatusBar>
+
+            <!-- ===================== Workspace (fills all remaining space) ===================== -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="430" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="1.16*" MinWidth="470" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition x:Name="DockColumn" Width="350" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Excel Workspace: Sprint 8 reclaims the decorative rail width. -->
+                <ContentControl x:Name="ExcelWorkspaceHost" Grid.Column="0" />
+                <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource Brush.Border}" />
+
+                <!-- Live Word Preview -->
+                <ContentControl x:Name="PreviewHost" Grid.Column="2" />
+                <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource Brush.Border}" />
+
+                <!-- Right Context Dock -->
+                <ContentControl x:Name="ContextDockHost" Grid.Column="4" />
+            </Grid>
+        </DockPanel>
+
+        <!-- Full-shell interaction shield for measured long operations. This is
+             intentionally an in-window overlay rather than a second popup/window,
+             so focus cannot escape behind the busy surface. -->
+        <Border Panel.ZIndex="1000"
+                Background="#73111A2B"
+                Visibility="{Binding LongOperation.IsBusy, Converter={StaticResource BoolToVisibility}}">
+            <Border Width="430"
+                    MaxWidth="520"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="White"
+                    BorderBrush="#FFD5DEEA"
+                    BorderThickness="1"
+                    CornerRadius="16"
+                    Padding="22">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="28" ShadowDepth="7" Opacity="0.24" />
+                </Border.Effect>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="36" Height="36" CornerRadius="10" Background="#FFEAF2FF">
+                            <TextBlock Text="↻"
+                                       Foreground="#FF2563EB"
+                                       FontSize="21"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding LongOperation.Title}"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FF172033" />
+                            <TextBlock Text="İşlem tamamlanana kadar diğer komutlar geçici olarak kapalı."
+                                       Margin="0,3,0,0"
+                                       FontSize="10.5"
+                                       Foreground="#FF6B7689" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding LongOperation.Detail}"
+                               Margin="0,17,0,0"
+                               FontSize="12"
+                               Foreground="#FF3B4658"
+                               TextWrapping="Wrap" />
+
+                    <ProgressBar IsIndeterminate="True"
+                                 Height="8"
+                                 Margin="0,16,0,0" />
+
+                    <Button Content="İptal"
+                            Style="{StaticResource Btn.Mini}"
+                            Command="{Binding LongOperation.CancelCommand}"
+                            IsEnabled="{Binding LongOperation.IsCancellable}"
+                            HorizontalAlignment="Right"
+                            Margin="0,16,0,0"
+                            Padding="16,0"
+                            Height="32" />
+                </StackPanel>
+            </Border>
         </Border>
-
-        <!-- ===================== Command bar ===================== -->
-        <Border DockPanel.Dock="Top" Height="58" Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
-            <DockPanel Margin="16,0">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <Button Content="＋ Yeni" Style="{StaticResource Btn.Base}" Command="{Binding NewProjectCommand}" Margin="0,0,4,0" />
-                    <Button Content="Aç" Style="{StaticResource Btn.Base}" Command="{Binding OpenProjectCommand}" Margin="0,0,4,0" />
-                    <Border Width="1" Height="24" Background="{DynamicResource Brush.Border}" Margin="4,0" />
-                    <Button Content="Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectCommand}" Margin="0,0,4,0" />
-                    <Button Content="Farklı Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectAsCommand}" Margin="0,0,12,0" />
-                    <Border Width="1" Height="24" Background="{DynamicResource Brush.Border}" Margin="0,0,12,0" />
-                    <ContentControl x:Name="LoadedSourcesHost" VerticalAlignment="Center" />
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <Button Content="Word Dosyası Oluştur" Style="{StaticResource Btn.Primary}" Command="{Binding ExportToWordCommand}" />
-                </StackPanel>
-
-                <StackPanel />
-            </DockPanel>
-        </Border>
-
-        <!-- Compact status area at the very bottom of the window. -->
-        <StatusBar DockPanel.Dock="Bottom" Height="28" Background="{DynamicResource Brush.Surface}">
-            <StatusBarItem Content="{Binding StatusText}" />
-            <StatusBarItem Visibility="{Binding LastExportedFilePath, Converter={StaticResource StringToVisibility}}">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="✓ Word dosyası oluşturuldu"
-                               Foreground="{DynamicResource Brush.Text.Secondary}"
-                               VerticalAlignment="Center"
-                               Margin="8,0,10,0" />
-                    <Button Content="Dosyayı Aç"
-                            Style="{StaticResource Btn.Link}"
-                            Command="{Binding OpenExportedFileCommand}"
-                            FontSize="11"
-                            Margin="0,0,10,0" />
-                    <Button Content="Klasörde Göster"
-                            Style="{StaticResource Btn.Link}"
-                            Command="{Binding OpenExportedFolderCommand}"
-                            FontSize="11" />
-                </StackPanel>
-            </StatusBarItem>
-        </StatusBar>
-
-        <!-- ===================== Workspace (fills all remaining space) ===================== -->
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="430" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="1.16*" MinWidth="470" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition x:Name="DockColumn" Width="350" />
-            </Grid.ColumnDefinitions>
-
-            <!-- Excel Workspace: Sprint 8 reclaims the decorative rail width. -->
-            <ContentControl x:Name="ExcelWorkspaceHost" Grid.Column="0" />
-            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource Brush.Border}" />
-
-            <!-- Live Word Preview -->
-            <ContentControl x:Name="PreviewHost" Grid.Column="2" />
-            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource Brush.Border}" />
-
-            <!-- Right Context Dock -->
-            <ContentControl x:Name="ContextDockHost" Grid.Column="4" />
-        </Grid>
-    </DockPanel>
+    </Grid>
 </Window>
