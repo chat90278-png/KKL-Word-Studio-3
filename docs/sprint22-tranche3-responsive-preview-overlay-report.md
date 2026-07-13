@@ -62,6 +62,12 @@ Infrastructure tests additionally require pre-cancelled workbook-open, sheet-pre
 
 ## Current validation status
 
+Exact corrected implementation head:
+
+```text
+88e9e82e2ee8c6e15b41583a2c9f9f806b7f3e56
+```
+
 The implementation head is **not GREEN yet**. Windows execution remains final truth.
 
 ```bat
