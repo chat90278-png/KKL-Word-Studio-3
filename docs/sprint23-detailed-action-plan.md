@@ -31,6 +31,7 @@ Mimari sınırlar:
 - düzenlenen başlık hücresinin Preview ve Word'e taşınması;
 - anlamsal sütun tespiti ve sabit Word sütun sırası;
 - var olan tabloyu güncelle/yeni tablo ekle kararı;
+- Word'e Aktar öncesi düzenlenebilir başlık/alt başlık/tablo yerleşim onayı;
 - kök başlık ve hiyerarşik numaralandırma;
 - tablo sonrası sonraki başlığın yeni sayfada başlaması;
 - Ön Belgenin salt okunur gösterimi ve birleşik DOCX.
@@ -58,6 +59,7 @@ Branch: `sprint23/00-contract-characterization`
 
 - bu plan repoya alınır;
 - mevcut davranışlar testlerle kilitlenir;
+- doğrudan transferin henüz yerleşim onayı göstermediği karakterize edilir;
 - üretim davranışı değiştirilmez;
 - değişecek kontratlar listelenir.
 
@@ -82,19 +84,55 @@ Branch: `sprint23/00-contract-characterization`
 - `Veri Aralığını Düzenle` üst kaynak barına taşınır;
 - Word sütun sırası sabitlenir: No, Parça Adı, Parça Numarası, NSN, Seri Numarası, Adet;
 - `Var olan <ad/numara> tablosunu güncelle` ve `Yeni tablo olarak ekle` seçenekleri;
-- `Tablo N: [ad]` girişi.
+- `Tablo N: [ad]` girişi;
+- transfer isteği bu aşamada doğrudan raporu değiştirmez, bir yerleşim taslağı üretir.
+
+### 23-02B — Word'e Aktar Yerleşim Onayı
+
+Bu iş 23-02 transfer kontratı ile 23-03 numaralandırma servisinin ortak entegrasyon noktasıdır. Ayrı rapor motoru veya ikinci ağaç oluşturulmaz.
+
+Popup yalnız ilgili parent zincirini gösterir:
+
+```text
+1. System Test Procedure Configuration List
+└─ 1.2  [Yeni başlık                         ] [−]
+   └─ 1.2.1  [Yeni alt başlık                ] [−]
+      └─ Tablo 5: [Tablo adı                 ]
+
+                         [İptal] [Onayla ve Önizle]
+```
+
+Kurallar:
+
+- kök parent her zaman gösterilir ve bu popup'tan kaldırılamaz;
+- aradaki diğer eş seviyeli başlıklar ve tablolar gösterilmez;
+- yalnız hedefe ait parent zinciri gösterilir;
+- önerilen yeni başlık, yeni alt başlık ve tablo adı düzenlenebilir;
+- başlık ve alt başlık yanında kaldırma düğmesi vardır;
+- alt başlık kaldırılırsa tablo yeni başlığın altında kalır;
+- başlık kaldırılırsa alt başlık mevcut parent altında yeniden seviyelendirilir;
+- ikisi de kaldırılırsa tablo doğrudan gösterilen mevcut parent altına eklenir;
+- görüntülenen `1.2`, `1.2.1`, `Tablo 5` değerleri gerçek rapor sırasından hesaplanır, sabit örnek metin değildir;
+- tablo seçiliyse mevcut parent zinciri korunur;
+- mevcut tablo güncelleniyorsa tablo sessizce başka parent'a taşınmaz;
+- seçim yoksa sabit kök parent kullanılır;
+- `İptal` hiçbir rapor mutation'ı yapmaz;
+- `Onayla ve Önizle` bütün değişiklikleri atomik uygular;
+- başarıdan sonra rapor paneli açılır, Preview yenilenir ve hedef tabloya gidilir;
+- eski transfer karar popup'ı ile ikinci bir modal zinciri oluşturulmaz; güncelle/yeni tablo/başlık yapısı/tablo adı tek akışta birleştirilir.
 
 ### 23-03 — Belge İskeleti ve Numaralandırma
 
 - gerçek, düzenlenebilir fakat silinemez kök heading;
 - varsayılan metin `System Test Procedure Configuration List`;
 - `1`, `1.1`, `1.1.1` numaralandırması;
-- Contents, Preview ve Word aynı resolver'ı kullanır;
+- Contents, Preview, Word ve transfer yerleşim popup'ı aynı resolver'ı kullanır;
 - tablo seçiliyken Başlık tablonun üstüne;
 - tablo seçiliyken Alt Başlık tablo ile sahibi başlık arasına;
 - seçim yoksa güvenli sona ekleme;
 - Yukarı/Aşağı yalnız aynı seviyedeki mantıksal kardeş bloklarla çalışır;
-- drag/drop Before/Into/After göstergeleri belirginleşir.
+- drag/drop Before/Into/After göstergeleri belirginleşir;
+- yerleşim onay taslağı onaylandıktan sonra tek atomik structure operasyonuyla uygulanır.
 
 ### 23-04 — İçindekiler Navigasyonu ve Sayfalama
 
@@ -138,7 +176,8 @@ Branch: `sprint23/00-contract-characterization`
 - farklı sütun sıraları ve Türkçe/İngilizce başlıklar;
 - manuel aralık geçiş/persistence;
 - başlık hücresi düzenleme → Preview → Word;
-- yeni/güncel tablo;
+- yeni/güncel tablo ve yerleşim onayı;
+- başlık/alt başlık kaldırma varyasyonları;
 - rapor ağacı, Contents navigasyonu ve page-break;
 - küçük ekran paneli;
 - Ön Belge birleşimi;
@@ -151,6 +190,7 @@ Branch: `sprint23/00-contract-characterization`
 23-00 Contract/karakterizasyon
   → 23-01 Range + semantic field detection + persistence
   → 23-02 Grid + column selection + fixed Word schema
+  → 23-02B Transfer placement draft/confirmation
   → 23-03 Root heading + structure + numbering
   → 23-04 TOC navigation + pagination parity
   → 23-05 Responsive shell + zoom/search
@@ -158,6 +198,8 @@ Branch: `sprint23/00-contract-characterization`
   → 23-07 Warning policy
   → 23-08 Integrated stabilization
 ```
+
+Transfer popup'ı 23-02'de taslak üretmeye başlar; gerçek numaralandırma ve atomik yerleştirme 23-03'ün ortak resolver/structure servisiyle tamamlanır.
 
 Uyarı sistemi sona yakın uygulanır; doğru uyarı senaryoları ancak veri, transfer, rapor ve Preview davranışları stabilize olduğunda kurulabilir.
 
@@ -167,17 +209,17 @@ Başlangıç: `514`
 
 Planlanan minimum ek testler:
 
-- 23-00: `+10`
+- 23-00: `+11`
 - 23-01: `+22`
-- 23-02: `+22`
-- 23-03: `+22`
+- 23-02 ve 23-02B: `+28`
+- 23-03: `+24`
 - 23-04: `+22`
 - 23-05: `+12`
 - 23-06: `+22`
 - 23-07: `+18`
-- 23-08: `+8`
+- 23-08: `+10`
 
-Geçici final tahmini: `672`. Her tranche gerçek eklenen test sayısını ayrıca raporlar.
+Geçici final tahmini: `683`. Her tranche gerçek eklenen test sayısını ayrıca raporlar.
 
 ## 6. Her tranche için kapı
 
