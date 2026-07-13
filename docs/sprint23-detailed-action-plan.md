@@ -221,7 +221,22 @@ Planlanan minimum ek testler:
 
 Geçici final tahmini: `683`. Her tranche gerçek eklenen test sayısını ayrıca raporlar.
 
-## 6. Her tranche için kapı
+## 6. Transfer yerleşim onayı test matrisi
+
+23-02B ve 23-03 boyunca en az şu durumlar test edilir:
+
+1. yeni başlık + yeni alt başlık + yeni tablo;
+2. yalnız yeni başlık + yeni tablo;
+3. yalnız yeni alt başlık + yeni tablo;
+4. iki başlık da kaldırılmış yeni tablo;
+5. seçili heading altında yeni yapı;
+6. seçili tablo yakınında yeni yapı;
+7. mevcut tabloyu yerini değiştirmeden güncelleme;
+8. gerçek `1.2 / 1.2.1 / Tablo 5` sıra hesabı;
+9. iptalde sıfır mutation;
+10. onayda tek atomik mutation ve Preview hedef navigasyonu.
+
+## 7. Her tranche için kapı
 
 ```bat
 git rev-parse HEAD
