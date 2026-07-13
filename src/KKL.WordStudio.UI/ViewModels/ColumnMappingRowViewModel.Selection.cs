@@ -2,5 +2,11 @@ namespace KKL.WordStudio.UI.ViewModels;
 
 public sealed partial class ColumnMappingRowViewModel
 {
-    public bool IsIncluded { get; set; } = true;
+    private bool _isIncluded = true;
+
+    public bool IsIncluded
+    {
+        get => _isIncluded;
+        set => SetProperty(ref _isIncluded, value);
+    }
 }
