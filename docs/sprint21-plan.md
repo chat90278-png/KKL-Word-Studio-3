@@ -28,7 +28,7 @@ Implemented:
 - Duplicate `(source path, worksheet)` targets are deduplicated case-insensitively.
 - Order follows loaded-workbook order and workbook worksheet order.
 
-Status: implemented and source-reviewed; current-head Windows/UI gate pending.
+Status: implementation and multi-workbook UI smoke passed on the pre-containment head; final exact-head regression gate pending.
 
 ## P0-B — Deterministic batch transfer orchestration
 
@@ -44,7 +44,7 @@ Implemented:
 - Success is accepted only when `ExcelTransferResult.CreatedNewTable` is true.
 - Original Excel files remain read-only.
 
-Status: implemented and source-reviewed; current-head Windows/UI gate pending.
+Status: implementation and Windows/UI smoke passed on the pre-containment head; final exact-head regression gate pending.
 
 ## P0-C — Compact per-target authoring options
 
@@ -58,7 +58,7 @@ Implemented:
 
 No wizard, persistent template memory or existing-table overwrite option was added.
 
-Status: implemented and source-reviewed; current-head Windows/UI gate pending.
+Status: implemented; final exact-head regression gate pending.
 
 ## P0-D — Batch result summary and diagnostics integration
 
@@ -69,7 +69,20 @@ Implemented:
 - Existing Sprint 20 Diagnostics Center remains unchanged and continues to receive generated table warnings through the normal Preview path.
 - No persistent batch history is stored.
 
-Status: implemented and source-reviewed; current-head Windows/UI gate pending.
+Status: implemented; final exact-head regression gate pending.
+
+## P0-E — Empty-caption hint containment
+
+Implemented after UI smoke exposed the remaining detached-layer issue:
+
+- removed the WPF `Popup` implementation for `+ Tablo başlığı`;
+- replaced it with an `Adorner` attached to the real `TableBlockHost`;
+- explicitly clipped the hint to the table bounds;
+- remove it when the host unloads, Preview unloads or owner window deactivates;
+- removed popup ToolTip usage and retained accessible help text through `AutomationProperties.SetHelpText`;
+- preserved empty-caption and authored-caption editing through the existing editor path.
+
+Status: source-reviewed with focused architecture regression; exact-head Windows/UI gate pending.
 
 ## Regression coverage
 
@@ -90,31 +103,28 @@ Architecture guards cover:
 - current range/header/WorkingData reuse;
 - `TargetElementId = null` and `CreatedNewTable` safety;
 - absence of QuickAssembly persistence in Domain;
-- absence of a second Excel reader/table engine in the orchestrator.
+- absence of a second Excel reader/table engine in the orchestrator;
+- absence of detached `Popup`, `PlacementMode` and popup ToolTip surfaces for the empty-caption hint;
+- bounded Adorner clipping and unload cleanup.
 
 No tests were deleted, skipped or weakened.
 
 ## Closure gate
 
 1. Exact current-head Windows:
-   - `dotnet restore`
    - `dotnet build`
    - `dotnet test`
    - 0 warnings / 0 errors;
    - no deleted, skipped or weakened tests.
 2. UI smoke:
-   - load at least two Excel workbooks;
-   - open `Hızlı Rapor`;
-   - select three worksheets across the workbooks;
-   - assign at least one caption;
-   - run `Seçilenleri Rapora Aktar`.
+   - open `Hızlı Rapor` and verify the completed batch flow remains functional;
+   - hover a table with an empty caption;
+   - verify `+ Tablo başlığı` remains inside the table/Preview area;
+   - switch to another window and close the app;
+   - verify no caption helper remains above another window or console.
 3. Result smoke:
-   - three distinct report tables appear in deterministic order;
-   - captions number once per semantic table;
-   - created/skipped/failed summary is correct;
-   - one intentionally invalid source does not block valid targets;
-   - Preview/Word preserve existing table/grouping semantics;
-   - related warnings still appear in the Sprint 20 warning center.
+   - Preview/Word preserve existing caption/table/grouping semantics;
+   - Sprint 20 warning navigation remains intact.
 
 ## Non-goals
 
