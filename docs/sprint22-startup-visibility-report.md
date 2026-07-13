@@ -60,6 +60,8 @@ Expected test totals after the two startup architecture guards:
 - Infrastructure: 127
 - Total: 496
 
+Use the SHA printed by `git rev-parse HEAD` as the exact validation head; do not rely on an older copied SHA after additional documentation commits.
+
 ## If the window is still not visible
 
 Stop the attached run with `Ctrl+C`, then print the two diagnostic files:
