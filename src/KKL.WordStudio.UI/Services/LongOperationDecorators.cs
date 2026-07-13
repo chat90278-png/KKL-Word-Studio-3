@@ -46,7 +46,7 @@ public sealed class LongOperationExcelWorkbookReader : IExcelWorkbookReader
     public Task<Result<SheetPreview>> GetSheetPreviewAsync(
         string filePath,
         string worksheetName,
-        int maxPreviewRows = 100,
+        int maxPreviewRows = int.MaxValue,
         CancellationToken cancellationToken = default) =>
         RunAsync(
             ExcelOverlayStage.SheetPreview,
