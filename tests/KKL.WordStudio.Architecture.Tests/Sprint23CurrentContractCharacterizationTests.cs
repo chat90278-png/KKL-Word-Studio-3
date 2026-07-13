@@ -19,6 +19,21 @@ public sealed class Sprint23CurrentContractCharacterizationTests
     }
 
     [Fact]
+    public void Transfer_CurrentlyMutatesImmediatelyAndHasNoEditablePlacementOutline()
+    {
+        var root = SolutionRootLocator.Find();
+        var xaml = Read(root, "src", "KKL.WordStudio.UI", "Views", "ExcelWorkspaceView.xaml");
+        var viewModel = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.cs");
+
+        Assert.Contains("private void TransferToReport() => ExecuteTransfer(existingTableMode: null, sourceFieldMappings: null);", viewModel, StringComparison.Ordinal);
+        Assert.Contains("var result = _transferService.Transfer(project, report, request);", viewModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("Onayla ve Önizle", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Yeni başlık", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Yeni alt başlık", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Placement", viewModel, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WorkingDataGrid_CurrentlyReplacesExcelLettersWithWorkingHeadersAndDoesNotDisableSorting()
     {
         var root = SolutionRootLocator.Find();
