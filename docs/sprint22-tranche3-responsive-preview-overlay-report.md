@@ -31,6 +31,8 @@ While the overlay is visible:
 - `İptal` cancels every active operation that declared a safe cancellation token;
 - the overlay closes only after all active operation leases finish.
 
+Preview cancellation is presentation-only. It does not roll back a report/table transfer that already completed; it stops the current render/projection and allows a clean Preview refresh afterward.
+
 ## Coverage
 
 Architecture guards verify:
