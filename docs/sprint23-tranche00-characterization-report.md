@@ -28,7 +28,7 @@ This tranche intentionally changes no production behavior. It adds:
 
 ## Windows gate — pending
 
-Run on the final exact branch head reported outside this committed document:
+Run on the final exact branch head reported in the PR/check request:
 
 ```bat
 git fetch origin
