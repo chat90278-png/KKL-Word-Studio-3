@@ -6,16 +6,21 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 /// <summary>
-/// Session-only shell state for genuinely long UI operations. Each caller owns
-/// an independent cancellation source; the shell displays the newest active
-/// operation while the full-screen overlay blocks accidental re-entry.
+/// Session-only shell state for genuinely long UI operations. Each visible
+/// caller owns an independent cancellation source; the shell displays the
+/// newest visible operation while the full-screen overlay blocks re-entry.
+/// Later report Preview refreshes stay hidden but still cancel stale work.
 /// </summary>
 public sealed partial class LongOperationViewModel : ViewModelBase
 {
+    private const string ReportPreviewTitle = "Rapor önizlemesi hazırlanıyor";
+
     public static LongOperationViewModel Shared { get; } = new();
 
     private readonly object _sync = new();
     private readonly Dictionary<long, ActiveOperation> _active = new();
+    private CancellationTokenSource? _hiddenPreviewCancellation;
+    private long _hiddenPreviewId;
     private long _nextId;
 
     private LongOperationViewModel()
@@ -36,6 +41,12 @@ public sealed partial class LongOperationViewModel : ViewModelBase
 
     public LongOperationLease Begin(string title, string detail, bool isCancellable = true)
     {
+        if (string.Equals(title, ReportPreviewTitle, StringComparison.Ordinal)
+            && !LongOperationDisplayPolicy.Shared.TryConsumeFirstWordTransferPreview())
+        {
+            return BeginHiddenPreview();
+        }
+
         var cancellation = new CancellationTokenSource();
         long id;
 
@@ -108,6 +119,42 @@ public sealed partial class LongOperationViewModel : ViewModelBase
         cancellation?.Dispose();
     }
 
+    private LongOperationLease BeginHiddenPreview()
+    {
+        CancellationTokenSource cancellation;
+        long id;
+        CancellationTokenSource? previous;
+
+        lock (_sync)
+        {
+            previous = _hiddenPreviewCancellation;
+            cancellation = new CancellationTokenSource();
+            id = ++_nextId;
+            _hiddenPreviewCancellation = cancellation;
+            _hiddenPreviewId = id;
+        }
+
+        // A new report edit supersedes the previous invisible refresh. The old
+        // ViewModel generation guard still prevents stale publication; this
+        // cancellation also releases renderer/projection work early.
+        previous?.Cancel();
+
+        return new LongOperationLease(
+            cancellation.Token,
+            () => EndHiddenPreview(id, cancellation));
+    }
+
+    private void EndHiddenPreview(long id, CancellationTokenSource cancellation)
+    {
+        lock (_sync)
+        {
+            if (_hiddenPreviewId == id && ReferenceEquals(_hiddenPreviewCancellation, cancellation))
+                _hiddenPreviewCancellation = null;
+        }
+
+        cancellation.Dispose();
+    }
+
     private void PublishNewestLocked()
     {
         if (_active.Count == 0)
@@ -164,6 +211,7 @@ public sealed class LongOperationLease : IDisposable
 {
     private LongOperationViewModel? _owner;
     private readonly long _id;
+    private Action? _standaloneDispose;
 
     internal LongOperationLease(LongOperationViewModel owner, long id, CancellationToken token)
     {
@@ -172,9 +220,25 @@ public sealed class LongOperationLease : IDisposable
         Token = token;
     }
 
+    internal LongOperationLease(CancellationToken token, Action standaloneDispose)
+    {
+        Token = token;
+        _standaloneDispose = standaloneDispose;
+    }
+
     public CancellationToken Token { get; }
 
     public void ReportDetail(string detail) => _owner?.ReportDetail(_id, detail);
 
-    public void Dispose() => Interlocked.Exchange(ref _owner, null)?.End(_id);
+    public void Dispose()
+    {
+        var owner = Interlocked.Exchange(ref _owner, null);
+        if (owner is not null)
+        {
+            owner.End(_id);
+            return;
+        }
+
+        Interlocked.Exchange(ref _standaloneDispose, null)?.Invoke();
+    }
 }
