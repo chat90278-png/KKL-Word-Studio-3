@@ -62,13 +62,9 @@ Infrastructure tests additionally require pre-cancelled workbook-open, sheet-pre
 
 ## Current validation status
 
-Exact corrected implementation head:
+The exact head to validate is the current branch head reported by `git rev-parse HEAD` after `git pull`.
 
-```text
-d972b1df658a7c80f7c501a7bc09fcd73e2f74f1
-```
-
-The implementation head is **not GREEN yet**. Windows execution remains final truth.
+The implementation is **not GREEN yet**. Windows execution remains final truth.
 
 ```bat
 git checkout sprint22/tranche3-excel-read-hardening
