@@ -1,6 +1,7 @@
 # KKL Word Studio brand assets
 
-- `BrandMark.png`: transparent 512×512 application mark used in the WPF title area.
-- `AppIcon.ico`: multi-resolution Windows application icon (16–256 px).
+- `BrandMark.png`: simplified transparent brand mark used in the WPF title area.
+- `BrandMarkSmall.png`: small-size optimized mark used for the runtime window/taskbar icon.
+- `AppIcon.ico`: build-time Windows executable icon fallback.
 
-The selected mark combines spreadsheet structure and document/report creation. Keep aspect ratio and do not recolor individual halves.
+The current mark is optimized for 16–48 px readability: fewer grid cells, fewer document lines, stronger silhouette and wider negative space. Keep aspect ratio and do not recolor individual halves.
