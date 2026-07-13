@@ -13,26 +13,34 @@ The branch base contains no production-code difference from the Sprint 22 baseli
 This tranche intentionally changes no production behavior. It adds:
 
 1. the detailed Sprint 23 dependency/tranche plan;
-2. four Application characterization tests for the existing range detector;
-3. two Infrastructure characterization tests for the current 100-row Preview limit and first-blank-row end detection;
-4. four Architecture characterization tests for the existing Excel mapping surface, grid headers/sorting, fixed shell layout, flat report structure and single-level warning count.
+2. the Word'e Aktar placement-confirmation workflow to the plan;
+3. four Application characterization tests for the existing range detector;
+4. two Infrastructure characterization tests for the current 100-row Preview limit and first-blank-row end detection;
+5. five Architecture characterization tests for:
+   - the existing Excel mapping surface;
+   - grid headers and sorting;
+   - fixed shell layout;
+   - flat report structure and single-level warning count;
+   - the current immediate transfer mutation and absence of an editable heading/subheading/table placement outline.
 
 ## Test delta
 
 - Previous total: `514`
 - Added Application tests: `4`
 - Added Infrastructure tests: `2`
-- Added Architecture tests: `4`
-- Expected total: `524`
+- Added Architecture tests: `5`
+- Expected total: `525`
 
 ## Windows gate — pending
 
 Run on the final exact branch head:
 
 ```bat
+git fetch origin
 git checkout sprint23/00-contract-characterization
-git pull
+git pull --ff-only origin sprint23/00-contract-characterization
 git rev-parse HEAD
+git status --short
 
 dotnet restore
 dotnet build -c Release
@@ -44,7 +52,7 @@ Expected:
 
 - 0 warnings;
 - 0 errors;
-- `524/524` tests;
+- `525/525` tests;
 - application startup smoke GREEN;
 - no intended production UI/behavior change.
 
