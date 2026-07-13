@@ -17,101 +17,82 @@ Selections and draft captions are session-only UI state. They are not added to t
 
 ## P0-A — Session-only source/sheet selection
 
-Add a compact multi-source selection surface reachable from the existing loaded-source area.
+Implemented:
 
-Each loaded workbook is shown with its worksheets:
+- `Hızlı Rapor` is hosted beside the existing loaded-source selector.
+- The panel projects `ExcelWorkspaceViewModel.OpenWorkbooks`; no parallel source store exists.
+- Workbook and worksheet checkboxes are available.
+- Workbook selection selects/deselects its worksheets.
+- Sheet selection remains independently editable.
+- Source synchronization preserves temporary selection/caption state and removes stale targets.
+- Duplicate `(source path, worksheet)` targets are deduplicated case-insensitively.
+- Order follows loaded-workbook order and workbook worksheet order.
 
-```text
-☑ sero2.xlsx
-   ☑ Sayfa1
-   ☐ Sayfa2
-
-☑ envanter.xlsx
-   ☑ Araçlar
-   ☑ Parçalar
-```
-
-Acceptance:
-
-- selection state belongs to UI/session state, not Domain persistence;
-- newly opened workbooks/sheets appear without recreating a parallel source store;
-- workbook-level selection selects/deselects its sheets;
-- sheet-level selection remains independently editable;
-- unloaded/closed workbooks are removed from the session selection;
-- duplicate `(source path, worksheet)` targets cannot appear twice;
-- source and worksheet order follows the existing loaded-workbook order and workbook sheet order;
-- the currently active workbook/sheet workflow continues to work unchanged.
+Status: implemented and source-reviewed; current-head Windows/UI gate pending.
 
 ## P0-B — Deterministic batch transfer orchestration
 
-Add `Seçilenleri Rapora Aktar` for selected sheet targets.
+Implemented:
 
-The batch orchestrator must reuse the existing single-sheet transfer path and its real services:
+- `Seçilenleri Rapora Aktar` executes selected targets in visible deterministic order.
+- `QuickAssemblyBatchOrchestrator` only orders and accounts for outcomes.
+- Every real transfer delegates to `ExcelWorkspaceViewModel.TransferQuickAssemblyTargetAsync`.
+- The target adapter reuses the existing preview/range/WorkingData/mapping state and `IExcelReportTransferService`.
+- One failure is recorded while later targets continue.
+- Duplicate targets are rejected before any transfer call.
+- Requests use `TargetElementId = null`; selected customized tables are not overwritten.
+- Success is accepted only when `ExcelTransferResult.CreatedNewTable` is true.
+- Original Excel files remain read-only.
 
-- existing workbook/sheet activation;
-- range detection/configuration;
-- WorkingData snapshot;
-- table creation/binding;
-- Serial/Quantity grouping detection;
-- Preview refresh;
-- automatic caption sequencing.
-
-Do not create a second table import/composition engine.
-
-Acceptance:
-
-- selected targets execute in visible deterministic order;
-- one sheet creates at most one new table during a batch invocation;
-- the same target cannot be submitted twice in one batch;
-- a failure on one target is recorded and remaining targets continue;
-- existing customized tables are never silently overwritten;
-- if the existing transfer path requires a user choice for an already configured table, batch mode defaults to creating a new table rather than silently replacing it;
-- original XLSX/XLSM files remain unchanged;
-- one final workspace/Preview refresh is preferred after the batch, unless existing contracts require per-item refresh for correctness.
+Status: implemented and source-reviewed; current-head Windows/UI gate pending.
 
 ## P0-C — Compact per-target authoring options
 
-For each selected sheet, provide lightweight session-only options:
+Implemented:
 
-- optional raw table caption;
-- action: `Yeni tablo` initially;
-- order controls or drag ordering only if deterministic source order is insufficient after P0-B;
-- skip toggle by deselecting the target.
+- Optional raw caption per worksheet.
+- Initial and only action in this sprint is safe `Yeni tablo` creation.
+- Deselecting a worksheet skips it.
+- Created targets are deselected after completion to reduce accidental duplicate imports.
+- Failed/skipped targets remain selected for retry.
 
-Do not add a complex wizard or persistent template memory.
+No wizard, persistent template memory or existing-table overwrite option was added.
 
-Explicit existing-table update is deferred until it can reuse the current safe transfer-choice contracts without weakening overwrite protection.
+Status: implemented and source-reviewed; current-head Windows/UI gate pending.
 
 ## P0-D — Batch result summary and diagnostics integration
 
-After execution show a compact result:
+Implemented:
 
-```text
-3 tablo oluşturuldu
-1 kaynak atlandı
-2 uyarı bulundu
-```
+- Per-target `Oluşturuldu`, `Atlandı` or `Başarısız` text.
+- Explicit created/skipped/failed aggregate summary.
+- Existing Sprint 20 Diagnostics Center remains unchanged and continues to receive generated table warnings through the normal Preview path.
+- No persistent batch history is stored.
 
-Acceptance:
-
-- success/failure/skip counts are explicit;
-- per-target failure message includes workbook and worksheet;
-- generated table warnings continue through the Sprint 20 Diagnostics Center;
-- clicking a diagnostic keeps existing Preview/Excel cross-navigation behavior;
-- no persistent batch history is stored.
+Status: implemented and source-reviewed; current-head Windows/UI gate pending.
 
 ## Regression coverage
 
-Add focused tests/guards for:
+Application tests cover:
 
 - session selection uniqueness and deterministic order;
 - workbook-level select/deselect behavior;
-- stale selection removal when loaded workbooks change;
+- stale selection removal;
+- selection/caption preservation;
 - duplicate target rejection;
-- continue-on-error batch result accounting;
-- batch orchestration delegates to the existing single-target transfer seam;
-- no Domain persistence fields are introduced for temporary sheet selection;
-- current single-sheet `Word'e Aktar` remains available and unchanged during the transition.
+- continue-on-error accounting.
+
+Architecture guards cover:
+
+- the loaded-source quick-assembly surface and DI registration;
+- use of the existing `OpenWorkbooks` session state;
+- delegation to `_transferService.Transfer`;
+- current range/header/WorkingData reuse;
+- `TargetElementId = null` and `CreatedNewTable` safety;
+- absence of QuickAssembly persistence in Domain;
+- absence of a second Excel reader/table engine in the orchestrator.
+
+No tests were deleted, skipped or weakened.
 
 ## Closure gate
 
@@ -123,16 +104,17 @@ Add focused tests/guards for:
    - no deleted, skipped or weakened tests.
 2. UI smoke:
    - load at least two Excel workbooks;
-   - open the quick assembly surface;
+   - open `Hızlı Rapor`;
    - select three worksheets across the workbooks;
    - assign at least one caption;
-   - run batch transfer.
+   - run `Seçilenleri Rapora Aktar`.
 3. Result smoke:
    - three distinct report tables appear in deterministic order;
    - captions number once per semantic table;
-   - Preview and Word preserve existing table/grouping semantics;
+   - created/skipped/failed summary is correct;
    - one intentionally invalid source does not block valid targets;
-   - related warnings appear in the Sprint 20 warning center.
+   - Preview/Word preserve existing table/grouping semantics;
+   - related warnings still appear in the Sprint 20 warning center.
 
 ## Non-goals
 
@@ -142,4 +124,5 @@ Add focused tests/guards for:
 - cloud sync;
 - direct modification of source Excel files;
 - a second report/table composition pipeline;
-- silent overwrite of customized report tables.
+- silent overwrite of customized report tables;
+- updating existing tables from the batch panel.
