@@ -96,7 +96,14 @@ public sealed class LongOperationExcelWorkbookReader : IExcelWorkbookReader
         Func<CancellationToken, Task<Result<T>>> operation,
         CancellationToken callerToken)
     {
-        using var lease = _operations.Begin(title, detail, isCancellable: true);
+        // Existing Excel Workspace calls use the default token and do not yet
+        // own an OperationCanceledException boundary. They still receive the
+        // loading shield, but the cancel button is enabled only when the caller
+        // deliberately supplied a token and therefore owns cancellation.
+        using var lease = _operations.Begin(
+            title,
+            detail,
+            isCancellable: callerToken.CanBeCanceled);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             callerToken,
             lease.Token);
