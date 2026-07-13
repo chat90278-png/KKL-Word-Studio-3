@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.UI.Views;
 
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -11,7 +12,7 @@ using KKL.WordStudio.UI.ViewModels;
 public partial class PreviewView
 {
     private const string EmptyCaptionHintText = "+ Tablo başlığı";
-    private const string EmptyCaptionHintToolTip = "Tablo başlığı eklemek için tıklayın";
+    private const string EmptyCaptionHintHelpText = "Tablo başlığı eklemek için tıklayın";
 
     private EmptyCaptionHintAdorner? _emptyCaptionHintAdorner;
     private AdornerLayer? _emptyCaptionHintLayer;
@@ -98,6 +99,7 @@ public partial class PreviewView
         AttachCaptionHintOwnerWindow();
         var adorner = new EmptyCaptionHintAdorner(host);
         adorner.HintClicked += EmptyCaptionHint_MouseLeftButtonDown;
+        host.Unloaded += CaptionHintTarget_Unloaded;
 
         _emptyCaptionHintTarget = host;
         _emptyCaptionHintBlock = block;
@@ -133,6 +135,9 @@ public partial class PreviewView
     private void CaptionHintOwnerWindow_Deactivated(object? sender, EventArgs e) =>
         CloseEmptyCaptionHint();
 
+    private void CaptionHintTarget_Unloaded(object sender, RoutedEventArgs e) =>
+        CloseEmptyCaptionHint();
+
     private void CaptionHint_Unloaded(object sender, RoutedEventArgs e)
     {
         CloseEmptyCaptionHint();
@@ -143,6 +148,9 @@ public partial class PreviewView
 
     private void CloseEmptyCaptionHint()
     {
+        if (_emptyCaptionHintTarget is not null)
+            _emptyCaptionHintTarget.Unloaded -= CaptionHintTarget_Unloaded;
+
         if (_emptyCaptionHintAdorner is not null)
             _emptyCaptionHintAdorner.HintClicked -= EmptyCaptionHint_MouseLeftButtonDown;
 
@@ -208,9 +216,9 @@ public partial class PreviewView
                 CornerRadius = new CornerRadius(3d),
                 Padding = new Thickness(4d, 1d, 4d, 1d),
                 Cursor = Cursors.IBeam,
-                ToolTip = EmptyCaptionHintToolTip,
                 Child = text
             };
+            AutomationProperties.SetHelpText(_hint, EmptyCaptionHintHelpText);
             _hint.MouseLeftButtonDown += (_, e) => HintClicked?.Invoke(this, e);
 
             _visuals = new VisualCollection(this) { _hint };
