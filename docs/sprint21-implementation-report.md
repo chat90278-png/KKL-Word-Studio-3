@@ -5,7 +5,8 @@
 - Baseline: `main` at `a622bffa71194fc0bbae64cf9664aeb7e3b0becd`
 - Branch: `sprint21/multi-source-quick-assembly`
 - PR: #5 (draft)
-- Current head is not GREEN until the exact Windows gate runs.
+- The multi-source quick-assembly head before the final caption containment fix passed Windows restore/build/test and UI smoke.
+- The final caption containment head still requires one exact-head Windows gate before merge.
 
 ## Implemented flow
 
@@ -28,6 +29,18 @@ Each target delegates to `ExcelWorkspaceViewModel.TransferQuickAssemblyTargetAsy
 
 Batch requests use `TargetElementId = null`, so selected customized tables are never overwritten. Success is accepted only when `ExcelTransferResult.CreatedNewTable` is true. Optional captions are applied to the new `TableElement.Caption`; existing automatic `Tablo n:` sequencing remains authoritative.
 
+## Empty-caption hint containment fix
+
+The `+ Tablo başlığı` helper previously used a WPF `Popup`, which owns a detached window surface and could remain visually above another panel/window.
+
+The helper now uses a bounded `Adorner` attached to the actual `TableBlockHost`:
+
+- no `Popup` or `PlacementMode` remains;
+- the adorner is clipped to the table block bounds;
+- it is removed when the table host unloads, the Preview unloads or the owner window deactivates;
+- its help text uses `AutomationProperties.SetHelpText`, not a popup ToolTip;
+- empty caption editing and authored-caption direct editing still call the existing caption editor.
+
 ## Safety
 
 - Deterministic workbook and worksheet order.
@@ -43,19 +56,18 @@ Batch requests use `TargetElementId = null`, so selected customized tables are n
 
 Application tests cover ordering, deduplication, selection/caption preservation, stale removal, workbook toggles, continue-on-error accounting and duplicate rejection.
 
-Architecture guards cover the compact UI, DI registration, reuse of `OpenWorkbooks`, delegation to `_transferService.Transfer`, range/header/WorkingData reuse, new-table-only safety and absence of QuickAssembly persistence in Domain.
+Architecture guards cover the compact UI, DI registration, reuse of `OpenWorkbooks`, delegation to `_transferService.Transfer`, range/header/WorkingData reuse, new-table-only safety, absence of QuickAssembly persistence in Domain, and prevention of detached popup regressions for the caption hint.
 
-## Pending gate
+## Pending final gate
 
 ```bat
 git checkout sprint21/multi-source-quick-assembly
 git pull
 git rev-parse HEAD
 
-dotnet restore
 dotnet build
 dotnet test
 dotnet run --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
 ```
 
-UI smoke: load two workbooks, select three sheets, enter one caption, run batch transfer, verify distinct new tables and the created/skipped/failed summary, then verify Preview/Word and Sprint 20 diagnostics behavior.
+UI smoke: hover an empty-caption table, verify `+ Tablo başlığı` stays inside the Preview/table area, switch to another window and close/reopen the app, and verify no helper remains above the console or another application.
