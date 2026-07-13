@@ -1,5 +1,7 @@
 namespace KKL.WordStudio.UI.ViewModels;
 
+using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -43,6 +45,13 @@ public sealed partial class LongOperationViewModel : ViewModelBase
             _active.Add(id, new ActiveOperation(id, title, detail, isCancellable, cancellation));
             PublishNewestLocked();
         }
+
+        // Setting IsBusy is not enough when the next operation performs
+        // synchronous setup on the UI thread. Process WPF data binding and one
+        // render turn now, after the shield became active, before returning to
+        // the caller. This is deliberately limited to the active UI dispatcher;
+        // headless/unit-test calls do not create or pump a dispatcher.
+        FlushPresentationIfAvailable();
 
         return new LongOperationLease(this, id, cancellation.Token);
     }
@@ -118,6 +127,19 @@ public sealed partial class LongOperationViewModel : ViewModelBase
         IsCancellable = _active.Values.Any(operation =>
             operation.IsCancellable && !operation.Cancellation.IsCancellationRequested);
         CancelCommand.NotifyCanExecuteChanged();
+    }
+
+    private static void FlushPresentationIfAvailable()
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || !dispatcher.CheckAccess())
+            return;
+
+        var frame = new DispatcherFrame();
+        dispatcher.BeginInvoke(
+            new Action(() => frame.Continue = false),
+            DispatcherPriority.ContextIdle);
+        Dispatcher.PushFrame(frame);
     }
 
     private sealed class ActiveOperation(
