@@ -60,6 +60,7 @@ public sealed class Sprint22LongOperationOverlayArchitectureTests
         Assert.Contains("class LongOperationExcelWorkbookReader : IExcelWorkbookReader", decorators, StringComparison.Ordinal);
         Assert.Contains("class LongOperationExcelReportTransferService : IExcelReportTransferService", decorators, StringComparison.Ordinal);
         Assert.Contains("return await operation(linkedCancellation.Token)", decorators, StringComparison.Ordinal);
+        Assert.Contains("isCancellable: callerToken.CanBeCanceled", decorators, StringComparison.Ordinal);
         Assert.Contains("var result = _inner.Transfer", decorators, StringComparison.Ordinal);
         Assert.DoesNotContain("SpreadsheetDocument", decorators, StringComparison.Ordinal);
         Assert.DoesNotContain("WordprocessingDocument", decorators, StringComparison.Ordinal);
@@ -74,7 +75,7 @@ public sealed class Sprint22LongOperationOverlayArchitectureTests
 
         Assert.Contains("FlushPresentationIfAvailable", operationState, StringComparison.Ordinal);
         Assert.Contains("DispatcherFrame", operationState, StringComparison.Ordinal);
-        Assert.Contains("DispatcherPriority.ContextIdle", operationState, StringComparison.Ordinal);
+        Assert.Contains("DispatcherPriority.Loaded", operationState, StringComparison.Ordinal);
         Assert.Contains("Application.Current?.Dispatcher", operationState, StringComparison.Ordinal);
 
         Assert.Contains("Task.Run(() => OpenWorkbook", reader, StringComparison.Ordinal);
