@@ -115,7 +115,7 @@ public sealed class Sprint21ColumnSelectionTransferTests
         var result = service.Transfer(project, report, BasicRequest(path));
 
         Assert.Equal(TransferOutcome.Failed, result.Outcome);
-        Assert.Contains("en az bir sütun", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("en az bir sütun", result.Error ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(report.Pages[0].Sections[0].Root.Children.OfType<TableElement>());
     }
 
