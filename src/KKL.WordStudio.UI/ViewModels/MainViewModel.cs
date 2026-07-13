@@ -31,7 +31,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public DockViewModel DockViewModel { get; }
 
     /// <summary>Shared session-only busy state rendered by MainWindow as a full interaction shield.</summary>
-    public LongOperationViewModel LongOperation { get; }
+    public LongOperationViewModel LongOperation { get; } = LongOperationViewModel.Shared;
 
     [ObservableProperty]
     private Project _currentProject;
@@ -54,7 +54,6 @@ public sealed partial class MainViewModel : ViewModelBase
         IFileDialogService fileDialogService,
         IShellLauncher shellLauncher,
         DockViewModel dockViewModel,
-        LongOperationViewModel longOperation,
         ILogger<MainViewModel> logger)
     {
         _projectService = projectService;
@@ -63,7 +62,6 @@ public sealed partial class MainViewModel : ViewModelBase
         _fileDialogService = fileDialogService;
         _shellLauncher = shellLauncher;
         DockViewModel = dockViewModel;
-        LongOperation = longOperation;
         _logger = logger;
 
         _currentProject = _projectService.CreateNew();
