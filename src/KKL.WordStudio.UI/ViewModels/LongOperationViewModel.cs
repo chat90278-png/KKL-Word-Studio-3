@@ -49,8 +49,8 @@ public sealed partial class LongOperationViewModel : ViewModelBase
         // Setting IsBusy is not enough when the next operation performs
         // synchronous setup on the UI thread. Process WPF data binding and one
         // render turn now, after the shield became active, before returning to
-        // the caller. This is deliberately limited to the active UI dispatcher;
-        // headless/unit-test calls do not create or pump a dispatcher.
+        // the caller. Stop at Loaded priority: DataBind/Render have run, but a
+        // new Input-priority click cannot re-enter the application here.
         FlushPresentationIfAvailable();
 
         return new LongOperationLease(this, id, cancellation.Token);
@@ -138,7 +138,7 @@ public sealed partial class LongOperationViewModel : ViewModelBase
         var frame = new DispatcherFrame();
         dispatcher.BeginInvoke(
             new Action(() => frame.Continue = false),
-            DispatcherPriority.ContextIdle);
+            DispatcherPriority.Loaded);
         Dispatcher.PushFrame(frame);
     }
 
