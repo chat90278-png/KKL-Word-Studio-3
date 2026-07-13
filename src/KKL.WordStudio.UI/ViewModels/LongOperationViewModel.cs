@@ -10,9 +10,15 @@ using CommunityToolkit.Mvvm.Input;
 /// </summary>
 public sealed partial class LongOperationViewModel : ViewModelBase
 {
+    public static LongOperationViewModel Shared { get; } = new();
+
     private readonly object _sync = new();
     private readonly Dictionary<long, ActiveOperation> _active = new();
     private long _nextId;
+
+    private LongOperationViewModel()
+    {
+    }
 
     [ObservableProperty]
     private bool _isBusy;
