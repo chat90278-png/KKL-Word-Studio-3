@@ -5,24 +5,27 @@ using Xunit;
 public sealed class Sprint21ColumnSelectionArchitectureTests
 {
     [Fact]
-    public void MappingSurface_ProvidesCheckboxAndBulkSelectionWithoutDeletingSourceColumns()
+    public void MappingSurface_ProvidesSingleClickCheckboxAndBulkSelectionWithoutDeletingSourceColumns()
     {
         var root = SolutionRootLocator.Find();
-        var view = Read(root, "src", "KKL.WordStudio.UI", "Views", "ExcelWorkspaceView.ColumnSelection.cs");
+        var xaml = Read(root, "src", "KKL.WordStudio.UI", "Views", "ExcelWorkspaceView.xaml");
         var row = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ColumnMappingRowViewModel.Selection.cs");
         var viewModel = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.ColumnSelection.cs");
 
-        Assert.Contains("DataGridCheckBoxColumn", view, StringComparison.Ordinal);
-        Assert.Contains("IsIncluded", view, StringComparison.Ordinal);
-        Assert.Contains("Tümünü seç", view, StringComparison.Ordinal);
-        Assert.Contains("Hiçbirini seçme", view, StringComparison.Ordinal);
-        Assert.Contains("ApplyColumnSelectionMappingCommand", view, StringComparison.Ordinal);
-        Assert.Contains("OpenColumnSelectionMappingDrawerCommand", view, StringComparison.Ordinal);
+        Assert.Contains("DataGridTemplateColumn Header=\"Aktar\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsChecked=\"{Binding IsIncluded, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ClickMode=\"Press\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Tümünü seç", xaml, StringComparison.Ordinal);
+        Assert.Contains("Hiçbirini seçme", xaml, StringComparison.Ordinal);
+        Assert.Contains("ApplyColumnSelectionMappingCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("OpenColumnSelectionMappingDrawerCommand", xaml, StringComparison.Ordinal);
         Assert.Contains("SetProperty(ref _isIncluded", row, StringComparison.Ordinal);
         Assert.Contains("ColumnTransferSelectionSession.Shared", viewModel, StringComparison.Ordinal);
         Assert.Contains("selectedColumns.Count == 0", viewModel, StringComparison.Ordinal);
         Assert.Contains("SetSelection", viewModel, StringComparison.Ordinal);
 
+        Assert.DoesNotContain("Veri kaynağı adı", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding DataSourceName", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("DeleteColumns", viewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("WorkingData.Columns.Remove", viewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("File.Write", viewModel, StringComparison.Ordinal);
