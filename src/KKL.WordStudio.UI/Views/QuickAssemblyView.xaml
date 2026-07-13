@@ -207,7 +207,7 @@
                             <ProgressBar Grid.Column="0"
                                          Minimum="0"
                                          Maximum="100"
-                                         Value="{Binding ProgressPercent}"
+                                         Value="{Binding ProgressPercent, Mode=OneWay}"
                                          Height="7"
                                          VerticalAlignment="Center" />
                             <Button Grid.Column="1"
