@@ -1,5 +1,6 @@
 namespace KKL.WordStudio.Infrastructure.Tests.TestSupport;
 
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
