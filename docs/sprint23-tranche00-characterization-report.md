@@ -16,12 +16,7 @@ This tranche intentionally changes no production behavior. It adds:
 2. the Word'e Aktar placement-confirmation workflow and its test matrix to the plan;
 3. four Application characterization tests for the existing range detector;
 4. two Infrastructure characterization tests for the current 100-row Preview limit and first-blank-row end detection;
-5. five Architecture characterization tests for:
-   - the existing Excel mapping surface;
-   - grid headers and sorting;
-   - fixed shell layout;
-   - flat report structure and single-level warning count;
-   - the current immediate transfer mutation and absence of an editable heading/subheading/table placement outline.
+5. five Architecture characterization tests for the current Excel mapping, grid header/sort, shell layout, report structure/warning and immediate-transfer surfaces.
 
 ## Test delta
 
@@ -33,7 +28,7 @@ This tranche intentionally changes no production behavior. It adds:
 
 ## Windows gate — pending
 
-Run on the final exact branch head reported in the PR/check request:
+Run on the final exact branch head reported outside this committed document:
 
 ```bat
 git fetch origin
