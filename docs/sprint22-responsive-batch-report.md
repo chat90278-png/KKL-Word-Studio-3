@@ -62,7 +62,7 @@ dotnet test -c Release --no-build
 dotnet run --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
 ```
 
-The tested SHA must be copied from `git rev-parse HEAD`; do not infer GREEN from an earlier implementation commit.
+The tested SHA must be copied from `git rev-parse HEAD`; do not infer GREEN from an earlier implementation commit. The `dotnet run` command only proves launch; the Hızlı Rapor cancellation behavior still requires the manual UI smoke below.
 
 Expected test totals if no other changes land:
 
