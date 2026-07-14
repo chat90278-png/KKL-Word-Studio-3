@@ -1,11 +1,11 @@
 # KKL Word Studio brand assets
 
-Final selected mark: the green Excel source grid and blue Word report page combined inside one rounded application icon.
+Final selected mark: a vertically merged green spreadsheet and blue document icon, simplified for title-bar and taskbar readability.
 
-- `BrandMark.png`: 256 px transparent application mark for larger in-app branding.
-- `BrandMarkSmall.png`: 128 px transparent small-size mark for the title area and safe runtime window/taskbar icon.
-- `AppIcon.ico`: seven-resolution Windows executable icon (`16, 24, 32, 48, 64, 128, 256 px`).
+- `BrandMark.png`: 256 px transparent master used for larger UI branding.
+- `BrandMarkSmall.png`: 128 px transparent small-size mark used in the title area and as the safe runtime window/taskbar icon.
+- `AppIcon.ico`: multi-resolution Windows executable icon (`16, 24, 32, 48, 64, 128, 256 px`).
 
-The repository assets are optimized derivatives of the approved transparent master supplied for Sprint 23. Keep the Excel/Word split, aspect ratio, white internal document surface and transparent outer background.
+The transparent outer padding is tightly cropped per asset so the approved symbol fills the available Windows icon square as much as possible without stretching or changing its proportions.
 
-Do not load the ICO directly through `Window.Icon`; the PNG runtime path avoids the WPF startup TypeConverter failure previously observed. The ICO remains the build-time executable, shortcut, Alt+Tab and installer icon.
+Keep the green/blue split, aspect ratio and transparent background. Do not load the ICO directly through `Window.Icon`; the PNG runtime path avoids the WPF startup TypeConverter failure previously observed.
