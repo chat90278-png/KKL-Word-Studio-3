@@ -85,7 +85,7 @@ public sealed partial class MainViewModel : ViewModelBase
             DockViewModel.ShowWarningsCommand.Execute(null);
             StatusText = $"Word dosyası oluşturulmadı — önce {readiness.ErrorGroupCount} kritik hatayı düzeltin.";
             _dialogService?.ShowError(
-                $"Raporda {readiness.ErrorGroupCount} kritik hata grubu var. Kontrol sekmesindeki hataları düzeltmeden Word dosyası oluşturulamaz.",
+                $"Raporda {readiness.ErrorGroupCount} kritik hata grubu ({readiness.ErrorOccurrenceCount} bulgu) var. Kontrol sekmesindeki hataları düzeltmeden Word dosyası oluşturulamaz.",
                 "Rapor Word'e Hazır Değil");
             return;
         }
@@ -93,7 +93,7 @@ public sealed partial class MainViewModel : ViewModelBase
         if (readiness.RequiresWarningConfirmation
             && _dialogService is not null
             && !_dialogService.ShowConfirmation(
-                $"Raporda {readiness.WarningGroupCount} uyarı grubu ({readiness.TotalOccurrenceCount} toplam bulgu) var. Yine de Word dosyası oluşturulsun mu?",
+                $"Raporda {readiness.WarningGroupCount} uyarı grubu ({readiness.WarningOccurrenceCount} uyarı bulgusu) var. Yine de Word dosyası oluşturulsun mu?",
                 "Uyarılarla Devam Et"))
         {
             StatusText = "Word dosyası oluşturma kullanıcı tarafından iptal edildi.";
