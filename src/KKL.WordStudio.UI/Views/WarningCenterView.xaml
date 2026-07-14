@@ -10,27 +10,31 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Margin="14,14,14,8" Padding="12" CornerRadius="10"
-                Background="#FFFFF8E7" BorderBrush="#FFF4D68A" BorderThickness="1">
+                Background="{Binding HeaderBackground}"
+                BorderBrush="{Binding HeaderBorderBrush}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Width="30" Height="30" CornerRadius="8" Background="#FFFFE8A8" VerticalAlignment="Top">
-                    <TextBlock Text="!" FontSize="16" FontWeight="Bold" Foreground="#FF9A6700"
+                <Border Width="30" Height="30" CornerRadius="8"
+                        Background="{Binding HeaderIconBackground}" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding HeaderIcon}" FontSize="16" FontWeight="Bold"
+                               Foreground="{Binding HeaderIconBrush}"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
                     <TextBlock Text="{Binding HeaderText}" FontSize="12.5" FontWeight="SemiBold"
-                               Foreground="{DynamicResource Brush.Text.Primary}" />
-                    <TextBlock Text="Tekrarlanan kayıtlar tek aksiyon altında gruplanır. Bir kayda tıklayarak rapor öğesine ve kaynağa gidin."
+                               Foreground="{DynamicResource Brush.Text.Primary}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding HeaderDetailText}"
                                FontSize="10" Foreground="{DynamicResource Brush.Text.Secondary}"
                                TextWrapping="Wrap" Margin="0,3,0,0" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Margin="12,0,12,9" Background="White" BorderBrush="{DynamicResource Brush.Border.Light}"
+        <Border Grid.Row="1" Margin="12,0,12,9" Background="White"
+                BorderBrush="{DynamicResource Brush.Border.Light}"
                 BorderThickness="1" CornerRadius="9" Padding="5">
             <WrapPanel>
                 <Button Content="{Binding TotalCount, StringFormat=Tümü ({0})}" Style="{StaticResource Btn.Mini}"
@@ -50,61 +54,79 @@
                               Visibility="{Binding HasItems, Converter={StaticResource BoolToVisibility}}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    IsEnabled="{Binding CanNavigate}"
-                                    HorizontalContentAlignment="Stretch"
-                                    Background="Transparent" BorderThickness="0" Padding="0"
-                                    Margin="0,0,0,8" Cursor="Hand">
-                                <Border Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
-                                        CornerRadius="10" Padding="11">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="4" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                            <Border Background="White" BorderBrush="{DynamicResource Brush.Border}"
+                                    BorderThickness="1" CornerRadius="10" Padding="11" Margin="0,0,0,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="4" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                                        <Border Grid.Column="0" Background="{Binding SeverityBrush}" CornerRadius="3" />
+                                    <Border Grid.Column="0" Background="{Binding SeverityBrush}" CornerRadius="3" />
 
-                                        <StackPanel Grid.Column="1" Margin="10,0,9,0">
-                                            <WrapPanel>
-                                                <Border Background="#FFF1F5F9" CornerRadius="7" Padding="7,2" Margin="0,0,6,4">
-                                                    <TextBlock Text="{Binding SeverityText}" FontSize="9" FontWeight="Bold" />
-                                                </Border>
-                                                <Border Background="#FFFFF2D7" CornerRadius="7" Padding="7,2" Margin="0,0,6,4"
-                                                        Visibility="{Binding HasMultipleOccurrences, Converter={StaticResource BoolToVisibility}}">
-                                                    <TextBlock Text="{Binding OccurrenceText}" FontSize="9" FontWeight="SemiBold" Foreground="#FF8A5A00" />
-                                                </Border>
-                                            </WrapPanel>
+                                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                        <WrapPanel>
+                                            <Border Background="#FFF1F5F9" CornerRadius="7" Padding="7,2" Margin="0,0,6,4">
+                                                <TextBlock Text="{Binding SeverityText}" FontSize="9" FontWeight="Bold" />
+                                            </Border>
+                                            <Border Background="#FFEAF1FF" CornerRadius="7" Padding="7,2" Margin="0,0,6,4">
+                                                <TextBlock Text="{Binding CodeText}" FontSize="8.6" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource Brush.Accent}" />
+                                            </Border>
+                                            <Border Background="#FFFFF2D7" CornerRadius="7" Padding="7,2" Margin="0,0,6,4"
+                                                    Visibility="{Binding HasMultipleOccurrences, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="{Binding OccurrenceText}" FontSize="9" FontWeight="SemiBold"
+                                                           Foreground="#FF8A5A00" />
+                                            </Border>
+                                        </WrapPanel>
 
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="11.5"
-                                                       Foreground="{DynamicResource Brush.Text.Primary}" />
-                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="10.2"
-                                                       Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,4,0,0" />
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="11.5"
+                                                   Foreground="{DynamicResource Brush.Text.Primary}" />
+                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="10.2"
+                                                   Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,4,0,0" />
 
-                                            <WrapPanel Margin="0,8,0,0">
-                                                <Border Background="#FFF1F5F9" CornerRadius="7" Padding="7,3" Margin="0,0,5,4"
-                                                        Visibility="{Binding HasElementName, Converter={StaticResource BoolToVisibility}}">
-                                                    <TextBlock Text="{Binding ElementName}" FontSize="9.5" FontWeight="SemiBold" />
-                                                </Border>
-                                                <Border Background="#FFEAF1FF" CornerRadius="7" Padding="7,3" Margin="0,0,5,4"
-                                                        Visibility="{Binding HasKey, Converter={StaticResource BoolToVisibility}}">
-                                                    <TextBlock Text="{Binding KeyText}" FontSize="9.5" Foreground="{DynamicResource Brush.Accent}" />
-                                                </Border>
-                                            </WrapPanel>
+                                        <WrapPanel Margin="0,8,0,0">
+                                            <Border Background="#FFF1F5F9" CornerRadius="7" Padding="7,3" Margin="0,0,5,4"
+                                                    Visibility="{Binding HasElementName, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="{Binding ElementName}" FontSize="9.5" FontWeight="SemiBold" />
+                                            </Border>
+                                            <Border Background="#FFF1F5F9" CornerRadius="7" Padding="7,3" Margin="0,0,5,4"
+                                                    Visibility="{Binding HasAffectedColumn, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="{Binding AffectedColumnText}" FontSize="9.3" />
+                                            </Border>
+                                            <Border Background="#FFF1F5F9" CornerRadius="7" Padding="7,3" Margin="0,0,5,4"
+                                                    Visibility="{Binding HasAffectedRows, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="{Binding AffectedRowsText}" FontSize="9.3" />
+                                            </Border>
+                                            <Border Background="#FFEAF1FF" CornerRadius="7" Padding="7,3" Margin="0,0,5,4"
+                                                    Visibility="{Binding HasDistinctKeys, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="{Binding DistinctKeyText}" FontSize="9.3"
+                                                           Foreground="{DynamicResource Brush.Accent}" />
+                                            </Border>
+                                        </WrapPanel>
 
-                                            <TextBlock Text="{Binding SourceText}" FontSize="9.3"
-                                                       Foreground="{DynamicResource Brush.Text.Secondary}"
-                                                       TextWrapping="Wrap" Margin="0,2,0,0"
-                                                       Visibility="{Binding HasSource, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock Text="{Binding ExampleText}" FontSize="9.5"
+                                                   Foreground="{DynamicResource Brush.Text.Primary}"
+                                                   TextWrapping="Wrap" Margin="0,5,0,0"
+                                                   Visibility="{Binding HasExamples, Converter={StaticResource BoolToVisibility}}" />
+
+                                        <TextBlock Text="{Binding SourceText}" FontSize="9.3"
+                                                   Foreground="{DynamicResource Brush.Text.Secondary}"
+                                                   TextWrapping="Wrap" Margin="0,7,0,0"
+                                                   Visibility="{Binding HasSource, Converter={StaticResource BoolToVisibility}}" />
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <Button Content="İlk Kayda Git" Style="{StaticResource Btn.Mini}"
+                                                    Command="{Binding DataContext.NavigateFirstCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}" IsEnabled="{Binding CanNavigate}" Margin="0,0,6,0" />
+                                            <Button Content="Sonraki" Style="{StaticResource Btn.Mini}"
+                                                    Command="{Binding DataContext.NavigateNextCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Visibility="{Binding CanNavigateNext, Converter={StaticResource BoolToVisibility}}" />
                                         </StackPanel>
-
-                                        <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="#FF8793A4"
-                                                   VerticalAlignment="Center" />
-                                    </Grid>
-                                </Border>
-                            </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
