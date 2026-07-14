@@ -36,11 +36,26 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
     public int WarningCount => _store.WarningCount;
     public int InformationCount => _store.InformationCount;
     public bool HasBlockingErrors => _store.HasBlockingErrors;
+
     public string HeaderText => TotalCount == 0
-        ? "Sorun bulunamadı"
+        ? "Word'e hazır — sorun bulunamadı"
         : HasBlockingErrors
-            ? $"{ErrorCount} hata · {WarningCount} uyarı · {InformationCount} bilgi"
-            : $"{WarningCount} uyarı · {InformationCount} bilgi";
+            ? $"Word'e hazır değil — {ErrorCount} kritik hata düzeltilmeli"
+            : WarningCount > 0
+                ? $"Word'e hazır — {WarningCount} uyarı türü kontrol edilmeli"
+                : $"Word'e hazır — {InformationCount} bilgi";
+
+    public string HeaderDetailText => HasBlockingErrors
+        ? "Kırmızı hatalar Word çıktısını engeller. Bir kayıttan ilgili rapor öğesine ve Excel kaynağına gidin."
+        : WarningCount > 0
+            ? "Sarı uyarılar çıktıyı engellemez; Word oluştururken tek bir onay istenir."
+            : "Bilgi kayıtları müdahale gerektirmez ve Word çıktısını engellemez.";
+
+    public string HeaderBackground => HasBlockingErrors ? "#FFFFE9E7" : WarningCount > 0 ? "#FFFFF8E7" : "#FFEAF7EF";
+    public string HeaderBorderBrush => HasBlockingErrors ? "#FFF1AAA4" : WarningCount > 0 ? "#FFF4D68A" : "#FFA9D9BC";
+    public string HeaderIcon => HasBlockingErrors ? "×" : WarningCount > 0 ? "!" : "✓";
+    public string HeaderIconBackground => HasBlockingErrors ? "#FFFFD2CE" : WarningCount > 0 ? "#FFFFE8A8" : "#FFDDF3E5";
+    public string HeaderIconBrush => HasBlockingErrors ? "#FFB42318" : WarningCount > 0 ? "#FF9A6700" : "#FF237A47";
 
     public WarningCenterViewModel(
         PreviewDiagnosticsStore store,
@@ -71,7 +86,15 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
     partial void OnFilterChanged(WarningCenterFilter value) => RebuildItems();
 
     [RelayCommand]
-    private async Task NavigateAsync(WarningDiagnosticItemViewModel? item)
+    private Task NavigateAsync(WarningDiagnosticItemViewModel? item) => NavigateOccurrenceAsync(item, reset: true);
+
+    [RelayCommand]
+    private Task NavigateFirstAsync(WarningDiagnosticItemViewModel? item) => NavigateOccurrenceAsync(item, reset: true);
+
+    [RelayCommand]
+    private Task NavigateNextAsync(WarningDiagnosticItemViewModel? item) => NavigateOccurrenceAsync(item, reset: false);
+
+    private async Task NavigateOccurrenceAsync(WarningDiagnosticItemViewModel? item, bool reset)
     {
         if (item is null)
             return;
@@ -85,10 +108,10 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
             previewNavigated = true;
         }
 
+        var key = item.GetNavigationKey(reset);
         var excelNavigated = false;
         foreach (var source in group.Sources)
         {
-            var key = group.KeyValues.FirstOrDefault();
             if (await _excelWorkspaceViewModel.NavigateToDiagnosticSourceAsync(source, key))
             {
                 excelNavigated = true;
@@ -96,11 +119,12 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
             }
         }
 
-        NavigationStatusText = (previewNavigated, excelNavigated) switch
+        NavigationStatusText = (previewNavigated, excelNavigated, key) switch
         {
-            (true, true) => "İlgili rapor öğesi ve Excel kaynağı vurgulandı.",
-            (true, false) => "İlgili rapor öğesine gidildi; kaynak hücre bulunamadı.",
-            (false, true) => "Excel kaynağına gidildi.",
+            (true, true, not null) => $"İlgili rapor öğesi ve Excel kaydı vurgulandı. Örnek anahtar: {key}",
+            (true, true, null) => "İlgili rapor öğesi ve Excel kaynağı vurgulandı.",
+            (true, false, _) => "İlgili rapor öğesine gidildi; kaynak hücre bulunamadı.",
+            (false, true, _) => "Excel kaynağına gidildi.",
             _ => "Bu kayıt için doğrudan gidilebilecek bir hedef yok."
         };
     }
@@ -147,34 +171,61 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
         OnPropertyChanged(nameof(InformationCount));
         OnPropertyChanged(nameof(HasBlockingErrors));
         OnPropertyChanged(nameof(HeaderText));
+        OnPropertyChanged(nameof(HeaderDetailText));
+        OnPropertyChanged(nameof(HeaderBackground));
+        OnPropertyChanged(nameof(HeaderBorderBrush));
+        OnPropertyChanged(nameof(HeaderIcon));
+        OnPropertyChanged(nameof(HeaderIconBackground));
+        OnPropertyChanged(nameof(HeaderIconBrush));
     }
 }
 
 public sealed class WarningDiagnosticItemViewModel
 {
+    private int _navigationIndex = -1;
+
     public WarningDiagnosticItemViewModel(PreviewDiagnosticGroup group)
     {
         Group = group;
         SourceText = BuildSourceText(group);
-        KeyText = BuildKeyText(group);
+        ExampleText = BuildExampleText(group);
     }
 
     public PreviewDiagnosticGroup Group { get; }
+    public string CodeText => string.Equals(Group.Code, PreviewDiagnosticCodes.Unclassified, StringComparison.Ordinal)
+        ? "GENEL"
+        : Group.Code;
     public string Title => Group.Title;
     public string Message => Group.Message;
     public string ElementName => Group.ElementName ?? string.Empty;
-    public string KeyText { get; }
+    public string AffectedColumnText => string.IsNullOrWhiteSpace(Group.AffectedColumn)
+        ? string.Empty
+        : $"Etkilenen sütun: {Group.AffectedColumn}";
+    public string AffectedRowsText => Group.RowNumbers.Count > 0
+        ? $"Örnek satırlar: {string.Join(", ", Group.RowNumbers.Take(5))}{(Group.RowNumbers.Count > 5 ? ", …" : string.Empty)}"
+        : Group.OccurrenceCount > 1
+            ? $"Etkilenen kayıt: {Group.OccurrenceCount}"
+            : string.Empty;
+    public string DistinctKeyText => Group.KeyValues.Count switch
+    {
+        0 => string.Empty,
+        1 => "1 farklı anahtar",
+        > 25 => "25+ farklı anahtar",
+        _ => $"{Group.KeyValues.Count} farklı anahtar"
+    };
+    public string ExampleText { get; }
     public string SourceText { get; }
     public int OccurrenceCount => Group.OccurrenceCount;
     public bool HasMultipleOccurrences => OccurrenceCount > 1;
-    public string OccurrenceText => $"{OccurrenceCount} tekrar";
+    public string OccurrenceText => OccurrenceCount == 1 ? "1 kayıt" : $"{OccurrenceCount} kayıt";
     public bool HasElementName => !string.IsNullOrWhiteSpace(ElementName);
-    public bool HasKey => Group.KeyValues.Count > 0;
+    public bool HasAffectedColumn => !string.IsNullOrWhiteSpace(Group.AffectedColumn);
+    public bool HasAffectedRows => !string.IsNullOrWhiteSpace(AffectedRowsText);
+    public bool HasDistinctKeys => Group.KeyValues.Count > 0;
+    public bool HasExamples => !string.IsNullOrWhiteSpace(ExampleText);
     public bool HasSource => Group.Sources.Count > 0;
     public bool CanNavigate => Group.ElementId is not null || HasSource;
-    public bool IsError => Group.Severity == PreviewDiagnosticSeverity.Error;
-    public bool IsWarning => Group.Severity == PreviewDiagnosticSeverity.Warning;
-    public bool IsInformation => Group.Severity == PreviewDiagnosticSeverity.Information;
+    public bool CanNavigateNext => Group.KeyValues.Count > 1;
     public string SeverityText => Group.Severity switch
     {
         PreviewDiagnosticSeverity.Error => "Hata",
@@ -188,13 +239,24 @@ public sealed class WarningDiagnosticItemViewModel
         _ => "#FF4B8FE2"
     };
 
-    private static string BuildKeyText(PreviewDiagnosticGroup group)
+    public string? GetNavigationKey(bool reset)
+    {
+        if (Group.KeyValues.Count == 0)
+            return null;
+
+        _navigationIndex = reset
+            ? 0
+            : (_navigationIndex + 1 + Group.KeyValues.Count) % Group.KeyValues.Count;
+        return Group.KeyValues[_navigationIndex];
+    }
+
+    private static string BuildExampleText(PreviewDiagnosticGroup group)
     {
         if (group.KeyValues.Count == 0)
             return string.Empty;
-        if (group.KeyValues.Count == 1)
-            return $"Anahtar: {group.KeyValues[0]}";
-        return $"{group.KeyValues.Count} farklı anahtar";
+
+        var examples = group.KeyValues.Take(3).Select(value => $"• Anahtar: {value}");
+        return "Örnekler:\n" + string.Join("\n", examples);
     }
 
     private static string BuildSourceText(PreviewDiagnosticGroup group)
