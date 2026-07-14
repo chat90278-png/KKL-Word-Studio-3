@@ -83,7 +83,10 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         RefreshSelectionState();
     }
 
-    private bool CanTransferSelected() => !IsBusy && SelectedCount > 0;
+    private bool CanTransferSelected() =>
+        !IsBusy
+        && SelectedCount > 0
+        && OrderedSelectedSheets.All(sheet => sheet.HasValidPlacementTarget);
 
     [RelayCommand(CanExecute = nameof(CanTransferSelected))]
     private async Task TransferSelectedAsync()
@@ -96,6 +99,20 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         {
             StatusText = "Rapora aktarılacak en az bir sayfa seçin.";
             return;
+        }
+
+        var invalid = OrderedSelectedSheets.FirstOrDefault(sheet => !sheet.HasValidPlacementTarget);
+        if (invalid is not null)
+        {
+            StatusText = $"{invalid.WorksheetName} için {invalid.PlacementTargetLabel.ToLowerInvariant()} seçin.";
+            return;
+        }
+
+        foreach (var target in selectedTargets)
+        {
+            target.ResolvedPlacementAnchorId = null;
+            target.CreatedHeadingElementId = null;
+            target.CreatedAltHeadingElementId = null;
         }
 
         _transferCancellation?.Dispose();
@@ -113,7 +130,7 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
             var progress = new InlineProgress<QuickAssemblyProgress>(ApplyProgress);
             var result = await _orchestrator.ExecuteAsync(
                 selectedTargets,
-                _excelWorkspace.TransferQuickAssemblyTargetAsync,
+                TransferResolvedTargetAsync,
                 transferCancellation.Token,
                 progress);
 
@@ -138,6 +155,62 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
             RefreshSelectionState();
             RefreshCommandStates();
         }
+    }
+
+    private async Task<QuickAssemblyTransferOutcome> TransferResolvedTargetAsync(
+        QuickAssemblyTarget target,
+        CancellationToken cancellationToken)
+    {
+        target.ResolvedPlacementAnchorId = null;
+        if (target.RequiresPlacementAnchor)
+        {
+            if (target.PlacementAnchorKind != target.RequiredPlacementAnchorKind)
+            {
+                return MissingPlacementTarget(target);
+            }
+
+            if (target.ExistingPlacementAnchorId is { } existingId)
+            {
+                target.ResolvedPlacementAnchorId = existingId;
+            }
+            else if (!string.IsNullOrWhiteSpace(target.SourcePlacementTargetKey))
+            {
+                var source = _selection.Targets.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Key, target.SourcePlacementTargetKey, StringComparison.OrdinalIgnoreCase));
+                target.ResolvedPlacementAnchorId = target.RequiredPlacementAnchorKind switch
+                {
+                    QuickAssemblyAnchorKind.Heading => source?.CreatedHeadingElementId,
+                    QuickAssemblyAnchorKind.AltHeading => source?.CreatedAltHeadingElementId,
+                    _ => null
+                };
+            }
+
+            if (target.ResolvedPlacementAnchorId is null)
+            {
+                var expected = target.RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+                    ? "üst başlık"
+                    : "alt başlık";
+                return new QuickAssemblyTransferOutcome
+                {
+                    Status = QuickAssemblyTransferStatus.Skipped,
+                    Message = $"Seçilen {expected} daha önce oluşturulamadı veya artık mevcut değil."
+                };
+            }
+        }
+
+        return await _excelWorkspace.TransferQuickAssemblyTargetAsync(target, cancellationToken);
+    }
+
+    private static QuickAssemblyTransferOutcome MissingPlacementTarget(QuickAssemblyTarget target)
+    {
+        var expected = target.RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+            ? "üst başlık"
+            : "alt başlık";
+        return new QuickAssemblyTransferOutcome
+        {
+            Status = QuickAssemblyTransferStatus.Skipped,
+            Message = $"Bu yapı için {expected} seçilmedi."
+        };
     }
 
     private bool CanCancelTransferSelected() =>
@@ -192,7 +265,7 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
 
             sheet.LastResultText = item.Status switch
             {
-                QuickAssemblyTransferStatus.Created => "Başlık + tablo oluşturuldu",
+                QuickAssemblyTransferStatus.Created => "Rapor bloğu oluşturuldu",
                 QuickAssemblyTransferStatus.Skipped => $"Atlandı · {item.Message}",
                 _ => $"Başarısız · {item.Message}"
             };
@@ -283,7 +356,60 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(OrderedSelectedSheets));
+        RefreshPlacementTargets();
         TransferSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RefreshPlacementTargets()
+    {
+        var existing = _excelWorkspace.GetQuickAssemblyExistingAnchors();
+        var ordered = OrderedSelectedSheets;
+
+        foreach (var sheet in Sources.SelectMany(source => source.Sheets))
+        {
+            sheet.RefreshPlacementRequirement();
+            if (!sheet.IsSelected || !sheet.RequiresPlacementTarget)
+            {
+                sheet.SetPlacementTargets(Array.Empty<QuickAssemblyPlacementTargetOption>());
+                continue;
+            }
+
+            var requiredKind = sheet.RequiredPlacementAnchorKind!.Value;
+            var options = new List<QuickAssemblyPlacementTargetOption>();
+            options.AddRange(existing
+                .Where(anchor => anchor.Kind == requiredKind)
+                .Select(anchor => new QuickAssemblyPlacementTargetOption
+                {
+                    Kind = anchor.Kind,
+                    ExistingElementId = anchor.ElementId,
+                    DisplayText = $"Raporda · {anchor.DisplayText}"
+                }));
+
+            var currentIndex = ordered.IndexOf(sheet);
+            foreach (var earlier in ordered.Take(Math.Max(0, currentIndex)))
+            {
+                if (requiredKind == QuickAssemblyAnchorKind.Heading && earlier.IncludeHeading)
+                {
+                    options.Add(new QuickAssemblyPlacementTargetOption
+                    {
+                        Kind = requiredKind,
+                        SourceTargetKey = earlier.Key,
+                        DisplayText = $"Hızlı Rapor {earlier.SelectionOrderText} · {earlier.HeadingText}"
+                    });
+                }
+                else if (requiredKind == QuickAssemblyAnchorKind.AltHeading && earlier.IncludeAltHeading)
+                {
+                    options.Add(new QuickAssemblyPlacementTargetOption
+                    {
+                        Kind = requiredKind,
+                        SourceTargetKey = earlier.Key,
+                        DisplayText = $"Hızlı Rapor {earlier.SelectionOrderText} · {earlier.AltHeadingText}"
+                    });
+                }
+            }
+
+            sheet.SetPlacementTargets(options);
+        }
     }
 
     private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
@@ -355,6 +481,21 @@ public sealed class QuickAssemblyWorkbookItemViewModel : ViewModelBase
     }
 }
 
+public sealed class QuickAssemblyPlacementTargetOption
+{
+    public required QuickAssemblyAnchorKind Kind { get; init; }
+    public required string DisplayText { get; init; }
+    public Guid? ExistingElementId { get; init; }
+    public string? SourceTargetKey { get; init; }
+
+    public bool Matches(QuickAssemblyTarget target) =>
+        target.PlacementAnchorKind == Kind
+        && (ExistingElementId.HasValue
+            ? target.ExistingPlacementAnchorId == ExistingElementId
+            : !string.IsNullOrWhiteSpace(SourceTargetKey)
+              && string.Equals(target.SourcePlacementTargetKey, SourceTargetKey, StringComparison.OrdinalIgnoreCase));
+}
+
 public sealed partial class QuickAssemblySheetItemViewModel : ViewModelBase
 {
     private readonly QuickAssemblyTarget _target;
@@ -363,12 +504,52 @@ public sealed partial class QuickAssemblySheetItemViewModel : ViewModelBase
     private readonly Action _selectionChanged;
     private bool _isSelected;
     private string? _lastResultText;
+    private QuickAssemblyPlacementTargetOption? _selectedPlacementTarget;
 
     public string Key => _target.Key;
     public string WorkbookDisplayName => _target.WorkbookDisplayName;
     public string WorksheetName => _target.WorksheetName;
     public int? SelectionOrder => _target.SelectionOrder;
     public string SelectionOrderText => SelectionOrder is { } order ? order.ToString() : "–";
+
+    public ObservableCollection<QuickAssemblyPlacementTargetOption> PlacementTargets { get; } = new();
+    public bool RequiresPlacementTarget => _target.RequiresPlacementAnchor;
+    public QuickAssemblyAnchorKind? RequiredPlacementAnchorKind => _target.RequiredPlacementAnchorKind;
+    public string PlacementTargetLabel => RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+        ? "Üst Başlık"
+        : "Alt Başlık";
+    public string PlacementTargetHint => RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+        ? "Yeni alt başlığın bağlanacağı mevcut veya daha önce oluşturulacak başlığı seçin."
+        : "Tablonun doğrudan altına ekleneceği mevcut veya daha önce oluşturulacak alt başlığı seçin.";
+    public bool HasValidPlacementTarget => !RequiresPlacementTarget || SelectedPlacementTarget is not null;
+
+    public QuickAssemblyPlacementTargetOption? SelectedPlacementTarget
+    {
+        get => _selectedPlacementTarget;
+        set
+        {
+            if (ReferenceEquals(_selectedPlacementTarget, value))
+                return;
+
+            _selectedPlacementTarget = value;
+            if (value is null)
+            {
+                _target.PlacementAnchorKind = null;
+                _target.ExistingPlacementAnchorId = null;
+                _target.SourcePlacementTargetKey = null;
+            }
+            else
+            {
+                _target.PlacementAnchorKind = value.Kind;
+                _target.ExistingPlacementAnchorId = value.ExistingElementId;
+                _target.SourcePlacementTargetKey = value.SourceTargetKey;
+            }
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasValidPlacementTarget));
+            _selectionChanged();
+        }
+    }
 
     public bool IsSelected
     {
@@ -461,12 +642,43 @@ public sealed partial class QuickAssemblySheetItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectionOrderText));
     }
 
+    public void RefreshPlacementRequirement()
+    {
+        OnPropertyChanged(nameof(RequiresPlacementTarget));
+        OnPropertyChanged(nameof(RequiredPlacementAnchorKind));
+        OnPropertyChanged(nameof(PlacementTargetLabel));
+        OnPropertyChanged(nameof(PlacementTargetHint));
+        OnPropertyChanged(nameof(HasValidPlacementTarget));
+    }
+
+    public void SetPlacementTargets(IEnumerable<QuickAssemblyPlacementTargetOption> options)
+    {
+        var list = options.ToList();
+        PlacementTargets.Clear();
+        foreach (var option in list)
+            PlacementTargets.Add(option);
+
+        var restored = list.FirstOrDefault(option => option.Matches(_target));
+        _selectedPlacementTarget = restored;
+        if (!RequiresPlacementTarget || restored is null)
+        {
+            _target.PlacementAnchorKind = null;
+            _target.ExistingPlacementAnchorId = null;
+            _target.SourcePlacementTargetKey = null;
+        }
+
+        OnPropertyChanged(nameof(SelectedPlacementTarget));
+        OnPropertyChanged(nameof(HasValidPlacementTarget));
+    }
+
     private void SetTargetProperty<T>(T current, T value, Action<T> assign)
     {
         if (EqualityComparer<T>.Default.Equals(current, value))
             return;
         assign(value);
         OnPropertyChanged();
+        RefreshPlacementRequirement();
+        _selectionChanged();
     }
 
     private void SetTargetText(string current, string? value, Action<string> assign)
@@ -476,5 +688,6 @@ public sealed partial class QuickAssemblySheetItemViewModel : ViewModelBase
             return;
         assign(normalized);
         OnPropertyChanged();
+        _selectionChanged();
     }
 }
