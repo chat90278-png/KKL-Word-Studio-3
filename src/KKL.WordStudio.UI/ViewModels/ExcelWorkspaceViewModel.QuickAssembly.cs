@@ -9,9 +9,8 @@ public sealed partial class ExcelWorkspaceViewModel
 
     /// <summary>
     /// Executes one quick-report target through the exact placement coordinator
-    /// used by normal Word'e Aktar. The current selected report element is the
-    /// first anchor; each successful table becomes the next anchor, so the batch
-    /// remains sequential and follows user click order without a second report tree.
+    /// used by normal Word'e Aktar. Full blocks chain after the previous table;
+    /// blocks without a new heading use the explicitly resolved outline anchor.
     /// </summary>
     public async Task<QuickAssemblyTransferOutcome> TransferQuickAssemblyTargetAsync(
         QuickAssemblyTarget target,
@@ -21,6 +20,14 @@ public sealed partial class ExcelWorkspaceViewModel
         await _quickAssemblyTransferGate.WaitAsync(cancellationToken);
         try
         {
+            if (target.RequiresPlacementAnchor && target.ResolvedPlacementAnchorId is null)
+            {
+                var expected = target.RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+                    ? "üst başlık"
+                    : "alt başlık";
+                return CreateQuickAssemblySkipped($"Bu yapı için geçerli bir {expected} seçilmedi.");
+            }
+
             var workbook = OpenWorkbooks.FirstOrDefault(candidate =>
                 string.Equals(candidate.FilePath, target.SourcePath, StringComparison.OrdinalIgnoreCase));
             if (workbook is null)
@@ -67,6 +74,16 @@ public sealed partial class ExcelWorkspaceViewModel
             if (selectedOptions.Count == 0)
                 return CreateQuickAssemblySkipped("Aktarılacak en az bir sütun seçilmediği için yapı atlandı.");
 
+            var placementAnchorId = target.RequiresPlacementAnchor
+                ? target.ResolvedPlacementAnchorId
+                : _workspace.SelectedReportElementId;
+            var requiredAnchorKind = target.RequiredPlacementAnchorKind switch
+            {
+                QuickAssemblyAnchorKind.Heading => ExcelTransferPlacementAnchorKind.Heading,
+                QuickAssemblyAnchorKind.AltHeading => ExcelTransferPlacementAnchorKind.AltHeading,
+                _ => (ExcelTransferPlacementAnchorKind?)null
+            };
+
             var transferRequest = new ExcelTransferRequest
             {
                 WorkbookFilePath = workbook.FilePath,
@@ -86,7 +103,7 @@ public sealed partial class ExcelWorkspaceViewModel
                     Header = column.Header,
                     OriginalSourceColumn = column.OriginalSourceColumn
                 }).ToList(),
-                TargetElementId = _workspace.SelectedReportElementId,
+                TargetElementId = placementAnchorId,
                 ExistingTableMode = null,
                 SourceFieldMappings = null,
                 PreferredDataSourceName = null
@@ -97,7 +114,8 @@ public sealed partial class ExcelWorkspaceViewModel
                 Transfer = transferRequest,
                 DestinationMode = ExcelTransferDestinationMode.CreateNewTable,
                 ExistingTableId = null,
-                AnchorElementId = _workspace.SelectedReportElementId,
+                AnchorElementId = placementAnchorId,
+                RequiredAnchorKind = requiredAnchorKind,
                 TableName = string.IsNullOrWhiteSpace(target.TableName)
                     ? NextTableName(report)
                     : target.TableName.Trim(),
@@ -131,6 +149,16 @@ public sealed partial class ExcelWorkspaceViewModel
                         "Hızlı rapor yeni tablo oluşturmadığı için güvenlik amacıyla başarı sayılmadı.");
                 }
 
+                var createdIndex = 0;
+                Guid? createdHeadingId = null;
+                Guid? createdAltHeadingId = null;
+                if (target.IncludeHeading && coordinated.CreatedElementIds.Count > createdIndex)
+                    createdHeadingId = coordinated.CreatedElementIds[createdIndex++];
+                if (target.IncludeAltHeading && coordinated.CreatedElementIds.Count > createdIndex)
+                    createdAltHeadingId = coordinated.CreatedElementIds[createdIndex];
+
+                target.CreatedHeadingElementId = createdHeadingId;
+                target.CreatedAltHeadingElementId = createdAltHeadingId;
                 _workspace.SetSelectedReportElement(result.Table.Id);
                 _workspace.NotifyReportContentChanged();
                 StatusText = $"{target.WorksheetName} · {result.RangeReference} → {result.Table.Name} yapısı oluşturuldu ve önizlemeye eklendi";
@@ -139,7 +167,9 @@ public sealed partial class ExcelWorkspaceViewModel
                 {
                     Status = QuickAssemblyTransferStatus.Created,
                     Message = StatusText,
-                    CreatedElementId = result.Table.Id
+                    CreatedElementId = result.Table.Id,
+                    CreatedHeadingElementId = createdHeadingId,
+                    CreatedAltHeadingElementId = createdAltHeadingId
                 };
             }
 
