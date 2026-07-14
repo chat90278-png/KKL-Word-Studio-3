@@ -19,10 +19,12 @@
 
 ### Table start and continuation
 
-- Preview keeps caption + column header + first meaningful table row together through its existing deterministic minimum-fragment measurement.
+- One semantic policy defines a table-start target of caption + column header + up to three meaningful data rows, naturally shrinking for short tables.
+- Preview retains deterministic caption/header/row measurement and carries a trailing heading chain when the table start requests a fresh page.
 - Short tables remain one fragment.
 - Long tables retain every source row exactly once and repeat column headers on continuation fragments.
 - Word captions receive native `KeepNext` so a caption cannot be stranded below a page boundary.
+- Word applies native `KeepNext` through the header and leading data rows to express the same table-start target without rebuilding the semantic table.
 - Every Word table row receives native `CantSplit`, matching Preview's atomic-row model while still allowing a long table to continue on later pages.
 - Existing Word `TableHeader` behavior remains authoritative for repeated continuation headers.
 
@@ -43,18 +45,28 @@
 
 ## Test delta
 
+Baseline: `629` tests.
+
+Added cases:
+
+- Application semantic policy: `+9`;
+- Engine pagination: `+6`;
+- Infrastructure OpenXML pagination: `+3`;
+- Architecture: `+1`.
+
 Expected current total:
 
 ```text
-637 / 637
+648 / 648
 ```
 
 Coverage includes:
 
-- shared semantic policy;
+- shared semantic policy and up-to-three-row table start;
 - complete trailing heading-chain carry;
 - no empty page when headings already begin a fresh page;
 - caption `KeepNext`;
+- leading table-start `KeepNext` chain;
 - row `CantSplit`;
 - native repeated header row;
 - short and long deterministic table fragment continuity;
@@ -75,7 +87,7 @@ Expected:
 ```text
 0 warnings
 0 errors
-637 / 637 tests
+648 / 648 tests
 ```
 
 ## Manual smoke
