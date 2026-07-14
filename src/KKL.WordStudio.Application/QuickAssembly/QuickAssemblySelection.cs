@@ -13,10 +13,17 @@ public sealed class QuickAssemblySourceSnapshot
     public required IReadOnlyList<string> WorksheetNames { get; init; }
 }
 
+public enum QuickAssemblyAnchorKind
+{
+    Heading,
+    AltHeading
+}
+
 /// <summary>
 /// One unique workbook/worksheet target. SelectionOrder is assigned when the
 /// user clicks the target and becomes the authoritative report block order.
-/// Heading metadata is session-only and feeds the existing placement coordinator.
+/// Heading metadata and anchor references are session-only and feed the existing
+/// placement coordinator.
 /// </summary>
 public sealed class QuickAssemblyTarget
 {
@@ -35,6 +42,32 @@ public sealed class QuickAssemblyTarget
     public string AltHeadingText { get; set; } = string.Empty;
     public string TableName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// When no new heading is created, the user must deliberately choose the
+    /// existing/earlier quick-report heading level that owns this block.
+    /// </summary>
+    public QuickAssemblyAnchorKind? PlacementAnchorKind { get; set; }
+    public Guid? ExistingPlacementAnchorId { get; set; }
+    public string? SourcePlacementTargetKey { get; set; }
+
+    /// <summary>Resolved immediately before transfer; never persisted or displayed.</summary>
+    public Guid? ResolvedPlacementAnchorId { get; set; }
+
+    /// <summary>Runtime identities published after this target succeeds so later targets may attach to it.</summary>
+    public Guid? CreatedHeadingElementId { get; set; }
+    public Guid? CreatedAltHeadingElementId { get; set; }
+
+    public bool RequiresPlacementAnchor => !IncludeHeading;
+
+    public QuickAssemblyAnchorKind? RequiredPlacementAnchorKind => IncludeHeading
+        ? null
+        : IncludeAltHeading
+            ? QuickAssemblyAnchorKind.Heading
+            : QuickAssemblyAnchorKind.AltHeading;
+
+    public bool HasPlacementAnchorReference =>
+        ExistingPlacementAnchorId.HasValue || !string.IsNullOrWhiteSpace(SourcePlacementTargetKey);
+
     /// <summary>Backward-compatible alias used by older quick-assembly tests and reports.</summary>
     public string? Caption
     {
@@ -47,8 +80,8 @@ public sealed class QuickAssemblyTarget
 
 /// <summary>
 /// Maintains temporary quick-report choices while loaded workbook snapshots
-/// change. Existing choices, click order and structure text survive refreshes;
-/// stale targets disappear.
+/// change. Existing choices, click order, structure text and target references
+/// survive refreshes; stale targets disappear.
 /// </summary>
 public sealed class QuickAssemblySelection
 {
@@ -103,7 +136,10 @@ public sealed class QuickAssemblySelection
                     HeadingText = previous?.HeadingText ?? defaultHeading,
                     IncludeAltHeading = previous?.IncludeAltHeading ?? true,
                     AltHeadingText = previous?.AltHeadingText ?? worksheetName,
-                    TableName = previous?.TableName ?? worksheetName
+                    TableName = previous?.TableName ?? worksheetName,
+                    PlacementAnchorKind = previous?.PlacementAnchorKind,
+                    ExistingPlacementAnchorId = previous?.ExistingPlacementAnchorId,
+                    SourcePlacementTargetKey = previous?.SourcePlacementTargetKey
                 });
             }
 
@@ -113,6 +149,7 @@ public sealed class QuickAssemblySelection
         _targets.Clear();
         _targets.AddRange(rebuilt);
         ReindexSelectionOrder();
+        RemoveStaleQuickTargetReferences();
     }
 
     public void SetWorkbookSelected(string sourcePath, bool isSelected)
@@ -191,6 +228,10 @@ public sealed class QuickAssemblySelection
                 .Max() + 1
             : null;
 
+        target.ResolvedPlacementAnchorId = null;
+        target.CreatedHeadingElementId = null;
+        target.CreatedAltHeadingElementId = null;
+
         if (reindexAfterChange)
             ReindexSelectionOrder();
     }
@@ -209,6 +250,18 @@ public sealed class QuickAssemblySelection
 
         foreach (var target in _targets.Where(target => !target.IsSelected))
             target.SelectionOrder = null;
+    }
+
+    private void RemoveStaleQuickTargetReferences()
+    {
+        var keys = _targets.Select(target => target.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var target in _targets.Where(target =>
+                     !string.IsNullOrWhiteSpace(target.SourcePlacementTargetKey)
+                     && !keys.Contains(target.SourcePlacementTargetKey!)))
+        {
+            target.SourcePlacementTargetKey = null;
+            target.PlacementAnchorKind = null;
+        }
     }
 
     private QuickAssemblyTarget? Find(string sourcePath, string worksheetName)
