@@ -85,16 +85,14 @@ internal static class WordContentWriter
         {
             foreach (var row in rows)
             {
-                var repeatsAsHeader = row.TableRowProperties?.GetFirstChild<TableHeader>() is not null;
                 row.TableRowProperties ??= new TableRowProperties();
                 if (row.TableRowProperties.GetFirstChild<CantSplit>() is null)
-                    row.TableRowProperties.AddChild(new CantSplit(), true);
-
-                // OpenXML schema-order insertion of CantSplit can normalize the
-                // row-property particle. Preserve the native repeat-header marker
-                // explicitly instead of allowing pagination policy to erase it.
-                if (repeatsAsHeader && row.TableRowProperties.GetFirstChild<TableHeader>() is null)
-                    row.TableRowProperties.AppendChild(new TableHeader());
+                {
+                    // WordTableWriter currently emits row height and repeat-header
+                    // properties. Prepending CantSplit preserves that native property
+                    // tree instead of asking AddChild to normalize/rebuild it.
+                    row.TableRowProperties.PrependChild(new CantSplit());
+                }
             }
         }
 
