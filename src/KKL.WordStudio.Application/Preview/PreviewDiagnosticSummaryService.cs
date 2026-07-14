@@ -25,11 +25,12 @@ public static class PreviewDiagnosticSummaryService
                 ElementName = group.Select(item => item.ElementName)
                     .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)),
                 OccurrenceCount = group.Count(),
+                // Keep every distinct navigation key. The card renders only a
+                // compact count, while repeated clicks can walk the complete set.
                 KeyValues = group.Select(item => item.KeyValue)
                     .Where(value => !string.IsNullOrWhiteSpace(value))
                     .Select(value => value!)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Take(25)
                     .ToList(),
                 Sources = group.SelectMany(item => item.Sources)
                     .GroupBy(CreateSourceKey)
