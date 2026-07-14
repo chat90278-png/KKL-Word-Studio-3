@@ -46,7 +46,11 @@ public sealed class Sprint23TocPaginationBrandingArchitectureTests
         var coordinator = Read(root, "src", "KKL.WordStudio.Application", "Transfer", "ExcelTransferPlacementCoordinator.cs");
 
         Assert.Contains("_placementAnchorElementId = selectedHeading.Id", placementUi, StringComparison.Ordinal);
-        Assert.Contains("placement.AnchorElementId ?? rootHeading.Id", coordinator, StringComparison.Ordinal);
+        Assert.Contains("var anchorIdForTransfer = altHeading?.Id", coordinator, StringComparison.Ordinal);
+        Assert.Contains("?? heading?.Id", coordinator, StringComparison.Ordinal);
+        Assert.Contains("?? placement.AnchorElementId", coordinator, StringComparison.Ordinal);
+        Assert.Contains("?? rootHeading.Id", coordinator, StringComparison.Ordinal);
+        Assert.Contains("targetElementId: anchorIdForTransfer", coordinator, StringComparison.Ordinal);
         Assert.DoesNotContain("ParentId", placementUi, StringComparison.Ordinal);
         Assert.DoesNotContain("ParentId", coordinator, StringComparison.Ordinal);
     }
