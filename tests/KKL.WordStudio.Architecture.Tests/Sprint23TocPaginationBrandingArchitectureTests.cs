@@ -42,7 +42,7 @@ public sealed class Sprint23TocPaginationBrandingArchitectureTests
     public void SelectedHeadingPlacement_ReusesRealAnchorWithoutCreatingAnotherTree()
     {
         var root = SolutionRootLocator.Find();
-        var placementUi = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.SelectedHeadingPlacement.cs");
+        var placementUi = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.DisplayOrder.cs");
         var coordinator = Read(root, "src", "KKL.WordStudio.Application", "Transfer", "ExcelTransferPlacementCoordinator.cs");
 
         Assert.Contains("_placementAnchorElementId = selectedHeading.Id", placementUi, StringComparison.Ordinal);
