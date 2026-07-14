@@ -1,5 +1,6 @@
 namespace KKL.WordStudio.Engine.Layout;
 
+using KKL.WordStudio.Application.Content;
 using KKL.WordStudio.Application.Formatting;
 using KKL.WordStudio.Application.Layout;
 using KKL.WordStudio.Application.Tables;
@@ -97,9 +98,18 @@ internal sealed class DeterministicTablePaginator
 
             if (rowIndex < rows.Count)
             {
-                var firstRowHeight = EstimateRowHeight(rows[rowIndex], columnCount, tableWidthMillimeters, format);
-                var minimumHeight = metrics.OverheadHeight + firstRowHeight;
-                if (!flow.IsAtBodyTop && minimumHeight > flow.RemainingBodyHeightMillimeters)
+                var requiredRowsHeight = EstimateRequiredStartRowsHeight(
+                    rows,
+                    rowIndex,
+                    columnCount,
+                    tableWidthMillimeters,
+                    format,
+                    metrics.OverheadHeight,
+                    flow.BodyHeightMillimeters);
+                var minimumHeight = metrics.OverheadHeight + requiredRowsHeight;
+                if (!flow.IsAtBodyTop
+                    && minimumHeight > flow.RemainingBodyHeightMillimeters + HeightTolerance
+                    && minimumHeight <= flow.BodyHeightMillimeters + HeightTolerance)
                 {
                     flow.NewPage();
                     continue;
@@ -196,37 +206,6 @@ internal sealed class DeterministicTablePaginator
                         warnings,
                         $"'{name}' tablosunun {rowIndex - 1}. veri satırı sayfa gövde yüksekliğini aşıyor; satır tek başına yerleştirildi.");
                 }
-                else if (fragmentIndex == 0
-                         && metrics.OverheadHeight > 0d
-                         && metrics.OverheadHeight <= flow.RemainingBodyHeightMillimeters)
-                {
-                    flow.AddBodyBlock(
-                        CreateBlock(
-                            flow,
-                            elementId,
-                            name,
-                            metrics.FragmentCaption,
-                            captionFormat,
-                            captionSequence,
-                            captionSequenceNumber,
-                            columnHeaders,
-                            [],
-                            [],
-                            startRowIndex,
-                            metrics.HasHeader,
-                            metrics.IsHeaderRepeated,
-                            sourceError,
-                            fragmentIndex,
-                            isEditable,
-                            format,
-                            tableWidthMillimeters,
-                            Math.Min(metrics.OverheadHeight, flow.BodyHeightMillimeters)),
-                        addGapAfter: false);
-                    fragmentIndex++;
-                    emittedEmptyFragment = true;
-                    flow.NewPage();
-                    continue;
-                }
                 else
                 {
                     rowsHeight = Math.Max(1d, flow.BodyHeightMillimeters - metrics.OverheadHeight);
@@ -298,7 +277,14 @@ internal sealed class DeterministicTablePaginator
         var columnCount = Math.Max(
             1,
             Math.Max(headers.Count, rows.Max(row => row.Count)));
-        var rowContribution = EstimateRowHeight(rows[0], columnCount, tableWidthMillimeters, format);
+        var rowContribution = EstimateRequiredStartRowsHeight(
+            rows,
+            startRowIndex: 0,
+            columnCount,
+            tableWidthMillimeters,
+            format,
+            height,
+            freshBodyHeightMillimeters);
         var firstGroup = rowGroups.FirstOrDefault(group =>
             group.KeepTogetherWhenPossible
             && group.StartRowIndex == 0
@@ -314,7 +300,7 @@ internal sealed class DeterministicTablePaginator
                 tableWidthMillimeters,
                 format);
             if (height + groupHeight <= freshBodyHeightMillimeters + HeightTolerance)
-                rowContribution = groupHeight;
+                rowContribution = Math.Max(rowContribution, groupHeight);
         }
 
         return Math.Max(6d, height + rowContribution);
@@ -375,6 +361,33 @@ internal sealed class DeterministicTablePaginator
             hasHeader,
             isHeaderRepeated,
             captionHeight + headerHeight + sourceErrorHeight);
+    }
+
+    private double EstimateRequiredStartRowsHeight(
+        IReadOnlyList<IReadOnlyList<string>> rows,
+        int startRowIndex,
+        int columnCount,
+        double tableWidthMillimeters,
+        ResolvedTableFormat format,
+        double overheadHeight,
+        double freshBodyHeightMillimeters)
+    {
+        var remainingRowCount = Math.Max(0, rows.Count - startRowIndex);
+        var requiredRowCount = ReportFlowPaginationPolicy.ResolveMinimumTableStartDataRowCount(remainingRowCount);
+        if (requiredRowCount == 0)
+            return 0d;
+
+        var requiredRowsHeight = EstimateRowsHeight(
+            rows,
+            startRowIndex,
+            requiredRowCount,
+            columnCount,
+            tableWidthMillimeters,
+            format);
+        if (overheadHeight + requiredRowsHeight <= freshBodyHeightMillimeters + HeightTolerance)
+            return requiredRowsHeight;
+
+        return EstimateRowHeight(rows[startRowIndex], columnCount, tableWidthMillimeters, format);
     }
 
     private double EstimateRowsHeight(
