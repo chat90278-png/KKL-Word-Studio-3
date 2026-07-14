@@ -20,7 +20,6 @@
                            Source="Assets/Brand/BrandMarkSmall.png"
                            ToolTip="KKL Word Studio" />
                     <TextBlock Text="KKL Word Studio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="8,0,0,0" />
-                    <TextBlock Text="{Binding CurrentProject.Name}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="10,0,0,0" />
                 </StackPanel>
             </Border>
 
