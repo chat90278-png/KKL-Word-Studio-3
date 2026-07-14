@@ -78,20 +78,29 @@ internal static class WordContentWriter
     private static void ApplyTablePaginationPolicy(Table table)
     {
         var rows = table.Elements<TableRow>().ToList();
+        var hasHeader = rows.Count > 0
+            && rows[0].TableRowProperties?.GetFirstChild<TableHeader>() is not null;
+
         if (ReportFlowPaginationPolicy.KeepTableRowsIntact)
         {
             foreach (var row in rows)
             {
+                var repeatsAsHeader = row.TableRowProperties?.GetFirstChild<TableHeader>() is not null;
                 row.TableRowProperties ??= new TableRowProperties();
                 if (row.TableRowProperties.GetFirstChild<CantSplit>() is null)
                     row.TableRowProperties.AddChild(new CantSplit(), true);
+
+                // OpenXML schema-order insertion of CantSplit can normalize the
+                // row-property particle. Preserve the native repeat-header marker
+                // explicitly instead of allowing pagination policy to erase it.
+                if (repeatsAsHeader && row.TableRowProperties.GetFirstChild<TableHeader>() is null)
+                    row.TableRowProperties.AppendChild(new TableHeader());
             }
         }
 
         if (rows.Count == 0)
             return;
 
-        var hasHeader = rows[0].TableRowProperties?.GetFirstChild<TableHeader>() is not null;
         var dataRowCount = Math.Max(0, rows.Count - (hasHeader ? 1 : 0));
         var requiredDataRows = ReportFlowPaginationPolicy.ResolveMinimumTableStartDataRowCount(dataRowCount);
         var requiredStartRowCount = requiredDataRows + (hasHeader ? 1 : 0);
