@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.UI.ViewModels;
 
 using KKL.WordStudio.Application.Structure;
+using KKL.WordStudio.Application.Transfer;
 using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Visitors;
 
