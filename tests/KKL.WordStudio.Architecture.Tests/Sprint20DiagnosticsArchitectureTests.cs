@@ -22,7 +22,7 @@ public sealed class Sprint20DiagnosticsArchitectureTests
 
         Assert.Contains("Content=\"İçindekiler\"", dock, StringComparison.Ordinal);
         Assert.Contains("Content=\"Özellikler\"", dock, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Uyarılar\"", dock, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Kontrol\"", dock, StringComparison.Ordinal);
         Assert.Contains("WarningsHost", dock, StringComparison.Ordinal);
         Assert.Contains("ConverterParameter=Warnings", dock, StringComparison.Ordinal);
         Assert.Contains("DockPage { Contents, Properties, Warnings, ChangeBinding }", dockState, StringComparison.Ordinal);
@@ -79,7 +79,7 @@ public sealed class Sprint20DiagnosticsArchitectureTests
     }
 
     [Fact]
-    public void DiagnosticFactory_PreservesMessageAndAttachesKeyAndSourceMetadata()
+    public void DiagnosticFactory_PreservesMessageAndAttachesCodeKeyAndSourceMetadata()
     {
         var root = SolutionRootLocator.Find();
         var factory = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnosticFactory.cs");
@@ -87,12 +87,15 @@ public sealed class Sprint20DiagnosticsArchitectureTests
 
         Assert.Contains("tableNode.CompositionWarnings", factory, StringComparison.Ordinal);
         Assert.Contains("Message = message", factory, StringComparison.Ordinal);
+        Assert.Contains("Code = rule.Code", factory, StringComparison.Ordinal);
         Assert.Contains("PN/key", factory, StringComparison.Ordinal);
         Assert.Contains("table.Sources", factory, StringComparison.Ordinal);
         Assert.Contains("Workbook.SourcePath", factory, StringComparison.Ordinal);
         Assert.Contains("WorksheetName", factory, StringComparison.Ordinal);
         Assert.Contains("RangeReference", factory, StringComparison.Ordinal);
         Assert.Contains("KeyColumnIdentity", contract, StringComparison.Ordinal);
+        Assert.Contains("AffectedColumn", contract, StringComparison.Ordinal);
+        Assert.Contains("RowNumber", contract, StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] parts) =>
