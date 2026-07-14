@@ -71,7 +71,10 @@ public sealed class ReportReadinessAssessment
     public required int ErrorGroupCount { get; init; }
     public required int WarningGroupCount { get; init; }
     public required int InformationGroupCount { get; init; }
-    public required int TotalOccurrenceCount { get; init; }
+    public required int ErrorOccurrenceCount { get; init; }
+    public required int WarningOccurrenceCount { get; init; }
+    public required int InformationOccurrenceCount { get; init; }
+    public int TotalOccurrenceCount => ErrorOccurrenceCount + WarningOccurrenceCount + InformationOccurrenceCount;
 
     public bool BlocksExport => ErrorGroupCount > 0;
     public bool RequiresWarningConfirmation => !BlocksExport && WarningGroupCount > 0;
@@ -85,7 +88,15 @@ public sealed class ReportReadinessAssessment
             ErrorGroupCount = consolidated.Count(item => item.Severity == PreviewDiagnosticSeverity.Error),
             WarningGroupCount = consolidated.Count(item => item.Severity == PreviewDiagnosticSeverity.Warning),
             InformationGroupCount = consolidated.Count(item => item.Severity == PreviewDiagnosticSeverity.Information),
-            TotalOccurrenceCount = consolidated.Sum(item => Math.Max(1, item.OccurrenceCount))
+            ErrorOccurrenceCount = CountOccurrences(consolidated, PreviewDiagnosticSeverity.Error),
+            WarningOccurrenceCount = CountOccurrences(consolidated, PreviewDiagnosticSeverity.Warning),
+            InformationOccurrenceCount = CountOccurrences(consolidated, PreviewDiagnosticSeverity.Information)
         };
     }
+
+    private static int CountOccurrences(
+        IEnumerable<PreviewDiagnostic> diagnostics,
+        PreviewDiagnosticSeverity severity) => diagnostics
+        .Where(item => item.Severity == severity)
+        .Sum(item => Math.Max(1, item.OccurrenceCount));
 }
