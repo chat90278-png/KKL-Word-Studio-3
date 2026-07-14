@@ -46,6 +46,19 @@ public partial class ExcelWorkspaceView
             column.Header = panel;
             column.HeaderStringFormat = null;
         }
+
+        SynchronizeTransferColumnOrder();
+    }
+
+    private void SynchronizeTransferColumnOrder()
+    {
+        var orderedIdentities = WorkingDataGrid.Columns
+            .OrderBy(column => column.DisplayIndex)
+            .Select(GetColumnIdentity)
+            .Where(identity => !string.IsNullOrWhiteSpace(identity))
+            .Cast<string>()
+            .ToList();
+        _viewModel.SetColumnDisplayOrder(orderedIdentities);
     }
 
     private async void WorkingDataGrid_CellEditEndingV23(object sender, DataGridCellEditEndingEventArgs e)
