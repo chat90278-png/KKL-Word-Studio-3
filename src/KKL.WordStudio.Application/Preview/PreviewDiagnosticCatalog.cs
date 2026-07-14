@@ -21,6 +21,8 @@ public static class PreviewDiagnosticCodes
     public const string TableDataWarning = "TABLE_DATA_WARNING";
     public const string TableTooWide = "TABLE_TOO_WIDE";
     public const string TableSplit = "TABLE_SPLIT";
+    public const string RowsSkipped = "ROWS_SKIPPED";
+    public const string DefaultTitleUsed = "DEFAULT_TITLE_USED";
     public const string LayoutWarning = "LAYOUT_WARNING";
 }
 
@@ -57,6 +59,16 @@ public static class PreviewDiagnosticCatalog
             return new(PreviewDiagnosticCodes.RowsNotMerged, PreviewDiagnosticSeverity.Warning,
                 "Satırlar güvenli biçimde birleştirilemedi",
                 "Birleştirme koşulları sağlanmadığı için ilgili satırlar ayrı tutuldu.");
+
+        if (ContainsAny(text, "varsayılan başlık", "default title"))
+            return new(PreviewDiagnosticCodes.DefaultTitleUsed, PreviewDiagnosticSeverity.Information,
+                "Varsayılan başlık kullanılıyor",
+                "Başlık kullanıcı tarafından değiştirilmedi; bu durum Word çıktısını engellemez.");
+
+        if (ContainsAny(text, "boş satır", "satır atlandı", "rows skipped", "empty row"))
+            return new(PreviewDiagnosticCodes.RowsSkipped, PreviewDiagnosticSeverity.Information,
+                "Boş satırlar aktarım dışında bırakıldı",
+                "Tamamen boş satırlar rapor tablosuna eklenmedi.");
 
         if (ContainsAny(text, "boş hücre", "empty cell"))
             return new(PreviewDiagnosticCodes.EmptyCells, PreviewDiagnosticSeverity.Warning,
@@ -128,6 +140,8 @@ public static class PreviewDiagnosticCatalog
             PreviewDiagnosticCodes.MergeConflict => $"{countText} içinde birleştirme değerleri çelişiyor; satırlar ayrı bırakıldı.",
             PreviewDiagnosticCodes.RowsNotMerged => $"{countText} güvenli biçimde birleştirilemedi ve ayrı tutuldu.",
             PreviewDiagnosticCodes.EmptyCells => $"{countText} içinde boş hücre bulundu.",
+            PreviewDiagnosticCodes.RowsSkipped => $"{countText} tamamen boş olduğu için aktarım dışında bırakıldı.",
+            PreviewDiagnosticCodes.DefaultTitleUsed => "Varsayılan başlık kullanılıyor; istenirse İçindekiler veya Preview üzerinden değiştirilebilir.",
             PreviewDiagnosticCodes.TableTooWide => "Tablo Word sayfasına geniş geliyor; çıktıdaki okunabilirliği kontrol edin.",
             PreviewDiagnosticCodes.TableSplit => "Tablo uzun olduğu için birden fazla Word sayfasına bölündü.",
             _ when !string.IsNullOrWhiteSpace(affectedColumn) => $"{affectedColumn} alanında {countText} kontrol edilmeli.",
