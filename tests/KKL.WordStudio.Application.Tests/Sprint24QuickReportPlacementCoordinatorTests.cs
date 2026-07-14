@@ -30,14 +30,16 @@ public sealed class Sprint24QuickReportPlacementCoordinatorTests
                 includeAltHeading: true));
 
         Assert.Equal(TransferOutcome.Success, result.TransferResult.Outcome);
-        Assert.Equal(2, result.CreatedElementIds.Count);
         var alt = Assert.IsType<TextElement>(body.Root.Children.Single(element =>
             element.Id == result.CreatedElementIds[0]));
         var table = Assert.IsType<TableElement>(result.TransferResult.Table);
+        Assert.Collection(
+            result.CreatedElementIds,
+            elementId => Assert.Equal(alt.Id, elementId),
+            elementId => Assert.Equal(table.Id, elementId));
         Assert.True(HeadingStylePresets.IsAltHeading(alt.Style));
         Assert.Equal("Alt Heading", alt.Name);
         Assert.Equal(body.Root.Children.IndexOf(alt) + 1, body.Root.Children.IndexOf(table));
-        Assert.Equal(table.Id, result.CreatedElementIds[1]);
     }
 
     [Fact]
@@ -64,8 +66,9 @@ public sealed class Sprint24QuickReportPlacementCoordinatorTests
                 includeAltHeading: false));
 
         Assert.Equal(TransferOutcome.Success, result.TransferResult.Outcome);
-        Assert.Single(result.CreatedElementIds);
+        var createdElementId = Assert.Single(result.CreatedElementIds);
         var createdTable = Assert.IsType<TableElement>(result.TransferResult.Table);
+        Assert.Equal(createdTable.Id, createdElementId);
         Assert.True(result.TransferResult.CreatedNewTable);
         Assert.True(body.Root.Children.IndexOf(createdTable) > body.Root.Children.IndexOf(existingTable));
         Assert.True(body.Root.Children.IndexOf(createdTable) < body.Root.Children.IndexOf(nextHeading));
@@ -91,7 +94,7 @@ public sealed class Sprint24QuickReportPlacementCoordinatorTests
 
         Assert.Equal(TransferOutcome.Failed, result.TransferResult.Outcome);
         Assert.Equal(beforeCount, body.Root.Children.Count);
-        Assert.Equal(0, result.CreatedElementIds.Count);
+        Assert.DoesNotContain(result.CreatedElementIds, _ => true);
     }
 
     private static ExcelTransferPlacementRequest Placement(
