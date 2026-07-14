@@ -18,7 +18,9 @@ public sealed class Sprint24WordExportReadinessArchitectureTests
         Assert.Contains("ReportReadinessAssessment.FromGroups(DockViewModel.Diagnostics.Groups)", main, StringComparison.Ordinal);
         Assert.Contains("readiness.BlocksExport", main, StringComparison.Ordinal);
         Assert.Contains("readiness.RequiresWarningConfirmation", main, StringComparison.Ordinal);
-        Assert.Contains("OpenControlCenter()", main, StringComparison.Ordinal);
+        Assert.Contains("OpenControlCenter(PreviewDiagnosticSeverity.Error)", main, StringComparison.Ordinal);
+        Assert.Contains("OpenControlCenter(PreviewDiagnosticSeverity.Warning)", main, StringComparison.Ordinal);
+        Assert.Contains("_workspace.SetSelectedReportElement(elementId)", main, StringComparison.Ordinal);
         Assert.Contains("ShowExportWarningDecision", main, StringComparison.Ordinal);
         Assert.Contains("ExportWarningDecision.Review", main, StringComparison.Ordinal);
         Assert.Contains("ExportWarningDecision.Cancel", main, StringComparison.Ordinal);
