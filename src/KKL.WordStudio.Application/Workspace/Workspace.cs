@@ -67,7 +67,12 @@ public sealed class Workspace : IWorkspace
         RaiseWorkspaceChanged();
     }
 
-    public void NotifyReportContentChanged() => RaiseReportContentChanged();
+    public void NotifyReportContentChanged()
+    {
+        if (ActiveReport is not null)
+            ReportDocumentStructurePolicy.EnsureRootAndRenumber(ActiveReport);
+        RaiseReportContentChanged();
+    }
 
     private void RaiseWorkspaceChanged() => WorkspaceChanged?.Invoke(this, EventArgs.Empty);
     private void RaiseReportContentChanged() => ReportContentChanged?.Invoke(this, EventArgs.Empty);
