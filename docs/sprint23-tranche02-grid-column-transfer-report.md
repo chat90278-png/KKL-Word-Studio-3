@@ -87,7 +87,17 @@ Expected project totals:
 - Infrastructure: `139`
 - Total: `559`
 
-## Windows gate — pending
+## Windows correction pass
+
+The first Windows run exposed three compatibility issues:
+
+1. `ColumnMappingRowViewModel.Selection.cs` duplicated the new source-generated `IsIncluded` property. The obsolete partial file was removed; `ColumnMappingRowViewModel.cs` is now the single authoritative definition.
+2. The Sprint 21 mapping-surface architecture test still required the removed drawer. Its identity was preserved, but its assertions now guard the direct checkbox-in-column-header surface and verify that the old drawer remains absent.
+3. The Sprint 21 Domain guard prohibited all persistence. Sprint 23 intentionally persists worksheet transfer preferences on the existing `ColumnMapping`; the guard now verifies that this state does not leak into `TableElement` and does not introduce source-Excel writing.
+
+The historical test method names remain unchanged because the baseline inventory tracks those identities.
+
+## Windows gate — pending rerun
 
 Run against the final exact branch head:
 
