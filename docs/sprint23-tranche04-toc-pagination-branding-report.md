@@ -40,6 +40,15 @@ Word:
 - No blank paragraphs or manual page-break runs are inserted.
 - Heading styles, numbering and TOC detection remain unchanged.
 
+### Selected-heading table placement
+
+- Selecting an existing root, heading or alt heading before `Word'e Aktar` makes that real element the placement parent.
+- The popup shows the selected numbered heading as its parent line.
+- Removing both optional proposed heading rows places the new table directly after the selected heading.
+- Keeping either proposed row preserves the existing create-heading/create-alt-heading flow.
+- The coordinator retains the selected `AnchorElementId`; it no longer falls back to the document root when both optional rows are removed.
+- No second report tree or persisted parent model is introduced.
+
 ### Selected application branding
 
 The approved Excel/Word combined logo set replaces the previous binary assets behind the existing centralized paths:
@@ -48,22 +57,9 @@ The approved Excel/Word combined logo set replaces the previous binary assets be
 - `Assets/Brand/BrandMarkSmall.png`: 128 px transparent title/taskbar runtime mark.
 - `Assets/Brand/AppIcon.ico`: seven Windows resolutions (`16, 24, 32, 48, 64, 128, 256 px`).
 
+The transparent outer padding was cropped and each resolution was regenerated from the tighter master, so the symbol occupies substantially more of the Windows icon square without changing the approved artwork.
+
 The existing safe runtime behavior remains: WPF loads the PNG for `Window.Icon`, while the ICO is the build-time EXE/shortcut/Alt+Tab/installer icon.
-
-## Windows correction pass
-
-The first Windows run found three concrete release-gate issues:
-
-- `CS7065` because the initially transferred ICO stream was truncated and not a valid complete Win32 icon resource;
-- xUnit2029 because the new Word page-break regression used `Assert.Empty` on a filtered collection;
-- a Sprint 17 architecture guard still expected the pre-pagination `WordContentWriter.AppendNode` signature.
-
-Corrections applied:
-
-- regenerated `AppIcon.ico` from the approved transparent logo as a compact seven-entry Windows ICONDIR;
-- verified all seven directory offsets and payload lengths are inside the stream;
-- replaced `Assert.Empty` with predicate-based `Assert.DoesNotContain`;
-- updated the historical guard to require the page-break-aware append call while preserving document-order caption counters.
 
 ## Architecture
 
@@ -72,12 +68,13 @@ Corrections applied:
 - Existing deterministic paginator and Word exporter are extended; no second renderer or exporter is introduced.
 - Existing `ReportContentKind` semantic classification feeds both outputs.
 - Branding references stay centralized in the UI project and MainWindow.
+- Existing `ExcelTransferPlacementCoordinator` remains authoritative for transfer placement.
 
 ## Test delta
 
 Added tests:
 
-- Application: `+6`
+- Application: `+7`
 - Engine: `+2`
 - Infrastructure: `+3`
 - Architecture: `+3`
@@ -85,7 +82,7 @@ Added tests:
 Expected Windows total:
 
 ```text
-590 / 590
+591 / 591
 ```
 
 ## Pending Windows gate
@@ -106,12 +103,13 @@ dotnet run -c Release --no-build --project src\KKL.WordStudio.UI\KKL.WordStudio.
 
 ## Manual smoke
 
-1. Confirm the new Excel/Word mark appears in the title area and taskbar.
-2. Confirm the rebuilt executable shows the new icon in Explorer/Alt+Tab.
+1. Confirm the enlarged Excel/Word mark appears in the title area and taskbar.
+2. Confirm the rebuilt executable shows the enlarged icon in Explorer/Alt+Tab.
 3. Double-click a heading in Contents; Preview scrolls to and selects that exact heading.
 4. Double-click a table with a duplicate/similar name elsewhere; Preview reaches the selected table by ID.
 5. Trigger navigation immediately after a Preview-changing edit; it waits for the refreshed layout and reaches the target.
 6. Place a short table halfway down a page and a heading after it; the heading begins on the next Preview page.
 7. Use a table spanning several pages; the next heading begins directly after its final page.
 8. Export Word and verify the same page transition without blank paragraphs/pages.
-9. Confirm Contents numbering and Word heading styles remain intact.
+9. Select an existing heading, open `Word'e Aktar`, remove both proposed heading rows and confirm the new table appears directly under the selected heading.
+10. Confirm Contents numbering and Word heading styles remain intact.
