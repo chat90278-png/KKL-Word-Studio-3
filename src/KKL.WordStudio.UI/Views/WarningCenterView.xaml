@@ -9,22 +9,25 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Margin="14,14,14,8" Padding="12" CornerRadius="10"
-                Background="#FFFFF8E7" BorderBrush="#FFF4D68A" BorderThickness="1">
+                Background="#FFF8FAFD" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Width="30" Height="30" CornerRadius="8" Background="#FFFFE8A8" VerticalAlignment="Top">
-                    <TextBlock Text="!" FontSize="16" FontWeight="Bold" Foreground="#FF9A6700"
+                <Border Width="30" Height="30" CornerRadius="8" Background="#FFEAF2FF" VerticalAlignment="Top">
+                    <TextBlock Text="✓" FontSize="15" FontWeight="Bold" Foreground="#FF2563EB"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
                     <TextBlock Text="{Binding HeaderText}" FontSize="12.5" FontWeight="SemiBold"
                                Foreground="{DynamicResource Brush.Text.Primary}" />
-                    <TextBlock Text="Bir uyarıya tıklayarak ilgili tablo ve Excel kaynağına gidin."
+                    <TextBlock Text="{Binding DetailText}"
                                FontSize="10" Foreground="{DynamicResource Brush.Text.Secondary}"
                                TextWrapping="Wrap" Margin="0,3,0,0" />
+                    <TextBlock Text="Bir bulguya tıklayarak ilgili rapor öğesi ve Excel kaynağına gidin."
+                               FontSize="9.6" Foreground="{DynamicResource Brush.Text.Secondary}"
+                               TextWrapping="Wrap" Margin="0,4,0,0" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -50,9 +53,20 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <Border Grid.Column="0" Background="#FFF2B84B" CornerRadius="3" />
+                                        <Border Grid.Column="0" Background="{Binding SeverityAccent}" CornerRadius="3" />
 
                                         <StackPanel Grid.Column="1" Margin="10,0,9,0">
+                                            <WrapPanel>
+                                                <Border Background="{Binding SeverityBackground}" CornerRadius="7" Padding="7,2" Margin="0,0,6,4">
+                                                    <TextBlock Text="{Binding SeverityText}" FontSize="9.2" FontWeight="Bold"
+                                                               Foreground="{Binding SeverityAccent}" />
+                                                </Border>
+                                                <Border Background="#FFF1F5F9" CornerRadius="7" Padding="7,2" Margin="0,0,6,4"
+                                                        Visibility="{Binding HasMultipleOccurrences, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="{Binding OccurrenceText}" FontSize="9.2" FontWeight="SemiBold" />
+                                                </Border>
+                                            </WrapPanel>
+
                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="11.5"
                                                        Foreground="{DynamicResource Brush.Text.Primary}" />
                                             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="10.2"
@@ -90,9 +104,9 @@
                         <TextBlock Text="✓" FontSize="20" Foreground="#FF2F855A"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="Uyarı yok" FontSize="13" FontWeight="SemiBold" Margin="0,10,0,0"
+                    <TextBlock Text="Word'e hazır" FontSize="13" FontWeight="SemiBold" Margin="0,10,0,0"
                                HorizontalAlignment="Center" />
-                    <TextBlock Text="Önizleme verileri güvenli biçimde oluşturuldu."
+                    <TextBlock Text="Önizleme doğrulamasında sorun bulunmadı."
                                FontSize="10" Foreground="{DynamicResource Brush.Text.Secondary}"
                                TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
                 </StackPanel>
