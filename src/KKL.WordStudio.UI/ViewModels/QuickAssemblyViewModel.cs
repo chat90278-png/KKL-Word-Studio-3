@@ -17,6 +17,12 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
     public ExcelWorkspaceViewModel ExcelWorkspace => _excelWorkspace;
     public ObservableCollection<QuickAssemblyWorkbookItemViewModel> Sources { get; } = new();
 
+    public IReadOnlyList<QuickAssemblySheetItemViewModel> OrderedSelectedSheets => Sources
+        .SelectMany(source => source.Sheets)
+        .Where(sheet => sheet.IsSelected)
+        .OrderBy(sheet => sheet.SelectionOrder ?? int.MaxValue)
+        .ToList();
+
     [ObservableProperty]
     private bool _isOpen;
 
@@ -24,7 +30,7 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
     private bool _isBusy;
 
     [ObservableProperty]
-    private string _statusText = "Yüklü Excel sayfalarını seçerek tek işlemde rapora ekleyin.";
+    private string _statusText = "Sayfaları tıklama sırasıyla seçin; başlık, alt başlık ve tablo adlarını düzenleyin.";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProgressPercent))]
@@ -77,7 +83,10 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         RefreshSelectionState();
     }
 
-    private bool CanTransferSelected() => !IsBusy && SelectedCount > 0;
+    private bool CanTransferSelected() =>
+        !IsBusy
+        && SelectedCount > 0
+        && OrderedSelectedSheets.All(sheet => sheet.HasValidPlacementTarget);
 
     [RelayCommand(CanExecute = nameof(CanTransferSelected))]
     private async Task TransferSelectedAsync()
@@ -92,37 +101,51 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
             return;
         }
 
+        var invalid = OrderedSelectedSheets.FirstOrDefault(sheet => !sheet.HasValidPlacementTarget);
+        if (invalid is not null)
+        {
+            StatusText = $"{invalid.WorksheetName} için {invalid.PlacementTargetLabel.ToLowerInvariant()} seçin.";
+            return;
+        }
+
+        foreach (var target in selectedTargets)
+        {
+            target.ResolvedPlacementAnchorId = null;
+            target.CreatedHeadingElementId = null;
+            target.CreatedAltHeadingElementId = null;
+        }
+
         _transferCancellation?.Dispose();
         using var transferCancellation = new CancellationTokenSource();
         _transferCancellation = transferCancellation;
         CompletedCount = 0;
         TotalCount = selectedTargets.Count;
-        CurrentItemText = "Toplu aktarım hazırlanıyor…";
+        CurrentItemText = "Rapor yapısı hazırlanıyor…";
         IsBusy = true;
         RefreshCommandStates();
-        StatusText = $"{selectedTargets.Count} sayfa rapora aktarılıyor…";
+        StatusText = $"{selectedTargets.Count} yapı bloğu rapora aktarılıyor…";
 
         try
         {
             var progress = new InlineProgress<QuickAssemblyProgress>(ApplyProgress);
             var result = await _orchestrator.ExecuteAsync(
                 selectedTargets,
-                _excelWorkspace.TransferQuickAssemblyTargetAsync,
+                TransferResolvedTargetAsync,
                 transferCancellation.Token,
                 progress);
 
             ApplyTargetResults(result);
             StatusText = result.IsCancelled
-                ? $"İptal edildi · {result.CreatedCount} tablo oluşturuldu · {result.SkippedCount} atlandı · {result.FailedCount} başarısız"
-                : $"{result.CreatedCount} tablo oluşturuldu · {result.SkippedCount} atlandı · {result.FailedCount} başarısız";
+                ? $"İptal edildi · {result.CreatedCount} yapı oluşturuldu · {result.SkippedCount} atlandı · {result.FailedCount} başarısız"
+                : $"{result.CreatedCount} yapı oluşturuldu · {result.SkippedCount} atlandı · {result.FailedCount} başarısız";
             CurrentItemText = result.IsCancelled
                 ? $"{result.Targets.Count}/{result.TotalTargetCount} hedef tamamlandı; kalanlar seçili bırakıldı."
                 : $"{result.TotalTargetCount}/{result.TotalTargetCount} hedef tamamlandı.";
         }
         catch (Exception exception)
         {
-            StatusText = $"Toplu aktarım başlatılamadı · {exception.Message}";
-            CurrentItemText = "Tamamlanan hedefler korunur; başarısız hedefleri yeniden deneyin.";
+            StatusText = $"Hızlı rapor başlatılamadı · {exception.Message}";
+            CurrentItemText = "Tamamlanan yapılar korunur; başarısız hedefleri yeniden deneyin.";
         }
         finally
         {
@@ -132,6 +155,62 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
             RefreshSelectionState();
             RefreshCommandStates();
         }
+    }
+
+    private async Task<QuickAssemblyTransferOutcome> TransferResolvedTargetAsync(
+        QuickAssemblyTarget target,
+        CancellationToken cancellationToken)
+    {
+        target.ResolvedPlacementAnchorId = null;
+        if (target.RequiresPlacementAnchor)
+        {
+            if (target.PlacementAnchorKind != target.RequiredPlacementAnchorKind)
+            {
+                return MissingPlacementTarget(target);
+            }
+
+            if (target.ExistingPlacementAnchorId is { } existingId)
+            {
+                target.ResolvedPlacementAnchorId = existingId;
+            }
+            else if (!string.IsNullOrWhiteSpace(target.SourcePlacementTargetKey))
+            {
+                var source = _selection.Targets.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Key, target.SourcePlacementTargetKey, StringComparison.OrdinalIgnoreCase));
+                target.ResolvedPlacementAnchorId = target.RequiredPlacementAnchorKind switch
+                {
+                    QuickAssemblyAnchorKind.Heading => source?.CreatedHeadingElementId,
+                    QuickAssemblyAnchorKind.AltHeading => source?.CreatedAltHeadingElementId,
+                    _ => null
+                };
+            }
+
+            if (target.ResolvedPlacementAnchorId is null)
+            {
+                var expected = target.RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+                    ? "üst başlık"
+                    : "alt başlık";
+                return new QuickAssemblyTransferOutcome
+                {
+                    Status = QuickAssemblyTransferStatus.Skipped,
+                    Message = $"Seçilen {expected} daha önce oluşturulamadı veya artık mevcut değil."
+                };
+            }
+        }
+
+        return await _excelWorkspace.TransferQuickAssemblyTargetAsync(target, cancellationToken);
+    }
+
+    private static QuickAssemblyTransferOutcome MissingPlacementTarget(QuickAssemblyTarget target)
+    {
+        var expected = target.RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+            ? "üst başlık"
+            : "alt başlık";
+        return new QuickAssemblyTransferOutcome
+        {
+            Status = QuickAssemblyTransferStatus.Skipped,
+            Message = $"Bu yapı için {expected} seçilmedi."
+        };
     }
 
     private bool CanCancelTransferSelected() =>
@@ -170,7 +249,7 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
 
         var targetName = $"{progress.CurrentTarget.WorkbookDisplayName} / {progress.CurrentTarget.WorksheetName}";
         CurrentItemText = progress.LastStatus is null
-            ? $"{targetName} işleniyor…"
+            ? $"{targetName} yapısı oluşturuluyor…"
             : $"{targetName} tamamlandı · {progress.CompletedCount}/{progress.TotalCount}";
     }
 
@@ -186,13 +265,13 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
 
             sheet.LastResultText = item.Status switch
             {
-                QuickAssemblyTransferStatus.Created => "Oluşturuldu",
+                QuickAssemblyTransferStatus.Created => "Rapor bloğu oluşturuldu",
                 QuickAssemblyTransferStatus.Skipped => $"Atlandı · {item.Message}",
                 _ => $"Başarısız · {item.Message}"
             };
 
             // Successful targets are deselected so a second click cannot
-            // accidentally create duplicate report tables. Failed/skipped and
+            // accidentally create duplicate report structures. Failed/skipped and
             // not-yet-started cancelled targets remain selected for retry.
             if (item.Status == QuickAssemblyTransferStatus.Created)
                 sheet.IsSelected = false;
@@ -251,6 +330,8 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
                 group.Key.SourcePath,
                 group.Key.WorkbookDisplayName,
                 group.OrderBy(target => target.WorksheetOrder).ToList(),
+                _selection.SetTargetSelected,
+                MoveSelectedTarget,
                 RefreshSelectionState));
         }
 
@@ -258,12 +339,77 @@ public sealed partial class QuickAssemblyViewModel : ViewModelBase
         RefreshSelectionState();
     }
 
+    private void MoveSelectedTarget(QuickAssemblyTarget target, int offset)
+    {
+        if (_selection.MoveSelected(target, offset))
+            RefreshSelectionState();
+    }
+
     private void RefreshSelectionState()
     {
         OnPropertyChanged(nameof(SelectedCount));
         foreach (var source in Sources)
+        {
             source.RefreshAggregateSelection();
+            foreach (var sheet in source.Sheets)
+                sheet.RefreshSelectionOrder();
+        }
+
+        OnPropertyChanged(nameof(OrderedSelectedSheets));
+        RefreshPlacementTargets();
         TransferSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RefreshPlacementTargets()
+    {
+        var existing = _excelWorkspace.GetQuickAssemblyExistingAnchors();
+        var ordered = OrderedSelectedSheets;
+
+        foreach (var sheet in Sources.SelectMany(source => source.Sheets))
+        {
+            sheet.RefreshPlacementRequirement();
+            if (!sheet.IsSelected || !sheet.RequiresPlacementTarget)
+            {
+                sheet.SetPlacementTargets(Array.Empty<QuickAssemblyPlacementTargetOption>());
+                continue;
+            }
+
+            var requiredKind = sheet.RequiredPlacementAnchorKind!.Value;
+            var options = new List<QuickAssemblyPlacementTargetOption>();
+            options.AddRange(existing
+                .Where(anchor => anchor.Kind == requiredKind)
+                .Select(anchor => new QuickAssemblyPlacementTargetOption
+                {
+                    Kind = anchor.Kind,
+                    ExistingElementId = anchor.ElementId,
+                    DisplayText = $"Raporda · {anchor.DisplayText}"
+                }));
+
+            var currentIndex = ordered.IndexOf(sheet);
+            foreach (var earlier in ordered.Take(Math.Max(0, currentIndex)))
+            {
+                if (requiredKind == QuickAssemblyAnchorKind.Heading && earlier.IncludeHeading)
+                {
+                    options.Add(new QuickAssemblyPlacementTargetOption
+                    {
+                        Kind = requiredKind,
+                        SourceTargetKey = earlier.Key,
+                        DisplayText = $"Hızlı Rapor {earlier.SelectionOrderText} · {earlier.HeadingText}"
+                    });
+                }
+                else if (requiredKind == QuickAssemblyAnchorKind.AltHeading && earlier.IncludeAltHeading)
+                {
+                    options.Add(new QuickAssemblyPlacementTargetOption
+                    {
+                        Kind = requiredKind,
+                        SourceTargetKey = earlier.Key,
+                        DisplayText = $"Hızlı Rapor {earlier.SelectionOrderText} · {earlier.AltHeadingText}"
+                    });
+                }
+            }
+
+            sheet.SetPlacementTargets(options);
+        }
     }
 
     private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
@@ -310,6 +456,8 @@ public sealed class QuickAssemblyWorkbookItemViewModel : ViewModelBase
         string sourcePath,
         string displayName,
         IReadOnlyList<QuickAssemblyTarget> targets,
+        Action<QuickAssemblyTarget, bool> setSelected,
+        Action<QuickAssemblyTarget, int> moveSelected,
         Action selectionChanged)
     {
         SourcePath = sourcePath;
@@ -318,7 +466,7 @@ public sealed class QuickAssemblyWorkbookItemViewModel : ViewModelBase
 
         foreach (var target in targets)
         {
-            Sheets.Add(new QuickAssemblySheetItemViewModel(target, () =>
+            Sheets.Add(new QuickAssemblySheetItemViewModel(target, setSelected, moveSelected, () =>
             {
                 RefreshAggregateSelection();
                 _selectionChanged();
@@ -333,38 +481,126 @@ public sealed class QuickAssemblyWorkbookItemViewModel : ViewModelBase
     }
 }
 
-public sealed class QuickAssemblySheetItemViewModel : ViewModelBase
+public sealed class QuickAssemblyPlacementTargetOption
+{
+    public required QuickAssemblyAnchorKind Kind { get; init; }
+    public required string DisplayText { get; init; }
+    public Guid? ExistingElementId { get; init; }
+    public string? SourceTargetKey { get; init; }
+
+    public bool Matches(QuickAssemblyTarget target) =>
+        target.PlacementAnchorKind == Kind
+        && (ExistingElementId.HasValue
+            ? target.ExistingPlacementAnchorId == ExistingElementId
+            : !string.IsNullOrWhiteSpace(SourceTargetKey)
+              && string.Equals(target.SourcePlacementTargetKey, SourceTargetKey, StringComparison.OrdinalIgnoreCase));
+}
+
+public sealed partial class QuickAssemblySheetItemViewModel : ViewModelBase
 {
     private readonly QuickAssemblyTarget _target;
+    private readonly Action<QuickAssemblyTarget, bool> _setSelected;
+    private readonly Action<QuickAssemblyTarget, int> _moveSelected;
     private readonly Action _selectionChanged;
     private bool _isSelected;
-    private string _caption;
     private string? _lastResultText;
+    private QuickAssemblyPlacementTargetOption? _selectedPlacementTarget;
 
     public string Key => _target.Key;
+    public string WorkbookDisplayName => _target.WorkbookDisplayName;
     public string WorksheetName => _target.WorksheetName;
+    public int? SelectionOrder => _target.SelectionOrder;
+    public string SelectionOrderText => SelectionOrder is { } order ? order.ToString() : "–";
+
+    public ObservableCollection<QuickAssemblyPlacementTargetOption> PlacementTargets { get; } = new();
+    public bool RequiresPlacementTarget => _target.RequiresPlacementAnchor;
+    public QuickAssemblyAnchorKind? RequiredPlacementAnchorKind => _target.RequiredPlacementAnchorKind;
+    public string PlacementTargetLabel => RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+        ? "Üst Başlık"
+        : "Alt Başlık";
+    public string PlacementTargetHint => RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+        ? "Yeni alt başlığın bağlanacağı mevcut veya daha önce oluşturulacak başlığı seçin."
+        : "Tablonun doğrudan altına ekleneceği mevcut veya daha önce oluşturulacak alt başlığı seçin.";
+    public bool HasValidPlacementTarget => !RequiresPlacementTarget || SelectedPlacementTarget is not null;
+
+    public QuickAssemblyPlacementTargetOption? SelectedPlacementTarget
+    {
+        get => _selectedPlacementTarget;
+        set
+        {
+            if (ReferenceEquals(_selectedPlacementTarget, value))
+                return;
+
+            _selectedPlacementTarget = value;
+            if (value is null)
+            {
+                _target.PlacementAnchorKind = null;
+                _target.ExistingPlacementAnchorId = null;
+                _target.SourcePlacementTargetKey = null;
+            }
+            else
+            {
+                _target.PlacementAnchorKind = value.Kind;
+                _target.ExistingPlacementAnchorId = value.ExistingElementId;
+                _target.SourcePlacementTargetKey = value.SourceTargetKey;
+            }
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasValidPlacementTarget));
+            _selectionChanged();
+        }
+    }
 
     public bool IsSelected
     {
         get => _isSelected;
         set
         {
-            if (!SetProperty(ref _isSelected, value))
+            if (_isSelected == value)
                 return;
-            _target.IsSelected = value;
+
+            _setSelected(_target, value);
+            SetProperty(ref _isSelected, _target.IsSelected);
+            RefreshSelectionOrder();
             _selectionChanged();
         }
     }
 
+    public bool IncludeHeading
+    {
+        get => _target.IncludeHeading;
+        set => SetTargetProperty(_target.IncludeHeading, value, assigned => _target.IncludeHeading = assigned);
+    }
+
+    public string HeadingText
+    {
+        get => _target.HeadingText;
+        set => SetTargetText(_target.HeadingText, value, assigned => _target.HeadingText = assigned);
+    }
+
+    public bool IncludeAltHeading
+    {
+        get => _target.IncludeAltHeading;
+        set => SetTargetProperty(_target.IncludeAltHeading, value, assigned => _target.IncludeAltHeading = assigned);
+    }
+
+    public string AltHeadingText
+    {
+        get => _target.AltHeadingText;
+        set => SetTargetText(_target.AltHeadingText, value, assigned => _target.AltHeadingText = assigned);
+    }
+
+    public string TableName
+    {
+        get => _target.TableName;
+        set => SetTargetText(_target.TableName, value, assigned => _target.TableName = assigned);
+    }
+
+    /// <summary>Compatibility binding for older view/tests.</summary>
     public string Caption
     {
-        get => _caption;
-        set
-        {
-            if (!SetProperty(ref _caption, value ?? string.Empty))
-                return;
-            _target.Caption = string.IsNullOrWhiteSpace(_caption) ? null : _caption.Trim();
-        }
+        get => TableName;
+        set => TableName = value;
     }
 
     public string? LastResultText
@@ -373,11 +609,85 @@ public sealed class QuickAssemblySheetItemViewModel : ViewModelBase
         set => SetProperty(ref _lastResultText, value);
     }
 
-    public QuickAssemblySheetItemViewModel(QuickAssemblyTarget target, Action selectionChanged)
+    public QuickAssemblySheetItemViewModel(
+        QuickAssemblyTarget target,
+        Action<QuickAssemblyTarget, bool> setSelected,
+        Action<QuickAssemblyTarget, int> moveSelected,
+        Action selectionChanged)
     {
         _target = target;
+        _setSelected = setSelected;
+        _moveSelected = moveSelected;
         _selectionChanged = selectionChanged;
         _isSelected = target.IsSelected;
-        _caption = target.Caption ?? string.Empty;
+    }
+
+    [RelayCommand]
+    private void MoveEarlier()
+    {
+        _moveSelected(_target, -1);
+        _selectionChanged();
+    }
+
+    [RelayCommand]
+    private void MoveLater()
+    {
+        _moveSelected(_target, 1);
+        _selectionChanged();
+    }
+
+    public void RefreshSelectionOrder()
+    {
+        OnPropertyChanged(nameof(SelectionOrder));
+        OnPropertyChanged(nameof(SelectionOrderText));
+    }
+
+    public void RefreshPlacementRequirement()
+    {
+        OnPropertyChanged(nameof(RequiresPlacementTarget));
+        OnPropertyChanged(nameof(RequiredPlacementAnchorKind));
+        OnPropertyChanged(nameof(PlacementTargetLabel));
+        OnPropertyChanged(nameof(PlacementTargetHint));
+        OnPropertyChanged(nameof(HasValidPlacementTarget));
+    }
+
+    public void SetPlacementTargets(IEnumerable<QuickAssemblyPlacementTargetOption> options)
+    {
+        var list = options.ToList();
+        PlacementTargets.Clear();
+        foreach (var option in list)
+            PlacementTargets.Add(option);
+
+        var restored = list.FirstOrDefault(option => option.Matches(_target));
+        _selectedPlacementTarget = restored;
+        if (!RequiresPlacementTarget || restored is null)
+        {
+            _target.PlacementAnchorKind = null;
+            _target.ExistingPlacementAnchorId = null;
+            _target.SourcePlacementTargetKey = null;
+        }
+
+        OnPropertyChanged(nameof(SelectedPlacementTarget));
+        OnPropertyChanged(nameof(HasValidPlacementTarget));
+    }
+
+    private void SetTargetProperty<T>(T current, T value, Action<T> assign)
+    {
+        if (EqualityComparer<T>.Default.Equals(current, value))
+            return;
+        assign(value);
+        OnPropertyChanged();
+        RefreshPlacementRequirement();
+        _selectionChanged();
+    }
+
+    private void SetTargetText(string current, string? value, Action<string> assign)
+    {
+        var normalized = value ?? string.Empty;
+        if (string.Equals(current, normalized, StringComparison.Ordinal))
+            return;
+        assign(normalized);
+        OnPropertyChanged();
+        _selectionChanged();
     }
 }

@@ -1,139 +1,100 @@
 <UserControl x:Class="KKL.WordStudio.UI.Views.QuickAssemblyView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Width="540"
-             MaxHeight="640">
+             Width="700"
+             MaxHeight="760">
     <Border Background="White"
-            BorderBrush="#FFD8E0EC"
+            BorderBrush="{DynamicResource Brush.Border}"
             BorderThickness="1"
-            CornerRadius="14">
+            CornerRadius="14"
+            Padding="18">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="26" ShadowDepth="7" Opacity="0.22" />
+        </Border.Effect>
+
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0"
-                    Background="#FFF7F9FC"
-                    BorderBrush="{DynamicResource Brush.Border.Light}"
-                    BorderThickness="0,0,0,1"
-                    CornerRadius="14,14,0,0"
-                    Padding="16,13">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="Hızlı Rapor Oluştur"
-                                   FontSize="14"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Text="Seçilen her Excel sayfası yeni bir rapor tablosu olur."
-                                   Margin="0,3,0,0"
-                                   FontSize="10.5"
-                                   Foreground="{DynamicResource Brush.Text.Secondary}" />
-                    </StackPanel>
-                    <Button Grid.Column="1"
-                            Content="✕"
-                            Style="{StaticResource Btn.Mini}"
-                            Command="{Binding ClosePanelCommand}"
-                            Width="28"
-                            Height="28"
-                            Padding="0" />
-                </Grid>
-            </Border>
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="HIZLI RAPOR" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    <TextBlock Text="Tam rapor yapısı oluştur" Margin="0,4,0,0" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Text="Sayfaları tıklama sırasıyla seçin. Her seçim başlık, alt başlık ve tablo bloğu olarak rapora eklenir."
+                               Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="×" Style="{StaticResource Btn.Mini}"
+                        Command="{Binding ClosePanelCommand}" Width="32" Height="30" VerticalAlignment="Top" />
+            </Grid>
 
-            <Grid Grid.Row="1" Margin="14,10,14,8">
-                <Border Background="#FFF8FAFD"
-                        BorderBrush="{DynamicResource Brush.Border}"
-                        BorderThickness="1"
-                        CornerRadius="10"
-                        Padding="16"
-                        Visibility="{Binding HasSources, Converter={StaticResource InverseBoolToVisibility}}">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="Henüz yüklü Excel kaynağı yok."
-                                   FontWeight="SemiBold"
-                                   TextAlignment="Center" />
-                        <TextBlock Text="Önce Excel ekle düğmesiyle dosya açın."
-                                   Margin="0,5,0,0"
-                                   FontSize="10.5"
-                                   Foreground="{DynamicResource Brush.Text.Secondary}" />
-                    </StackPanel>
-                </Border>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <Border Background="{DynamicResource Brush.Surface.Alt}"
+                            BorderBrush="{DynamicResource Brush.Border.Light}"
+                            BorderThickness="1" CornerRadius="9" Padding="10"
+                            Visibility="{Binding HasSources, Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="Önce bir veya daha fazla Excel dosyası ekleyin."
+                                   Foreground="{DynamicResource Brush.Text.Secondary}" TextAlignment="Center" />
+                    </Border>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              Visibility="{Binding HasSources, Converter={StaticResource BoolToVisibility}}">
-                    <ScrollViewer.Style>
-                        <Style TargetType="ScrollViewer">
-                            <Setter Property="IsEnabled" Value="True" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ScrollViewer.Style>
-                    <ItemsControl ItemsSource="{Binding Sources}">
+                    <Grid Margin="0,0,0,8" Visibility="{Binding HasSources, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="1 · KAYNAK SAYFALARI" FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Tümünü Seç" Style="{StaticResource Btn.Mini}" Command="{Binding SelectAllCommand}" Margin="0,0,6,0" />
+                            <Button Content="Temizle" Style="{StaticResource Btn.Mini}" Command="{Binding ClearSelectionCommand}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Sources}"
+                                  Visibility="{Binding HasSources, Converter={StaticResource BoolToVisibility}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FFFAFBFD"
-                                        BorderBrush="{DynamicResource Brush.Border}"
-                                        BorderThickness="1"
-                                        CornerRadius="10"
-                                        Margin="0,0,0,9">
+                                <Border BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="1"
+                                        Background="{DynamicResource Brush.Surface.Alt}" CornerRadius="9"
+                                        Padding="10" Margin="0,0,0,8">
                                     <StackPanel>
-                                        <Grid Margin="12,10,12,8">
+                                        <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <CheckBox Content="{Binding DisplayName}"
-                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                      FontWeight="SemiBold"
-                                                      ToolTip="{Binding SourcePath}" />
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding Sheets.Count, StringFormat='{}{0} sayfa'}"
-                                                       FontSize="9.5"
-                                                       Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                            <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                      FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding SelectedCount, StringFormat='{}{0} seçili'}"
+                                                       Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="10" VerticalAlignment="Center" />
                                         </Grid>
 
-                                        <ItemsControl ItemsSource="{Binding Sheets}">
+                                        <ItemsControl ItemsSource="{Binding Sheets}" Margin="20,7,0,0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="White"
-                                                            BorderBrush="{DynamicResource Brush.Border.Light}"
-                                                            BorderThickness="0,1,0,0"
-                                                            Padding="12,8">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="24" />
-                                                                <ColumnDefinition Width="135" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <CheckBox Grid.Column="0"
-                                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                                      VerticalAlignment="Center" />
-                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                                <TextBlock Text="{Binding WorksheetName}"
-                                                                           FontWeight="SemiBold"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{Binding LastResultText}"
-                                                                           FontSize="9.5"
-                                                                           Foreground="{DynamicResource Brush.Text.Secondary}"
-                                                                           TextTrimming="CharacterEllipsis"
-                                                                           Visibility="{Binding LastResultText, Converter={StaticResource StringToVisibility}}" />
-                                                            </StackPanel>
-                                                            <TextBox Grid.Column="2"
-                                                                     Text="{Binding Caption, UpdateSourceTrigger=PropertyChanged}"
-                                                                     IsEnabled="{Binding IsSelected}"
-                                                                     Margin="8,0,0,0"
-                                                                     Height="28"
-                                                                     VerticalContentAlignment="Center"
-                                                                     ToolTip="İsteğe bağlı tablo başlığı" />
-                                                        </Grid>
-                                                    </Border>
+                                                    <Grid Margin="0,3">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding WorksheetName}" Margin="7,0,0,0"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                        <Border Grid.Column="2" Background="#FFEAF2FF" CornerRadius="8" Padding="7,2"
+                                                                Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}">
+                                                            <TextBlock Text="{Binding SelectionOrderText, StringFormat='Sıra {0}'}"
+                                                                       FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Accent}" />
+                                                        </Border>
+                                                    </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -142,90 +103,152 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                </ScrollViewer>
-            </Grid>
 
-            <Border Grid.Row="2"
-                    Background="#FFF7F9FC"
-                    BorderBrush="{DynamicResource Brush.Border.Light}"
-                    BorderThickness="0,1,0,0"
-                    CornerRadius="0,0,14,14"
-                    Padding="14,11">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid>
+                    <Separator Margin="0,8,0,14" />
+
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0"
-                                Content="Tümünü seç"
-                                Style="{StaticResource Btn.Mini}"
-                                Command="{Binding SelectAllCommand}"
-                                Margin="0,0,6,0" />
-                        <Button Grid.Column="1"
-                                Content="Temizle"
-                                Style="{StaticResource Btn.Mini}"
-                                Command="{Binding ClearSelectionCommand}" />
-                        <TextBlock Grid.Column="2"
-                                   Text="{Binding SelectedCount, StringFormat='{}{0} sayfa seçili'}"
-                                   Margin="12,0,0,0"
-                                   FontSize="10.5"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource Brush.Text.Secondary}"
-                                   VerticalAlignment="Center" />
-                        <Button Grid.Column="3"
-                                Content="Seçilenleri Rapora Aktar"
-                                Style="{StaticResource Btn.Primary}"
-                                Command="{Binding TransferSelectedCommand}"
-                                Height="32"
-                                Padding="14,0" />
+                        <StackPanel>
+                            <TextBlock Text="2 · RAPOR YAPISI" FontSize="10" FontWeight="Bold"
+                                       Foreground="{DynamicResource Brush.Text.Secondary}" />
+                            <TextBlock Text="Sıra ilk tıklamaya göre oluşur; oklarla sonradan değiştirebilirsiniz."
+                                       Margin="0,3,0,0" FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Background="{DynamicResource Brush.Accent.Soft}" CornerRadius="10" Padding="9,4" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding SelectedCount, StringFormat='{}{0} yapı'}" FontWeight="SemiBold" FontSize="10.5"
+                                       Foreground="{DynamicResource Brush.Accent}" />
+                        </Border>
                     </Grid>
 
-                    <Grid Grid.Row="1"
-                          Margin="0,9,0,0"
-                          Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <TextBlock Text="{Binding CurrentItemText}"
-                                   FontSize="10.5"
-                                   FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
-                        <Grid Grid.Row="1" Margin="0,6,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ProgressBar Grid.Column="0"
-                                         Minimum="0"
-                                         Maximum="100"
-                                         Value="{Binding ProgressPercent, Mode=OneWay}"
-                                         Height="7"
-                                         VerticalAlignment="Center" />
-                            <Button Grid.Column="1"
-                                    Content="İptal"
-                                    Style="{StaticResource Btn.Mini}"
-                                    Command="{Binding CancelTransferSelectedCommand}"
-                                    Margin="10,0,0,0" />
-                        </Grid>
-                    </Grid>
+                    <TextBlock Text="Henüz yapı seçilmedi. Yukarıdaki sayfalara tıkladığınız sırada bloklar burada oluşur."
+                               Margin="8,12" TextAlignment="Center" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Brush.Text.Secondary}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedCount}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
 
-                    <TextBlock Grid.Row="2"
-                               Text="{Binding StatusText}"
-                               Margin="0,8,0,0"
-                               FontSize="10.5"
-                               Foreground="{DynamicResource Brush.Text.Secondary}"
-                               TextWrapping="Wrap" />
-                </Grid>
-            </Border>
+                    <ItemsControl ItemsSource="{Binding OrderedSelectedSheets}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#FFCAD8EE" BorderThickness="1" Background="#FFFAFCFF"
+                                        CornerRadius="10" Padding="11" Margin="0,0,0,9">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,9">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="32" Height="32" CornerRadius="9" Background="{DynamicResource Brush.Accent.Soft}">
+                                                <TextBlock Text="{Binding SelectionOrderText}" FontWeight="Bold" Foreground="{DynamicResource Brush.Accent}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding WorksheetName}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding WorkbookDisplayName}" FontSize="9.5"
+                                                           Foreground="{DynamicResource Brush.Text.Secondary}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="↑" Style="{StaticResource Btn.Mini}" Command="{Binding MoveEarlierCommand}"
+                                                        Width="30" Height="28" Margin="0,0,4,0" ToolTip="Bu yapıyı öne taşı" />
+                                                <Button Content="↓" Style="{StaticResource Btn.Mini}" Command="{Binding MoveLaterCommand}"
+                                                        Width="30" Height="28" ToolTip="Bu yapıyı arkaya taşı" />
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Grid Margin="12,0,0,7">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="92" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox Content="Başlık" IsChecked="{Binding IncludeHeading, Mode=TwoWay}"
+                                                      VerticalAlignment="Center" FontWeight="SemiBold" />
+                                            <TextBox Grid.Column="1" Text="{Binding HeadingText, UpdateSourceTrigger=PropertyChanged}"
+                                                     IsEnabled="{Binding IncludeHeading}" />
+                                        </Grid>
+
+                                        <Grid Margin="28,0,0,7">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="92" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox Content="Alt Başlık" IsChecked="{Binding IncludeAltHeading, Mode=TwoWay}"
+                                                      VerticalAlignment="Center" FontWeight="SemiBold" />
+                                            <TextBox Grid.Column="1" Text="{Binding AltHeadingText, UpdateSourceTrigger=PropertyChanged}"
+                                                     IsEnabled="{Binding IncludeAltHeading}" />
+                                        </Grid>
+
+                                        <Grid Margin="44,0,0,7"
+                                              Visibility="{Binding RequiresPlacementTarget, Converter={StaticResource BoolToVisibility}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="76" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding PlacementTargetLabel}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1">
+                                                <ComboBox ItemsSource="{Binding PlacementTargets}"
+                                                          SelectedItem="{Binding SelectedPlacementTarget, Mode=TwoWay}"
+                                                          DisplayMemberPath="DisplayText"
+                                                          ToolTip="{Binding PlacementTargetHint}" />
+                                                <TextBlock Text="{Binding PlacementTargetHint}" Margin="2,3,0,0"
+                                                           FontSize="9.5" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Grid Margin="44,0,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="76" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Tablo" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBox Grid.Column="1" Text="{Binding TableName, UpdateSourceTrigger=PropertyChanged}" />
+                                        </Grid>
+
+                                        <TextBlock Text="{Binding LastResultText}" Margin="44,7,0,0" FontSize="9.5"
+                                                   Foreground="{DynamicResource Brush.Text.Secondary}"
+                                                   Visibility="{Binding LastResultText, Converter={StaticResource StringToVisibility}}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <StackPanel Grid.Row="2" Margin="0,12,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}" />
+                <TextBlock Text="{Binding CurrentItemText}" Margin="0,6,0,0" FontSize="10.5"
+                           Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Grid Grid.Row="3" Margin="0,14,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding StatusText}" FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding SelectedCount, StringFormat='{}{0} yapı seçildi'}" Margin="0,3,0,0" FontWeight="SemiBold" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button Content="İptal" Style="{StaticResource Btn.Mini}" Command="{Binding CancelTransferSelectedCommand}"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" Margin="0,0,8,0" />
+                    <Button Content="Rapor Yapısını Oluştur" Style="{StaticResource Btn.Primary}"
+                            Command="{Binding TransferSelectedCommand}" Height="34" Padding="17,0" />
+                </StackPanel>
+            </Grid>
         </Grid>
     </Border>
 </UserControl>

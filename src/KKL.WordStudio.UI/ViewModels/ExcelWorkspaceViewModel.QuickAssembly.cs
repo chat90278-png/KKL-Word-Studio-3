@@ -1,17 +1,19 @@
 namespace KKL.WordStudio.UI.ViewModels;
 
 using KKL.WordStudio.Application.QuickAssembly;
+using KKL.WordStudio.Application.Styling;
 using KKL.WordStudio.Application.Transfer;
+using KKL.WordStudio.Domain.Elements;
+using KKL.WordStudio.Domain.Visitors;
 
 public sealed partial class ExcelWorkspaceViewModel
 {
     private readonly SemaphoreSlim _quickAssemblyTransferGate = new(1, 1);
 
     /// <summary>
-    /// Executes one quick-assembly target through the same transfer service and
-    /// current-range/WorkingData contracts used by the normal Word'e Aktar
-    /// action. The target is always created as a new table; an existing selected
-    /// report table is never silently overwritten by batch assembly.
+    /// Executes one quick-report target through the exact placement coordinator
+    /// used by normal Word'e Aktar. Full blocks chain after the previous table;
+    /// blocks without a new heading use the explicitly resolved outline anchor.
     /// </summary>
     public async Task<QuickAssemblyTransferOutcome> TransferQuickAssemblyTargetAsync(
         QuickAssemblyTarget target,
@@ -21,6 +23,14 @@ public sealed partial class ExcelWorkspaceViewModel
         await _quickAssemblyTransferGate.WaitAsync(cancellationToken);
         try
         {
+            if (target.RequiresPlacementAnchor && target.ResolvedPlacementAnchorId is null)
+            {
+                var expected = target.RequiredPlacementAnchorKind == QuickAssemblyAnchorKind.Heading
+                    ? "üst başlık"
+                    : "alt başlık";
+                return CreateQuickAssemblySkipped($"Bu yapı için geçerli bir {expected} seçilmedi.");
+            }
+
             var workbook = OpenWorkbooks.FirstOrDefault(candidate =>
                 string.Equals(candidate.FilePath, target.SourcePath, StringComparison.OrdinalIgnoreCase));
             if (workbook is null)
@@ -31,15 +41,22 @@ public sealed partial class ExcelWorkspaceViewModel
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Set the sheet first so workbook activation and the explicit await
-            // both resolve the same target. The normal selection hook may start
-            // an equivalent preview load; the awaited load below is the
-            // authoritative completion point for this batch item.
+            // A failed sheet read must never leave the previous target's preview
+            // eligible for transfer. Clear the authoritative state before the
+            // selection hooks and explicit awaited load run.
+            _currentPreview = null;
+            DetectedDataEndRow = null;
             workbook.SelectedSheetName = target.WorksheetName;
             SelectedWorkbook = workbook;
             await LoadPreviewAsync();
 
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (!ReferenceEquals(SelectedWorkbook, workbook)
+                || !string.Equals(SelectedWorkbook.SelectedSheetName, target.WorksheetName, StringComparison.Ordinal))
+            {
+                return CreateQuickAssemblyFailed("Hızlı rapor hedefi yükleme sırasında değişti.");
+            }
 
             var project = _workspace.ActiveProject;
             var report = _workspace.ActiveReport;
@@ -52,59 +69,112 @@ public sealed partial class ExcelWorkspaceViewModel
             if (DetectedDataEndRow is not { } dataEndRow || dataEndRow < EffectiveDataStartRow)
                 return CreateQuickAssemblyFailed("Veri aralığı algılanamadı veya geçersiz.");
 
-            var request = new ExcelTransferRequest
+            EnsureColumnTransferOptions();
+            var selectedOptions = ColumnMappings
+                .Where(option => option.IsIncluded)
+                .OrderBy(option => option.SourceOrder)
+                .ToList();
+            if (selectedOptions.Count == 0)
+                return CreateQuickAssemblySkipped("Aktarılacak en az bir sütun seçilmediği için yapı atlandı.");
+
+            var placementAnchorId = target.RequiresPlacementAnchor
+                ? target.ResolvedPlacementAnchorId
+                : _workspace.SelectedReportElementId;
+            var requiredAnchorKind = target.RequiredPlacementAnchorKind switch
+            {
+                QuickAssemblyAnchorKind.Heading => ExcelTransferPlacementAnchorKind.Heading,
+                QuickAssemblyAnchorKind.AltHeading => ExcelTransferPlacementAnchorKind.AltHeading,
+                _ => (ExcelTransferPlacementAnchorKind?)null
+            };
+
+            var transferRequest = new ExcelTransferRequest
             {
                 WorkbookFilePath = workbook.FilePath,
                 WorkbookFileName = workbook.DisplayName,
                 WorksheetName = target.WorksheetName,
                 Range = BuildCurrentRange(dataEndRow),
                 HeaderTexts = GetHeaderRowTexts(),
-                AppliedColumnMappings = _mappingsApplied && ColumnMappings.Count > 0
-                    ? ColumnMappings.Select(mapping => new TransferColumnMapping
-                    {
-                        SourceColumn = mapping.SourceColumn,
-                        FieldName = mapping.FieldName,
-                        DataType = mapping.DataType
-                    }).ToList()
-                    : null,
+                AppliedColumnMappings = selectedOptions.Select(option => new TransferColumnMapping
+                {
+                    SourceColumn = option.SourceColumn,
+                    FieldName = ResolveLogicalField(option),
+                    DataType = option.DataType
+                }).ToList(),
                 WorkingDataColumns = GetCurrentWorksheet()?.WorkingData?.Columns.Select(column => new TransferWorkingColumn
                 {
                     SourceField = column.SourceField,
                     Header = column.Header,
                     OriginalSourceColumn = column.OriginalSourceColumn
                 }).ToList(),
-
-                // Batch assembly is deliberately non-destructive. It never
-                // routes through the currently selected report element and it
-                // does not reuse a possibly stale manually typed source name
-                // from another active workbook.
-                TargetElementId = null,
+                TargetElementId = placementAnchorId,
                 ExistingTableMode = null,
                 SourceFieldMappings = null,
                 PreferredDataSourceName = null
             };
 
-            var result = _transferService.Transfer(project, report, request);
+            var placement = new ExcelTransferPlacementRequest
+            {
+                Transfer = transferRequest,
+                DestinationMode = ExcelTransferDestinationMode.CreateNewTable,
+                ExistingTableId = null,
+                AnchorElementId = placementAnchorId,
+                RequiredAnchorKind = requiredAnchorKind,
+                TableName = string.IsNullOrWhiteSpace(target.TableName)
+                    ? NextTableName(report)
+                    : target.TableName.Trim(),
+                IncludeHeading = target.IncludeHeading,
+                HeadingText = target.HeadingText,
+                IncludeAltHeading = target.IncludeAltHeading,
+                AltHeadingText = target.AltHeadingText,
+                Columns = ColumnMappings.Select(option => new TransferColumnSelection
+                {
+                    ProviderField = option.ProviderField,
+                    LogicalField = ResolveLogicalField(option),
+                    Header = option.FieldName,
+                    SemanticRole = option.SemanticRole,
+                    SourceOrder = option.SourceOrder,
+                    IsIncluded = option.IsIncluded
+                }).ToList()
+            };
+
+            var coordinated = ExcelTransferPlacementCoordinator.Transfer(
+                _transferService,
+                project,
+                report,
+                placement);
+            var result = coordinated.TransferResult;
+
             if (result.Outcome == TransferOutcome.Success && result.Table is not null)
             {
                 if (!result.CreatedNewTable)
                 {
                     return CreateQuickAssemblyFailed(
-                        "Toplu aktarım yeni tablo oluşturmadığı için güvenlik amacıyla başarı sayılmadı.");
+                        "Hızlı rapor yeni tablo oluşturmadığı için güvenlik amacıyla başarı sayılmadı.");
                 }
 
-                result.Table.Caption = string.IsNullOrWhiteSpace(target.Caption)
-                    ? null
-                    : target.Caption.Trim();
+                var createdTexts = coordinated.CreatedElementIds
+                    .Select(elementId => ReportElementFlattener.FindById(report, elementId))
+                    .OfType<TextElement>()
+                    .Where(text => !string.Equals(text.Name, "Document Root", StringComparison.Ordinal))
+                    .ToList();
+                var createdHeadingId = createdTexts
+                    .FirstOrDefault(text => HeadingStylePresets.IsHeading(text.Style))?.Id;
+                var createdAltHeadingId = createdTexts
+                    .FirstOrDefault(text => HeadingStylePresets.IsAltHeading(text.Style))?.Id;
+
+                target.CreatedHeadingElementId = createdHeadingId;
+                target.CreatedAltHeadingElementId = createdAltHeadingId;
                 _workspace.SetSelectedReportElement(result.Table.Id);
                 _workspace.NotifyReportContentChanged();
-                StatusText = $"{target.WorksheetName} · {result.RangeReference} → {result.Table.Name} oluşturuldu";
+                StatusText = $"{target.WorksheetName} · {result.RangeReference} → {result.Table.Name} yapısı oluşturuldu ve önizlemeye eklendi";
 
                 return new QuickAssemblyTransferOutcome
                 {
                     Status = QuickAssemblyTransferStatus.Created,
                     Message = StatusText,
-                    CreatedElementId = result.Table.Id
+                    CreatedElementId = result.Table.Id,
+                    CreatedHeadingElementId = createdHeadingId,
+                    CreatedAltHeadingElementId = createdAltHeadingId
                 };
             }
 
@@ -112,9 +182,9 @@ public sealed partial class ExcelWorkspaceViewModel
                 return CreateQuickAssemblySkipped("Mevcut tablo kararı gerektiği için güvenli biçimde atlandı.");
 
             if (result.Outcome == TransferOutcome.RequiresSourceFieldMapping)
-                return CreateQuickAssemblySkipped("Kaynak alan eşlemesi gerektiği için toplu aktarımda atlandı.");
+                return CreateQuickAssemblySkipped("Kaynak alan eşlemesi gerektiği için hızlı raporda atlandı.");
 
-            return CreateQuickAssemblyFailed(result.Error ?? "Sayfa rapora aktarılamadı.");
+            return CreateQuickAssemblyFailed(result.Error ?? "Sayfa rapor yapısına aktarılamadı.");
         }
         finally
         {

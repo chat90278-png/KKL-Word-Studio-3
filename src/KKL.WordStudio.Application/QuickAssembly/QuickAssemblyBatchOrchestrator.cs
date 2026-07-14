@@ -12,6 +12,8 @@ public sealed class QuickAssemblyTransferOutcome
     public required QuickAssemblyTransferStatus Status { get; init; }
     public string? Message { get; init; }
     public Guid? CreatedElementId { get; init; }
+    public Guid? CreatedHeadingElementId { get; init; }
+    public Guid? CreatedAltHeadingElementId { get; init; }
 }
 
 public sealed class QuickAssemblyTargetResult
@@ -20,6 +22,8 @@ public sealed class QuickAssemblyTargetResult
     public required QuickAssemblyTransferStatus Status { get; init; }
     public string? Message { get; init; }
     public Guid? CreatedElementId { get; init; }
+    public Guid? CreatedHeadingElementId { get; init; }
+    public Guid? CreatedAltHeadingElementId { get; init; }
 }
 
 /// <summary>
@@ -52,6 +56,8 @@ public sealed class QuickAssemblyBatchResult
 /// import to the existing single-target transfer seam supplied by the caller.
 /// It never reads Excel or creates report tables directly.
 ///
+/// SelectionOrder is authoritative. Workbook/worksheet order remains a safe
+/// fallback for callers created before click-order tracking was introduced.
 /// Cancellation is cooperative and bounded: an already-running target gets the
 /// token and may stop at its own safe checkpoints; otherwise cancellation takes
 /// effect before the next target. Completed target results are always retained.
@@ -69,7 +75,8 @@ public sealed class QuickAssemblyBatchOrchestrator
 
         var orderedTargets = targets
             .Where(target => target.IsSelected)
-            .OrderBy(target => target.WorkbookOrder)
+            .OrderBy(target => target.SelectionOrder ?? int.MaxValue)
+            .ThenBy(target => target.WorkbookOrder)
             .ThenBy(target => target.WorksheetOrder)
             .ToList();
         RejectDuplicates(orderedTargets);
@@ -93,7 +100,9 @@ public sealed class QuickAssemblyBatchOrchestrator
                     Target = target,
                     Status = outcome.Status,
                     Message = outcome.Message,
-                    CreatedElementId = outcome.CreatedElementId
+                    CreatedElementId = outcome.CreatedElementId,
+                    CreatedHeadingElementId = outcome.CreatedHeadingElementId,
+                    CreatedAltHeadingElementId = outcome.CreatedAltHeadingElementId
                 };
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
