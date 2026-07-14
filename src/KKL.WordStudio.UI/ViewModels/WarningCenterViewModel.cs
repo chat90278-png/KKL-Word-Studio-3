@@ -121,11 +121,11 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
 
         NavigationStatusText = (previewNavigated, excelNavigated, key) switch
         {
-            (true, true, not null) => $"İlgili rapor öğesi ve Excel kaydı vurgulandı. Örnek anahtar: {key}",
+            (true, true, not null) => $"İlgili rapor öğesi ve Excel kaydı vurgulandı. Kayıt anahtarı: {key}",
             (true, true, null) => "İlgili rapor öğesi ve Excel kaynağı vurgulandı.",
             (true, false, _) => "İlgili rapor öğesine gidildi; kaynak hücre bulunamadı.",
             (false, true, _) => "Excel kaynağına gidildi.",
-            _ => "Bu kayıt için doğrudan gidilebilecek bir hedef yok."
+            _ => "Bu bulgu için doğrudan gidilebilecek bir hedef yok."
         };
     }
 
@@ -202,22 +202,20 @@ public sealed class WarningDiagnosticItemViewModel
         ? string.Empty
         : $"Etkilenen sütun: {Group.AffectedColumn}";
     public string AffectedRowsText => Group.RowNumbers.Count > 0
-        ? $"Örnek satırlar: {string.Join(", ", Group.RowNumbers.Take(5))}{(Group.RowNumbers.Count > 5 ? ", …" : string.Empty)}"
-        : Group.OccurrenceCount > 1
-            ? $"Etkilenen kayıt: {Group.OccurrenceCount}"
-            : string.Empty;
+        ? $"Etkilenen satır: {string.Join(", ", Group.RowNumbers.Take(5))}{(Group.RowNumbers.Count > 5 ? ", …" : string.Empty)}"
+        : string.Empty;
     public string DistinctKeyText => Group.KeyValues.Count switch
     {
         0 => string.Empty,
-        1 => "1 farklı anahtar",
-        > 25 => "25+ farklı anahtar",
-        _ => $"{Group.KeyValues.Count} farklı anahtar"
+        1 => "1 benzersiz kayıt anahtarı",
+        > 25 => "25+ benzersiz kayıt anahtarı",
+        _ => $"{Group.KeyValues.Count} benzersiz kayıt anahtarı"
     };
     public string ExampleText { get; }
     public string SourceText { get; }
     public int OccurrenceCount => Group.OccurrenceCount;
     public bool HasMultipleOccurrences => OccurrenceCount > 1;
-    public string OccurrenceText => OccurrenceCount == 1 ? "1 kayıt" : $"{OccurrenceCount} kayıt";
+    public string OccurrenceText => OccurrenceCount == 1 ? "1 bulgu" : $"{OccurrenceCount} bulgu";
     public bool HasElementName => !string.IsNullOrWhiteSpace(ElementName);
     public bool HasAffectedColumn => !string.IsNullOrWhiteSpace(Group.AffectedColumn);
     public bool HasAffectedRows => !string.IsNullOrWhiteSpace(AffectedRowsText);
@@ -225,7 +223,11 @@ public sealed class WarningDiagnosticItemViewModel
     public bool HasExamples => !string.IsNullOrWhiteSpace(ExampleText);
     public bool HasSource => Group.Sources.Count > 0;
     public bool CanNavigate => Group.ElementId is not null || HasSource;
-    public bool CanNavigateNext => Group.KeyValues.Count > 1;
+    public int NavigationTargetCount => Group.KeyValues.Count > 0
+        ? Group.KeyValues.Count
+        : CanNavigate ? 1 : 0;
+    public bool CanNavigateNext => NavigationTargetCount > 1;
+    public string PrimaryNavigationText => CanNavigateNext ? "İlk Kayda Git" : "Kayda Git";
     public string SeverityText => Group.Severity switch
     {
         PreviewDiagnosticSeverity.Error => "Hata",
@@ -255,7 +257,7 @@ public sealed class WarningDiagnosticItemViewModel
         if (group.KeyValues.Count == 0)
             return string.Empty;
 
-        var examples = group.KeyValues.Take(3).Select(value => $"• Anahtar: {value}");
+        var examples = group.KeyValues.Take(3).Select(value => $"• Kayıt anahtarı: {value}");
         return "Örnekler:\n" + string.Join("\n", examples);
     }
 
