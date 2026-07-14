@@ -82,12 +82,16 @@ public sealed class Sprint15OrchestrationAndHeuristicGuardTests
     }
 
     [Fact]
-    public void ApplicationTableComposition_IsOnlyProductionAreaAllowedToContainFullGroupingAliasSets()
+    public void ApplicationTableCompositionAndCanonicalExcelMatcher_AreOnlyProductionAreasAllowedToContainFullAliasSets()
     {
         var root = SolutionRootLocator.Find();
         var files = SourceScan.ReadCodeFiles(root, "src", ".cs");
+        const string canonicalExcelMatcher = "src/KKL.WordStudio.Application/Excel/ExcelSemanticFieldMatcher.cs";
+
         var offenders = files
-            .Where(file => !file.RelativePath.StartsWith("src/KKL.WordStudio.Application/TableComposition/", StringComparison.Ordinal))
+            .Where(file =>
+                !file.RelativePath.StartsWith("src/KKL.WordStudio.Application/TableComposition/", StringComparison.Ordinal)
+                && !string.Equals(file.RelativePath, canonicalExcelMatcher, StringComparison.Ordinal))
             .Select(file => (file.RelativePath, Families: FindRoleAliasFamilies(file.Text)))
             .Where(item => item.Families.Count == 3)
             .Select(item => $"{item.RelativePath} [{string.Join(", ", item.Families)}]")
@@ -95,7 +99,7 @@ public sealed class Sprint15OrchestrationAndHeuristicGuardTests
 
         Assert.True(
             offenders.Count == 0,
-            "A complete Product/Serial/Quantity alias heuristic set is allowed only under Application/TableComposition. Offenders: " +
+            "A complete Product/Serial/Quantity alias set is allowed only under Application/TableComposition or in the canonical Excel semantic field matcher. Offenders: " +
             string.Join(", ", offenders));
     }
 

@@ -13,6 +13,14 @@ public sealed class ExcelDataRangeCandidate
     public required int EndColumn { get; init; }
     public required ExcelDataRangeConfidence Confidence { get; init; }
 
+    /// <summary>
+    /// Canonical fields recognised on the selected header row. Empty when the
+    /// candidate has no header or no supported semantic aliases were found.
+    /// </summary>
+    public IReadOnlyList<ExcelSemanticFieldMatch> SemanticFields { get; init; } =
+        Array.Empty<ExcelSemanticFieldMatch>();
+
+    public int SemanticMatchCount => SemanticFields.Count;
     public bool RequiresReview => Confidence == ExcelDataRangeConfidence.Low;
 }
 

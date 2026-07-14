@@ -14,9 +14,10 @@ public sealed class Sprint23ExcelReaderCharacterizationTests
         new(NullLogger<OpenXmlExcelWorkbookReader>.Instance);
 
     [Fact]
-    public async Task DefaultSheetPreview_IsCurrentlyTruncatedAtOneHundredRows()
+    public async Task DefaultSheetPreview_LoadsTheCompleteSourceAndShowsAnEndBuffer()
     {
-        var filePath = Sprint22WorkbookFixtureFactory.Create(Sprint22WorkbookScenario.NormalSixColumn);
+        var scenario = Sprint22WorkbookScenario.NormalSixColumn;
+        var filePath = Sprint22WorkbookFixtureFactory.Create(scenario);
         try
         {
             var result = await CreateReader().GetSheetPreviewAsync(
@@ -24,7 +25,30 @@ public sealed class Sprint23ExcelReaderCharacterizationTests
                 Sprint22WorkbookFixtureFactory.WorksheetName(1));
 
             Assert.True(result.IsSuccess, result.Error);
-            Assert.Equal(100, result.Value.Rows.Count);
+            Assert.Equal(scenario.DataRowCount + 1 + 5, result.Value.Rows.Count); // header + all data + visual buffer
+            Assert.Equal(scenario.DataRowCount + 1 + 5, result.Value.RowNumbers[^1]);
+            Assert.False(result.Value.IsTruncated);
+            Assert.All(result.Value.Rows.TakeLast(5), row => Assert.Empty(row));
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task ExplicitPreviewBound_RemainsAvailableForSpecialisedLightweightReads()
+    {
+        var filePath = Sprint22WorkbookFixtureFactory.Create(Sprint22WorkbookScenario.NormalSixColumn);
+        try
+        {
+            var result = await CreateReader().GetSheetPreviewAsync(
+                filePath,
+                Sprint22WorkbookFixtureFactory.WorksheetName(1),
+                maxPreviewRows: 40);
+
+            Assert.True(result.IsSuccess, result.Error);
+            Assert.Equal(40, result.Value.Rows.Count);
             Assert.True(result.Value.IsTruncated);
         }
         finally
@@ -34,9 +58,38 @@ public sealed class Sprint23ExcelReaderCharacterizationTests
     }
 
     [Fact]
-    public async Task DataEndDetection_CurrentlyStopsAtFirstBlankRowAfterData()
+    public async Task DataEndDetection_ToleratesAnAccidentalBlankRowInsideData()
     {
-        var filePath = CreateWorkbookWithBlankRowInsideData();
+        var filePath = CreateWorkbookWithRows(
+            Row(1, ("A1", "No"), ("B1", "Part Name")),
+            Row(2, ("A2", "1"), ("B2", "Valve")),
+            new DocumentFormat.OpenXml.Spreadsheet.Row { RowIndex = 3U },
+            Row(4, ("A4", "2"), ("B4", "Pump")));
+        try
+        {
+            var result = await CreateReader().DetectDataRangeAsync(
+                filePath,
+                "Sheet1",
+                dataStartRow: 2,
+                startColumn: 1,
+                endColumn: 2);
+
+            Assert.True(result.IsSuccess, result.Error);
+            Assert.Equal(4, result.Value.DataEndRow);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task DataEndDetection_StopsAtTheLastMeaningfulRowBeforeASustainedBlankGap()
+    {
+        var filePath = CreateWorkbookWithRows(
+            Row(1, ("A1", "No"), ("B1", "Part Name")),
+            Row(2, ("A2", "1"), ("B2", "Valve")),
+            Row(8, ("A8", "2"), ("B8", "Unrelated later block")));
         try
         {
             var result = await CreateReader().DetectDataRangeAsync(
@@ -55,9 +108,41 @@ public sealed class Sprint23ExcelReaderCharacterizationTests
         }
     }
 
-    private static string CreateWorkbookWithBlankRowInsideData()
+    [Fact]
+    public async Task DataEndDetection_TreatsFormulaCellsAsMeaningfulEvenWithoutCachedDisplayText()
     {
-        var filePath = Path.Combine(Path.GetTempPath(), $"kkl-sprint23-characterization-{Guid.NewGuid():N}.xlsx");
+        var formulaRow = new DocumentFormat.OpenXml.Spreadsheet.Row { RowIndex = 3U };
+        formulaRow.Append(new Cell
+        {
+            CellReference = "B3",
+            CellFormula = new CellFormula("B2")
+        });
+
+        var filePath = CreateWorkbookWithRows(
+            Row(1, ("A1", "No"), ("B1", "Part Name")),
+            Row(2, ("A2", "1"), ("B2", "Valve")),
+            formulaRow);
+        try
+        {
+            var result = await CreateReader().DetectDataRangeAsync(
+                filePath,
+                "Sheet1",
+                dataStartRow: 2,
+                startColumn: 1,
+                endColumn: 2);
+
+            Assert.True(result.IsSuccess, result.Error);
+            Assert.Equal(3, result.Value.DataEndRow);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    private static string CreateWorkbookWithRows(params DocumentFormat.OpenXml.Spreadsheet.Row[] rows)
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), $"kkl-sprint23-range-{Guid.NewGuid():N}.xlsx");
         using var document = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook);
         var workbookPart = document.AddWorkbookPart();
         workbookPart.Workbook = new Workbook();
@@ -65,10 +150,8 @@ public sealed class Sprint23ExcelReaderCharacterizationTests
         var sheetData = new SheetData();
         worksheetPart.Worksheet = new Worksheet(sheetData);
 
-        sheetData.Append(Row(1, ("A1", "No"), ("B1", "Part Name")));
-        sheetData.Append(Row(2, ("A2", "1"), ("B2", "Valve")));
-        sheetData.Append(new DocumentFormat.OpenXml.Spreadsheet.Row { RowIndex = 3U });
-        sheetData.Append(Row(4, ("A4", "2"), ("B4", "Pump")));
+        foreach (var row in rows)
+            sheetData.Append(row);
 
         var sheets = workbookPart.Workbook.AppendChild(new Sheets());
         sheets.Append(new Sheet
