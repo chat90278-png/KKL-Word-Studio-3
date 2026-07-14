@@ -59,7 +59,16 @@ public sealed class Sprint24PaginationParityWordTests
         SourceCount = 0,
         Format = new()
         {
-            RepeatHeader = repeatHeader
+            WidthPercent = 100d,
+            FixedLayout = true,
+            BorderSizePoints = 0.5d,
+            CellMarginTopMillimeters = 0d,
+            CellMarginBottomMillimeters = 0d,
+            CellMarginLeftMillimeters = 0d,
+            CellMarginRightMillimeters = 0d,
+            PreferredRowHeightMillimeters = 0d,
+            RepeatHeader = repeatHeader,
+            Columns = []
         }
     };
 }
