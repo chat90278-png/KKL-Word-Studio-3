@@ -10,17 +10,13 @@ using Microsoft.Extensions.Logging;
 using System.IO;
 
 /// <summary>
-/// Shell-level ViewModel: owns the active Project and pushes it into
-/// IWorkspace, which every other panel reacts to. It also owns the
-/// last-saved file path so "Save" does not need to re-prompt.
-///
-/// Deliberately does NOT fake a dirty-state indicator ("*") — no reliable
-/// dirty-tracking mechanism exists yet, so the title bar simply omits it
-/// rather than showing a marker that might be wrong.
+/// Shell-level ViewModel for the Excel-first session. It bootstraps one
+/// in-memory Project aggregate because the existing transfer/export pipeline
+/// is project-based, but it no longer exposes native project New/Open/Save
+/// commands to the user. The session lives for the lifetime of the process.
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase
 {
-    private readonly IProjectService _projectService;
     private readonly IReportExporterRegistry _exporterRegistry;
     private readonly IWorkspace _workspace;
     private readonly IFileDialogService _fileDialogService;
@@ -43,10 +39,6 @@ public sealed partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string? _lastExportedFilePath;
 
-    /// <summary>Set after a successful Open/Save — lets "Save" write back without re-prompting, while "Save As" always prompts.</summary>
-    [ObservableProperty]
-    private string? _currentProjectFilePath;
-
     public MainViewModel(
         IProjectService projectService,
         IReportExporterRegistry exporterRegistry,
@@ -56,7 +48,7 @@ public sealed partial class MainViewModel : ViewModelBase
         DockViewModel dockViewModel,
         ILogger<MainViewModel> logger)
     {
-        _projectService = projectService;
+        ArgumentNullException.ThrowIfNull(projectService);
         _exporterRegistry = exporterRegistry;
         _workspace = workspace;
         _fileDialogService = fileDialogService;
@@ -64,68 +56,12 @@ public sealed partial class MainViewModel : ViewModelBase
         DockViewModel = dockViewModel;
         _logger = logger;
 
-        _currentProject = _projectService.CreateNew();
+        _currentProject = projectService.CreateNew();
         _workspace.SetActiveProject(_currentProject);
         _workspace.SetActiveReport(_currentProject.Reports.FirstOrDefault());
-    }
-
-    [RelayCommand]
-    private void NewProject()
-    {
-        CurrentProject = _projectService.CreateNew();
-        _workspace.SetActiveProject(CurrentProject);
-        _workspace.SetActiveReport(CurrentProject.Reports.FirstOrDefault());
-
-        LastExportedFilePath = null;
-        CurrentProjectFilePath = null;
-        StatusText = $"'{CurrentProject.Name}' oluşturuldu";
-        _logger.LogInformation("New project created: {ProjectId}", CurrentProject.Id);
-    }
-
-    [RelayCommand]
-    private async Task OpenProjectAsync()
-    {
-        var path = _fileDialogService.OpenProjectFile();
-        if (path is null) return;
-
-        var result = await _projectService.OpenAsync(path);
-        if (result.IsFailure)
-        {
-            StatusText = result.Error!;
-            _logger.LogWarning("Failed to open project {Path}: {Error}", path, result.Error);
-            return;
-        }
-
-        CurrentProject = result.Value;
-        CurrentProjectFilePath = path;
-        LastExportedFilePath = null;
-        _workspace.SetActiveProject(CurrentProject);
-        _workspace.SetActiveReport(CurrentProject.Reports.FirstOrDefault());
-
-        StatusText = $"'{path}' açıldı";
-        _logger.LogInformation("Opened project {ProjectId} from {Path}", CurrentProject.Id, path);
-    }
-
-    [RelayCommand]
-    private async Task SaveProjectAsync()
-    {
-        var path = CurrentProjectFilePath ?? _fileDialogService.SaveProjectFile(CurrentProject.Name);
-        if (path is null) return;
-
-        var result = await _projectService.SaveAsync(CurrentProject, path);
-        if (result.IsSuccess) CurrentProjectFilePath = path;
-        StatusText = result.IsSuccess ? $"'{path}' konumuna kaydedildi" : result.Error!;
-    }
-
-    [RelayCommand]
-    private async Task SaveProjectAsAsync()
-    {
-        var path = _fileDialogService.SaveProjectFile(CurrentProject.Name);
-        if (path is null) return;
-
-        var result = await _projectService.SaveAsync(CurrentProject, path);
-        if (result.IsSuccess) CurrentProjectFilePath = path;
-        StatusText = result.IsSuccess ? $"'{path}' konumuna kaydedildi" : result.Error!;
+        _logger.LogInformation(
+            "Excel-first workspace session initialized: {ProjectId}",
+            _currentProject.Id);
     }
 
     [RelayCommand]
@@ -134,7 +70,7 @@ public sealed partial class MainViewModel : ViewModelBase
         var report = _workspace.ActiveReport;
         if (report is null)
         {
-            StatusText = "Dışa aktarılacak etkin rapor yok — önce bir rapor ekleyin veya seçin.";
+            StatusText = "Word dosyası oluşturulamadı — etkin rapor çalışma alanı hazır değil.";
             return;
         }
 
