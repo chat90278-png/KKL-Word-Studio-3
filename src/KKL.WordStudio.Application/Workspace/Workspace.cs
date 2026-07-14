@@ -1,5 +1,6 @@
 namespace KKL.WordStudio.Application.Workspace;
 
+using KKL.WordStudio.Application.Structure;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
 
@@ -29,6 +30,9 @@ public sealed class Workspace : IWorkspace
 
     public void SetActiveReport(Report? report)
     {
+        if (report is not null)
+            ReportDocumentStructurePolicy.EnsureRootAndRenumber(report);
+
         ActiveReport = report;
         SelectedReportElementId = null;
         RaiseWorkspaceChanged();
@@ -63,7 +67,12 @@ public sealed class Workspace : IWorkspace
         RaiseWorkspaceChanged();
     }
 
-    public void NotifyReportContentChanged() => RaiseReportContentChanged();
+    public void NotifyReportContentChanged()
+    {
+        if (ActiveReport is not null)
+            ReportDocumentStructurePolicy.EnsureRootAndRenumber(ActiveReport);
+        RaiseReportContentChanged();
+    }
 
     private void RaiseWorkspaceChanged() => WorkspaceChanged?.Invoke(this, EventArgs.Empty);
     private void RaiseReportContentChanged() => ReportContentChanged?.Invoke(this, EventArgs.Empty);
