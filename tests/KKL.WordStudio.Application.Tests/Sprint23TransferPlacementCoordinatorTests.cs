@@ -15,9 +15,7 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
     public void OrderColumns_UsesCanonicalRoleOrderAndKeepsUnknownsInSourceOrder()
     {
         // Historical test name is retained for baseline-inventory compatibility.
-        // The accepted Sprint 23 behavior now preserves selected Excel columns in
-        // physical left-to-right source order; semantic roles drive selection and
-        // binding identity, not output rearrangement.
+        // Output order is the live Excel grid order supplied through SourceOrder.
         var ordered = ExcelTransferPlacementCoordinator.OrderColumns(
         [
             Column("F", "Quantity", "Qty", ExcelSemanticFieldRole.Quantity, 5),
@@ -36,8 +34,8 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
     [Fact]
     public void CreateNewTable_CreatesRootHeadingAltHeadingAndCanonicalColumns()
     {
-        // Historical method name is retained. Columns now follow the active Excel
-        // source order and the table name is materialized as a visible text element.
+        // Historical method name is retained. Heading text is visibly numbered,
+        // while the existing heading styles remain the Word/Contents identity.
         var (project, report, body) = CreateProjectAndReport();
         var placement = new ExcelTransferPlacementRequest
         {
@@ -58,21 +56,20 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
             placement);
 
         Assert.Equal(TransferOutcome.Success, result.TransferResult.Outcome);
-        Assert.Equal(5, body.Root.Children.Count);
+        Assert.Equal(4, body.Root.Children.Count);
         var root = Assert.IsType<TextElement>(body.Root.Children[0]);
         var heading = Assert.IsType<TextElement>(body.Root.Children[1]);
         var altHeading = Assert.IsType<TextElement>(body.Root.Children[2]);
-        var title = Assert.IsType<TextElement>(body.Root.Children[3]);
-        var table = Assert.IsType<TableElement>(body.Root.Children[4]);
+        var table = Assert.IsType<TableElement>(body.Root.Children[3]);
 
         Assert.Equal("Document Root", root.Name);
-        Assert.Equal(ExcelTransferPlacementCoordinator.DefaultRootHeadingText, root.Content.Text);
-        Assert.Equal("Main Assembly", heading.Content.Text);
-        Assert.Equal("Installed Parts", altHeading.Content.Text);
-        Assert.StartsWith(ExcelTransferPlacementCoordinator.TableTitleElementNamePrefix, title.Name, StringComparison.Ordinal);
-        Assert.Equal("Configuration List", title.Content.Text);
-        Assert.True(title.Style.Bold);
+        Assert.Equal("1. System Test Procedure Configuration List", root.Content.Text);
+        Assert.Equal("1.1 Main Assembly", heading.Content.Text);
+        Assert.Equal("1.1.1 Installed Parts", altHeading.Content.Text);
         Assert.Equal("Configuration List", table.Name);
+        Assert.Equal("Configuration List", table.Caption);
+        Assert.DoesNotContain(body.Root.Children.OfType<TextElement>(), text =>
+            text.Name.StartsWith(ExcelTransferPlacementCoordinator.TableTitleElementNamePrefix, StringComparison.Ordinal));
         Assert.Equal(
             ["Nsn", "Quantity", "SerialNumber", "PartNumber", "ItemNumber", "PartNameEnglish"],
             table.Columns.Select(column => column.SourceField));
@@ -84,8 +81,8 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
     [Fact]
     public void UpdateExistingTable_RenamesAndCanonicalizesWithoutMovingTheTable()
     {
-        // Historical method name is retained. Updating creates/updates the visible
-        // title immediately before the same table object and preserves source order.
+        // Historical method name is retained. Updating uses the existing native
+        // caption pipeline and removes a title element from earlier Tranche heads.
         var (project, report, body) = CreateProjectAndReport();
         var table = new TableElement
         {
@@ -93,6 +90,12 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
             Binding = new Binding { DataSourceName = "Old", WorksheetName = "OldSheet" }
         };
         table.Columns.Add(new TableColumn { Header = "Old", SourceField = "Old" });
+        var legacyTitle = new TextElement
+        {
+            Name = ExcelTransferPlacementCoordinator.TableTitleElementNamePrefix + table.Id.ToString("N"),
+            Content = Domain.Expressions.Expression.Literal("Old title")
+        };
+        body.Root.Children.Add(legacyTitle);
         body.Root.Children.Add(table);
 
         var placement = new ExcelTransferPlacementRequest
@@ -111,11 +114,10 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
             placement);
 
         Assert.Equal(TransferOutcome.Success, result.TransferResult.Outcome);
-        Assert.Equal(2, body.Root.Children.Count);
-        var title = Assert.IsType<TextElement>(body.Root.Children[0]);
-        Assert.Same(table, body.Root.Children[1]);
-        Assert.Equal("Updated Table", title.Content.Text);
+        Assert.Single(body.Root.Children);
+        Assert.Same(table, body.Root.Children[0]);
         Assert.Equal("Updated Table", table.Name);
+        Assert.Equal("Updated Table", table.Caption);
         Assert.Equal("Sheet1", table.Binding?.WorksheetName);
         Assert.Equal("Nsn", table.Columns[0].SourceField);
         Assert.Equal("PartNameEnglish", table.Columns[^1].SourceField);
