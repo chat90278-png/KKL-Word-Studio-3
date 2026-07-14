@@ -4,6 +4,7 @@
     <Grid Background="{DynamicResource Brush.Surface.Alt}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -22,14 +23,28 @@
                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
                     <TextBlock Text="{Binding HeaderText}" FontSize="12.5" FontWeight="SemiBold"
                                Foreground="{DynamicResource Brush.Text.Primary}" />
-                    <TextBlock Text="Bir uyarıya tıklayarak ilgili tablo ve Excel kaynağına gidin."
+                    <TextBlock Text="Tekrarlanan kayıtlar tek aksiyon altında gruplanır. Bir kayda tıklayarak rapor öğesine ve kaynağa gidin."
                                FontSize="10" Foreground="{DynamicResource Brush.Text.Secondary}"
                                TextWrapping="Wrap" Margin="0,3,0,0" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <Border Grid.Row="1" Margin="12,0,12,9" Background="White" BorderBrush="{DynamicResource Brush.Border.Light}"
+                BorderThickness="1" CornerRadius="9" Padding="5">
+            <WrapPanel>
+                <Button Content="{Binding TotalCount, StringFormat=Tümü ({0})}" Style="{StaticResource Btn.Mini}"
+                        Command="{Binding ShowAllCommand}" Margin="0,0,4,0" />
+                <Button Content="{Binding ErrorCount, StringFormat=Hata ({0})}" Style="{StaticResource Btn.Mini}"
+                        Command="{Binding ShowErrorsCommand}" Margin="0,0,4,0" />
+                <Button Content="{Binding WarningCount, StringFormat=Uyarı ({0})}" Style="{StaticResource Btn.Mini}"
+                        Command="{Binding ShowWarningsCommand}" Margin="0,0,4,0" />
+                <Button Content="{Binding InformationCount, StringFormat=Bilgi ({0})}" Style="{StaticResource Btn.Mini}"
+                        Command="{Binding ShowInformationCommand}" />
+            </WrapPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <Grid>
                 <ItemsControl ItemsSource="{Binding Items}" Margin="12,0,12,12"
                               Visibility="{Binding HasItems, Converter={StaticResource BoolToVisibility}}">
@@ -50,9 +65,19 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <Border Grid.Column="0" Background="#FFF2B84B" CornerRadius="3" />
+                                        <Border Grid.Column="0" Background="{Binding SeverityBrush}" CornerRadius="3" />
 
                                         <StackPanel Grid.Column="1" Margin="10,0,9,0">
+                                            <WrapPanel>
+                                                <Border Background="#FFF1F5F9" CornerRadius="7" Padding="7,2" Margin="0,0,6,4">
+                                                    <TextBlock Text="{Binding SeverityText}" FontSize="9" FontWeight="Bold" />
+                                                </Border>
+                                                <Border Background="#FFFFF2D7" CornerRadius="7" Padding="7,2" Margin="0,0,6,4"
+                                                        Visibility="{Binding HasMultipleOccurrences, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="{Binding OccurrenceText}" FontSize="9" FontWeight="SemiBold" Foreground="#FF8A5A00" />
+                                                </Border>
+                                            </WrapPanel>
+
                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="11.5"
                                                        Foreground="{DynamicResource Brush.Text.Primary}" />
                                             <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="10.2"
@@ -90,16 +115,16 @@
                         <TextBlock Text="✓" FontSize="20" Foreground="#FF2F855A"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="Uyarı yok" FontSize="13" FontWeight="SemiBold" Margin="0,10,0,0"
+                    <TextBlock Text="Bu filtrede kayıt yok" FontSize="13" FontWeight="SemiBold" Margin="0,10,0,0"
                                HorizontalAlignment="Center" />
-                    <TextBlock Text="Önizleme verileri güvenli biçimde oluşturuldu."
+                    <TextBlock Text="Diğer seviyeleri görmek için üstteki filtreleri kullanın."
                                FontSize="10" Foreground="{DynamicResource Brush.Text.Secondary}"
                                TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
                 </StackPanel>
             </Grid>
         </ScrollViewer>
 
-        <TextBlock Grid.Row="2" Text="{Binding NavigationStatusText}" Margin="14,6,14,12"
+        <TextBlock Grid.Row="3" Text="{Binding NavigationStatusText}" Margin="14,6,14,12"
                    FontSize="9.8" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" />
     </Grid>
 </UserControl>

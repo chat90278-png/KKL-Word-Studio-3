@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Border Background="{DynamicResource Brush.Surface.Alt}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1,0,0,0">
         <Grid>
-            <!-- Normal / Expanded: segmented header + active page body -->
             <DockPanel Visibility="{Binding State, ConverterParameter=Collapsed, Converter={StaticResource EnumNotEqualToVisibility}}">
                 <Border DockPanel.Dock="Top" Height="48" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
                     <Grid Margin="9,0">
@@ -25,9 +24,10 @@
                                              Command="{Binding ShowWarningsCommand}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="Uyarılar" />
-                                        <Border Background="#FFFFE3A1" CornerRadius="7" Padding="5,1" Margin="5,0,0,0"
+                                        <Border Background="{Binding Diagnostics.BadgeBackground}" CornerRadius="7" Padding="5,1" Margin="5,0,0,0"
                                                 Visibility="{Binding Diagnostics.HasItems, Converter={StaticResource BoolToVisibility}}">
-                                            <TextBlock Text="{Binding Diagnostics.CountText}" FontSize="9" FontWeight="Bold" Foreground="#FF8A5A00" />
+                                            <TextBlock Text="{Binding Diagnostics.CountText}" FontSize="9" FontWeight="Bold"
+                                                       Foreground="{Binding Diagnostics.BadgeForeground}" />
                                         </Border>
                                     </StackPanel>
                                 </RadioButton>
@@ -49,7 +49,6 @@
                 </Grid>
             </DockPanel>
 
-            <!-- Collapsed: minimal icon rail -->
             <StackPanel Visibility="{Binding State, ConverterParameter=Collapsed, Converter={StaticResource EnumEqualsToVisibility}}"
                         HorizontalAlignment="Center" Margin="0,10,0,0">
                 <Button Content="☷" ToolTip="İçindekiler" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToContentsCommand}" Margin="0,0,0,7" />

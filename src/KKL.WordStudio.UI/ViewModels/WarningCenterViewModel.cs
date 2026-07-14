@@ -7,6 +7,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KKL.WordStudio.Application.Preview;
 
+public enum WarningCenterFilter
+{
+    All,
+    Error,
+    Warning,
+    Information
+}
+
 public sealed partial class WarningCenterViewModel : ViewModelBase
 {
     private readonly PreviewDiagnosticsStore _store;
@@ -18,9 +26,21 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
     [ObservableProperty]
     private string _navigationStatusText = string.Empty;
 
+    [ObservableProperty]
+    private WarningCenterFilter _filter = WarningCenterFilter.All;
+
     public int Count => Items.Count;
     public bool HasItems => Count > 0;
-    public string HeaderText => HasItems ? $"{Count} uyarı bulundu" : "Uyarı yok";
+    public int TotalCount => _store.Count;
+    public int ErrorCount => _store.ErrorCount;
+    public int WarningCount => _store.WarningCount;
+    public int InformationCount => _store.InformationCount;
+    public bool HasBlockingErrors => _store.HasBlockingErrors;
+    public string HeaderText => TotalCount == 0
+        ? "Sorun bulunamadı"
+        : HasBlockingErrors
+            ? $"{ErrorCount} hata · {WarningCount} uyarı · {InformationCount} bilgi"
+            : $"{WarningCount} uyarı · {InformationCount} bilgi";
 
     public WarningCenterViewModel(
         PreviewDiagnosticsStore store,
@@ -37,23 +57,39 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void ShowAll() => Filter = WarningCenterFilter.All;
+
+    [RelayCommand]
+    private void ShowErrors() => Filter = WarningCenterFilter.Error;
+
+    [RelayCommand]
+    private void ShowWarnings() => Filter = WarningCenterFilter.Warning;
+
+    [RelayCommand]
+    private void ShowInformation() => Filter = WarningCenterFilter.Information;
+
+    partial void OnFilterChanged(WarningCenterFilter value) => RebuildItems();
+
+    [RelayCommand]
     private async Task NavigateAsync(WarningDiagnosticItemViewModel? item)
     {
         if (item is null)
             return;
 
-        var diagnostic = item.Diagnostic;
+        var group = item.Group;
         var previewNavigated = false;
-        if (diagnostic.ElementId is { } elementId)
+        if (group.ElementId is { } elementId)
         {
+            ReportPaneViewModel.Shared.OpenForAction();
             _previewViewModel.NavigateToElement(elementId);
             previewNavigated = true;
         }
 
         var excelNavigated = false;
-        foreach (var source in diagnostic.Sources)
+        foreach (var source in group.Sources)
         {
-            if (await _excelWorkspaceViewModel.NavigateToDiagnosticSourceAsync(source, diagnostic.KeyValue))
+            var key = group.KeyValues.FirstOrDefault();
+            if (await _excelWorkspaceViewModel.NavigateToDiagnosticSourceAsync(source, key))
             {
                 excelNavigated = true;
                 break;
@@ -62,10 +98,10 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
 
         NavigationStatusText = (previewNavigated, excelNavigated) switch
         {
-            (true, true) => "Önizleme tablosu ve Excel kaynağı vurgulandı.",
-            (true, false) => "Önizleme tablosuna gidildi; kaynak hücre bulunamadı.",
+            (true, true) => "İlgili rapor öğesi ve Excel kaynağı vurgulandı.",
+            (true, false) => "İlgili rapor öğesine gidildi; kaynak hücre bulunamadı.",
             (false, true) => "Excel kaynağına gidildi.",
-            _ => "Bu uyarı için doğrudan gidilebilecek bir hedef yok."
+            _ => "Bu kayıt için doğrudan gidilebilecek bir hedef yok."
         };
     }
 
@@ -73,15 +109,29 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
 
     private void Diagnostics_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(PreviewDiagnosticsStore.Count) or nameof(PreviewDiagnosticsStore.HasItems))
-            PublishSummaryProperties();
+        if (e.PropertyName is nameof(PreviewDiagnosticsStore.Count)
+            or nameof(PreviewDiagnosticsStore.ErrorCount)
+            or nameof(PreviewDiagnosticsStore.WarningCount)
+            or nameof(PreviewDiagnosticsStore.InformationCount)
+            or nameof(PreviewDiagnosticsStore.HasBlockingErrors))
+        {
+            RebuildItems();
+        }
     }
 
     private void RebuildItems()
     {
+        var selectedSeverity = Filter switch
+        {
+            WarningCenterFilter.Error => PreviewDiagnosticSeverity.Error,
+            WarningCenterFilter.Warning => PreviewDiagnosticSeverity.Warning,
+            WarningCenterFilter.Information => PreviewDiagnosticSeverity.Information,
+            _ => (PreviewDiagnosticSeverity?)null
+        };
+
         Items.Clear();
-        foreach (var diagnostic in _store.Items)
-            Items.Add(new WarningDiagnosticItemViewModel(diagnostic));
+        foreach (var group in _store.Groups.Where(group => selectedSeverity is null || group.Severity == selectedSeverity))
+            Items.Add(new WarningDiagnosticItemViewModel(group));
 
         NavigationStatusText = string.Empty;
         PublishSummaryProperties();
@@ -91,39 +141,77 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(Count));
         OnPropertyChanged(nameof(HasItems));
+        OnPropertyChanged(nameof(TotalCount));
+        OnPropertyChanged(nameof(ErrorCount));
+        OnPropertyChanged(nameof(WarningCount));
+        OnPropertyChanged(nameof(InformationCount));
+        OnPropertyChanged(nameof(HasBlockingErrors));
         OnPropertyChanged(nameof(HeaderText));
     }
 }
 
 public sealed class WarningDiagnosticItemViewModel
 {
-    public WarningDiagnosticItemViewModel(PreviewDiagnostic diagnostic)
+    public WarningDiagnosticItemViewModel(PreviewDiagnosticGroup group)
     {
-        Diagnostic = diagnostic;
-        SourceText = BuildSourceText(diagnostic);
+        Group = group;
+        SourceText = BuildSourceText(group);
+        KeyText = BuildKeyText(group);
     }
 
-    public PreviewDiagnostic Diagnostic { get; }
-    public string Title => Diagnostic.Title;
-    public string Message => Diagnostic.Message;
-    public string ElementName => Diagnostic.ElementName ?? string.Empty;
-    public string KeyText => string.IsNullOrWhiteSpace(Diagnostic.KeyValue) ? string.Empty : $"Anahtar: {Diagnostic.KeyValue}";
+    public PreviewDiagnosticGroup Group { get; }
+    public string Title => Group.Title;
+    public string Message => Group.Message;
+    public string ElementName => Group.ElementName ?? string.Empty;
+    public string KeyText { get; }
     public string SourceText { get; }
+    public int OccurrenceCount => Group.OccurrenceCount;
+    public bool HasMultipleOccurrences => OccurrenceCount > 1;
+    public string OccurrenceText => $"{OccurrenceCount} tekrar";
     public bool HasElementName => !string.IsNullOrWhiteSpace(ElementName);
-    public bool HasKey => !string.IsNullOrWhiteSpace(Diagnostic.KeyValue);
-    public bool HasSource => Diagnostic.Sources.Count > 0;
-    public bool CanNavigate => Diagnostic.ElementId is not null || HasSource;
-
-    private static string BuildSourceText(PreviewDiagnostic diagnostic)
+    public bool HasKey => Group.KeyValues.Count > 0;
+    public bool HasSource => Group.Sources.Count > 0;
+    public bool CanNavigate => Group.ElementId is not null || HasSource;
+    public bool IsError => Group.Severity == PreviewDiagnosticSeverity.Error;
+    public bool IsWarning => Group.Severity == PreviewDiagnosticSeverity.Warning;
+    public bool IsInformation => Group.Severity == PreviewDiagnosticSeverity.Information;
+    public string SeverityText => Group.Severity switch
     {
-        if (diagnostic.Sources.Count == 0)
+        PreviewDiagnosticSeverity.Error => "Hata",
+        PreviewDiagnosticSeverity.Warning => "Uyarı",
+        _ => "Bilgi"
+    };
+    public string SeverityBrush => Group.Severity switch
+    {
+        PreviewDiagnosticSeverity.Error => "#FFD9485F",
+        PreviewDiagnosticSeverity.Warning => "#FFF2B84B",
+        _ => "#FF4B8FE2"
+    };
+
+    private static string BuildKeyText(PreviewDiagnosticGroup group)
+    {
+        if (group.KeyValues.Count == 0)
+            return string.Empty;
+        if (group.KeyValues.Count == 1)
+            return $"Anahtar: {group.KeyValues[0]}";
+        return $"{group.KeyValues.Count} farklı anahtar";
+    }
+
+    private static string BuildSourceText(PreviewDiagnosticGroup group)
+    {
+        if (group.Sources.Count == 0)
             return string.Empty;
 
-        return string.Join("  •  ", diagnostic.Sources.Select(source =>
+        var visible = group.Sources.Take(3).Select(source =>
         {
             var parts = new[] { source.DataSourceName, source.WorksheetName, source.RangeReference }
                 .Where(part => !string.IsNullOrWhiteSpace(part));
             return string.Join(" · ", parts);
-        }));
+        }).ToList();
+
+        if (group.Sources.Count > visible.Count)
+            visible.Add($"+{group.Sources.Count - visible.Count} kaynak");
+
+        return string.Join("  •  ", visible);
     }
 }

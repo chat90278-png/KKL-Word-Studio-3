@@ -78,13 +78,22 @@ public sealed class Sprint23CurrentContractCharacterizationTests
         var contents = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ContentsViewModel.cs");
         var structure = Read(root, "src", "KKL.WordStudio.Application", "Structure", "ReportStructureService.cs");
         var warnings = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "WarningCenterViewModel.cs");
+        var summaries = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnosticSummaryService.cs");
 
         Assert.Contains("a flat sequence of Heading/AltHeading/Table", contents, StringComparison.Ordinal);
         Assert.Contains("section.Root.Children", contents, StringComparison.Ordinal);
         Assert.Contains("never introduces a second outline", structure, StringComparison.Ordinal);
+
+        // The stable test name is retained for inventory continuity. The accepted
+        // warning contract now projects raw diagnostics into grouped, severity-aware
+        // actions without changing the report outline or introducing a second validator.
         Assert.Contains("public int Count => Items.Count;", warnings, StringComparison.Ordinal);
-        Assert.Contains("public string HeaderText => HasItems ? $\"{Count} uyarı bulundu\" : \"Uyarı yok\";", warnings, StringComparison.Ordinal);
-        Assert.DoesNotContain("DiagnosticSeverity", warnings, StringComparison.Ordinal);
+        Assert.Contains("public int TotalCount => _store.Count;", warnings, StringComparison.Ordinal);
+        Assert.Contains("WarningCenterFilter", warnings, StringComparison.Ordinal);
+        Assert.Contains("_store.Groups", warnings, StringComparison.Ordinal);
+        Assert.Contains("PreviewDiagnosticSeverity", warnings, StringComparison.Ordinal);
+        Assert.Contains("PreviewDiagnosticSummaryService", summaries, StringComparison.Ordinal);
+        Assert.Contains("OccurrenceCount", summaries, StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] parts) =>
