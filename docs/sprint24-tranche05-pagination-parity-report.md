@@ -78,6 +78,22 @@ Coverage includes:
 - stable repeated layout plan;
 - no second paginator/export fragmenter and no UI pagination ownership.
 
+## Windows stabilization findings
+
+The first supplied Windows run did not include `git rev-parse HEAD`, so it cannot be accepted as an exact-head gate. It exposed the following real failures in the pre-fix branch snapshot:
+
+- `ReportFlowPaginationPolicyTests` constructed `ResolvedTextFormat` without its required fields: `12 × CS9035`.
+- `Sprint24HeadingChainPaginationTests` directly referenced internal `LayoutPageFlow`: `1 × CS0122`.
+- The architecture test used a broad text search that counted non-implementation/generated source matches as a second layout engine.
+- Adding `CantSplit` through OpenXML schema-order normalization removed the existing `TableHeader` marker in the in-memory row properties, breaking the new repeat-header test and the Sprint 18 canonical DOCX regression.
+
+Corrections:
+
+- Test format fixtures now initialize the complete resolved text format contract.
+- Heading-chain tests now exercise the public `DeterministicDocumentLayoutEngine` path.
+- Architecture source scans exclude `bin/obj` and match concrete class/record inheritance declarations only.
+- Word row pagination preserves and restores the native `TableHeader` marker while adding `CantSplit`.
+
 ## Windows gate
 
 ```bat
@@ -117,6 +133,7 @@ Expected:
 ## Gate status
 
 - Source review: complete.
+- First supplied Windows run: RED on a pre-fix snapshot; failures diagnosed and corrected.
 - GitHub CI status: no checks are configured/reported for the current head.
-- Exact-head Windows build/test/manual smoke: pending user evidence.
+- Current exact-head Windows build/test/manual smoke: pending user evidence.
 - PR must remain draft and must not be merged until the Windows gate is GREEN.
