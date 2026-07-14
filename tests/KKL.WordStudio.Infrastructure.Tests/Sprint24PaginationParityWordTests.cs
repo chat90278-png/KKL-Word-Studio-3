@@ -32,6 +32,23 @@ public sealed class Sprint24PaginationParityWordTests
     }
 
     [Fact]
+    public void HeaderAndLeadingRows_UseSharedKeepNextStartRequirement()
+    {
+        var body = new Body();
+
+        WordContentWriter.AppendNode(body, CreateTable(repeatHeader: true));
+
+        var rows = Assert.Single(body.Elements<Table>()).Elements<TableRow>().ToList();
+        Assert.Equal(3, rows.Count);
+        Assert.All(rows.Take(2), row => Assert.All(
+            row.Descendants<Paragraph>(),
+            paragraph => Assert.NotNull(paragraph.ParagraphProperties?.GetFirstChild<KeepNext>())));
+        Assert.All(
+            rows[^1].Descendants<Paragraph>(),
+            paragraph => Assert.Null(paragraph.ParagraphProperties?.GetFirstChild<KeepNext>()));
+    }
+
+    [Fact]
     public void RepeatingHeader_RemainsNativeWordHeaderRow()
     {
         var body = new Body();
