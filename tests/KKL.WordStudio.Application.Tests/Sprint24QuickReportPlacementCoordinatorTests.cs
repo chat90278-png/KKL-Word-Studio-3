@@ -33,14 +33,15 @@ public sealed class Sprint24QuickReportPlacementCoordinatorTests
         Assert.Equal(2, result.CreatedElementIds.Count);
         var alt = Assert.IsType<TextElement>(body.Root.Children.Single(element =>
             element.Id == result.CreatedElementIds[0]));
+        var table = Assert.IsType<TableElement>(result.TransferResult.Table);
         Assert.True(HeadingStylePresets.IsAltHeading(alt.Style));
         Assert.Equal("Alt Heading", alt.Name);
-        Assert.Equal(alt.Id, body.Root.Children[body.Root.Children.IndexOf(alt)].Id);
-        Assert.Equal(result.TransferResult.Table!.Id, result.CreatedElementIds[1]);
+        Assert.Equal(body.Root.Children.IndexOf(alt) + 1, body.Root.Children.IndexOf(table));
+        Assert.Equal(table.Id, result.CreatedElementIds[1]);
     }
 
     [Fact]
-    public void AltHeadingAnchor_WithBothRowsDisabled_AppendsOnlyTableToThatBlock()
+    public void AltHeadingAnchor_WithBothRowsDisabled_InsertsOnlyNewTableDirectlyUnderIt()
     {
         var (project, report, body) = CreateProjectAndReport();
         var heading = Heading("Parent");
@@ -65,7 +66,9 @@ public sealed class Sprint24QuickReportPlacementCoordinatorTests
         Assert.Equal(TransferOutcome.Success, result.TransferResult.Outcome);
         Assert.Single(result.CreatedElementIds);
         var createdTable = Assert.IsType<TableElement>(result.TransferResult.Table);
-        Assert.True(body.Root.Children.IndexOf(createdTable) > body.Root.Children.IndexOf(existingTable));
+        Assert.True(result.TransferResult.CreatedNewTable);
+        Assert.Equal(body.Root.Children.IndexOf(alt) + 1, body.Root.Children.IndexOf(createdTable));
+        Assert.True(body.Root.Children.IndexOf(createdTable) < body.Root.Children.IndexOf(existingTable));
         Assert.True(body.Root.Children.IndexOf(createdTable) < body.Root.Children.IndexOf(nextHeading));
     }
 
