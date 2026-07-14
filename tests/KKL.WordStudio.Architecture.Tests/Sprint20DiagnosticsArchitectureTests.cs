@@ -22,7 +22,7 @@ public sealed class Sprint20DiagnosticsArchitectureTests
 
         Assert.Contains("Content=\"İçindekiler\"", dock, StringComparison.Ordinal);
         Assert.Contains("Content=\"Özellikler\"", dock, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Uyarılar\"", dock, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Kontrol\"", dock, StringComparison.Ordinal);
         Assert.Contains("WarningsHost", dock, StringComparison.Ordinal);
         Assert.Contains("ConverterParameter=Warnings", dock, StringComparison.Ordinal);
         Assert.Contains("DockPage { Contents, Properties, Warnings, ChangeBinding }", dockState, StringComparison.Ordinal);
