@@ -3,6 +3,7 @@ namespace KKL.WordStudio.UI.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KKL.WordStudio.Application.Abstractions;
+using KKL.WordStudio.Application.Preview;
 using KKL.WordStudio.Application.Workspace;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.UI.Services;
@@ -22,6 +23,7 @@ public sealed partial class MainViewModel : ViewModelBase
     private readonly IFileDialogService _fileDialogService;
     private readonly IShellLauncher _shellLauncher;
     private readonly ILogger<MainViewModel> _logger;
+    private readonly IDialogService? _dialogService;
 
     /// <summary>Shared with ContextDockView/ContentsViewModel/PropertiesViewModel via DI (registered as a singleton) — the shell's Grid column width binds to its State.</summary>
     public DockViewModel DockViewModel { get; }
@@ -46,7 +48,8 @@ public sealed partial class MainViewModel : ViewModelBase
         IFileDialogService fileDialogService,
         IShellLauncher shellLauncher,
         DockViewModel dockViewModel,
-        ILogger<MainViewModel> logger)
+        ILogger<MainViewModel> logger,
+        IDialogService? dialogService = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
         _exporterRegistry = exporterRegistry;
@@ -55,6 +58,7 @@ public sealed partial class MainViewModel : ViewModelBase
         _shellLauncher = shellLauncher;
         DockViewModel = dockViewModel;
         _logger = logger;
+        _dialogService = dialogService;
 
         _currentProject = projectService.CreateNew();
         _workspace.SetActiveProject(_currentProject);
@@ -71,6 +75,28 @@ public sealed partial class MainViewModel : ViewModelBase
         if (report is null)
         {
             StatusText = "Word dosyası oluşturulamadı — etkin rapor çalışma alanı hazır değil.";
+            return;
+        }
+
+        var readiness = ReportReadinessAssessment.FromGroups(DockViewModel.Diagnostics.Groups);
+        if (readiness.BlocksExport)
+        {
+            ReportPaneViewModel.Shared.OpenForAction();
+            DockViewModel.ShowWarningsCommand.Execute(null);
+            StatusText = $"Word dosyası oluşturulmadı — önce {readiness.ErrorGroupCount} kritik hatayı düzeltin.";
+            _dialogService?.ShowError(
+                $"Raporda {readiness.ErrorGroupCount} kritik hata grubu ({readiness.ErrorOccurrenceCount} hata bulgusu) var. Kontrol sekmesindeki hataları düzeltmeden Word dosyası oluşturulamaz.",
+                "Rapor Word'e Hazır Değil");
+            return;
+        }
+
+        if (readiness.RequiresWarningConfirmation
+            && _dialogService is not null
+            && !_dialogService.ShowConfirmation(
+                $"Raporda {readiness.WarningGroupCount} uyarı grubu ({readiness.WarningOccurrenceCount} uyarı bulgusu) var. Yine de Word dosyası oluşturulsun mu?",
+                "Uyarılarla Devam Et"))
+        {
+            StatusText = "Word dosyası oluşturma kullanıcı tarafından iptal edildi.";
             return;
         }
 
