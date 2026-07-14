@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.Engine.Tests;
 
 using KKL.WordStudio.Application.Content;
+using KKL.WordStudio.Application.Formatting;
 using KKL.WordStudio.Application.Layout;
 using KKL.WordStudio.Engine.Layout;
 using Xunit;
@@ -78,7 +79,6 @@ public sealed class Sprint24PaginationParityTests
         var document = CreateDocument(
             pageHeightMillimeters: 297d,
             bodyNodes: [CreateTable(tableId, rowCount: 100, repeatHeader: true)]);
-
         var layout = await LayoutAsync(document);
         var fragments = TableFragments(layout, tableId);
         var flattenedRowNumbers = fragments
@@ -152,9 +152,18 @@ public sealed class Sprint24PaginationParityTests
             .Select(index => (IReadOnlyList<string>)[index.ToString(), $"Part {index}", "1"])
             .ToList(),
         SourceCount = 0,
-        Format = new()
+        Format = new ResolvedTableFormat
         {
-            RepeatHeader = repeatHeader
+            WidthPercent = 100d,
+            FixedLayout = true,
+            BorderSizePoints = 0.5d,
+            CellMarginTopMillimeters = 0d,
+            CellMarginBottomMillimeters = 0d,
+            CellMarginLeftMillimeters = 0d,
+            CellMarginRightMillimeters = 0d,
+            PreferredRowHeightMillimeters = 0d,
+            RepeatHeader = repeatHeader,
+            Columns = Array.Empty<ResolvedTableColumnFormat>()
         }
     };
 
