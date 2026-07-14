@@ -25,10 +25,7 @@ public sealed partial class MainViewModel : ViewModelBase
     private readonly ILogger<MainViewModel> _logger;
     private readonly IDialogService? _dialogService;
 
-    /// <summary>Shared with ContextDockView/ContentsViewModel/PropertiesViewModel via DI (registered as a singleton) — the shell's Grid column width binds to its State.</summary>
     public DockViewModel DockViewModel { get; }
-
-    /// <summary>Shared session-only busy state rendered by MainWindow as a full interaction shield.</summary>
     public LongOperationViewModel LongOperation { get; } = LongOperationViewModel.Shared;
 
     [ObservableProperty]
@@ -37,7 +34,6 @@ public sealed partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusText = "Hazır";
 
-    /// <summary>Set after a successful export — enables the "Open file"/"Open folder" actions.</summary>
     [ObservableProperty]
     private string? _lastExportedFilePath;
 
@@ -81,23 +77,32 @@ public sealed partial class MainViewModel : ViewModelBase
         var readiness = ReportReadinessAssessment.FromGroups(DockViewModel.Diagnostics.Groups);
         if (readiness.BlocksExport)
         {
-            ReportPaneViewModel.Shared.OpenForAction();
-            DockViewModel.ShowWarningsCommand.Execute(null);
+            OpenControlCenter();
             StatusText = $"Word dosyası oluşturulmadı — önce {readiness.ErrorGroupCount} kritik hatayı düzeltin.";
             _dialogService?.ShowError(
-                $"Raporda {readiness.ErrorGroupCount} kritik hata grubu ({readiness.ErrorOccurrenceCount} hata bulgusu) var. Kontrol sekmesindeki hataları düzeltmeden Word dosyası oluşturulamaz.",
+                $"Raporda {readiness.ErrorGroupCount} kritik hata türü ve {readiness.ErrorOccurrenceCount} hata kaydı var. Kontrol sekmesindeki kırmızı hatalar düzeltilmeden Word dosyası oluşturulamaz.",
                 "Rapor Word'e Hazır Değil");
             return;
         }
 
-        if (readiness.RequiresWarningConfirmation
-            && _dialogService is not null
-            && !_dialogService.ShowConfirmation(
-                $"Raporda {readiness.WarningGroupCount} uyarı grubu ({readiness.WarningOccurrenceCount} uyarı bulgusu) var. Yine de Word dosyası oluşturulsun mu?",
-                "Uyarılarla Devam Et"))
+        if (readiness.RequiresWarningConfirmation)
         {
-            StatusText = "Word dosyası oluşturma kullanıcı tarafından iptal edildi.";
-            return;
+            var decision = _dialogService?.ShowExportWarningDecision(
+                $"Raporda {readiness.WarningGroupCount} uyarı türü var. Toplam {readiness.WarningOccurrenceCount} kayıt etkileniyor.",
+                "Uyarılarla Devam Et") ?? ExportWarningDecision.Review;
+
+            if (decision == ExportWarningDecision.Review)
+            {
+                OpenControlCenter();
+                StatusText = "Word dosyası oluşturulmadı — uyarılar Kontrol merkezinde açıldı.";
+                return;
+            }
+
+            if (decision == ExportWarningDecision.Cancel)
+            {
+                StatusText = "Word dosyası oluşturma kullanıcı tarafından iptal edildi.";
+                return;
+            }
         }
 
         var path = _fileDialogService.SaveWordFile(report.Name);
@@ -120,6 +125,12 @@ public sealed partial class MainViewModel : ViewModelBase
         LastExportedFilePath = path;
         StatusText = $"'{report.Name}' raporu '{path}' konumuna aktarıldı";
         _logger.LogInformation("Exported report {ReportId} to {Path}", report.Id, path);
+    }
+
+    private void OpenControlCenter()
+    {
+        ReportPaneViewModel.Shared.OpenForAction();
+        DockViewModel.ShowWarningsCommand.Execute(null);
     }
 
     [RelayCommand(CanExecute = nameof(HasLastExportedFile))]
