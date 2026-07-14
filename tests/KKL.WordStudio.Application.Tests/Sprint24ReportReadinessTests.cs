@@ -20,7 +20,7 @@ public sealed class Sprint24ReportReadinessTests
 
         var group = Assert.Single(consolidated);
         Assert.Equal(3, group.OccurrenceCount);
-        Assert.Null(group.KeyValue);
+        Assert.Equal("1001", group.KeyValue);
         Assert.Equal(3, group.Sources.Count);
         Assert.Equal(elementId, group.ElementId);
     }
