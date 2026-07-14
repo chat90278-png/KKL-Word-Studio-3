@@ -146,8 +146,8 @@ public partial class ContentsView : UserControl
     private void ClearDropIndicator()
     {
         if (_dropTargetItem is null) return;
-        _dropTargetItem.ClearValue(Border.BorderBrushProperty);
-        _dropTargetItem.ClearValue(Border.BorderThicknessProperty);
+        _dropTargetItem.ClearValue(Control.BorderBrushProperty);
+        _dropTargetItem.ClearValue(Control.BorderThicknessProperty);
         _dropTargetItem.ClearValue(Control.BackgroundProperty);
         _dropTargetItem.ClearValue(ToolTipProperty);
         _dropTargetItem = null;
