@@ -50,7 +50,7 @@ public sealed class Sprint24QuickReportStructureArchitectureTests
         Assert.Contains("MoveEarlierCommand", view, StringComparison.Ordinal);
         Assert.Contains("MoveLaterCommand", view, StringComparison.Ordinal);
         Assert.Contains("OrderBy(sheet => sheet.SelectionOrder", viewModel, StringComparison.Ordinal);
-        Assert.Contains("existing.Where(anchor => anchor.Kind == requiredKind)", viewModel, StringComparison.Ordinal);
+        Assert.Contains(".Where(anchor => anchor.Kind == requiredKind)", viewModel, StringComparison.Ordinal);
         Assert.Contains("ordered.Take", viewModel, StringComparison.Ordinal);
     }
 
@@ -75,6 +75,7 @@ public sealed class Sprint24QuickReportStructureArchitectureTests
         Assert.Contains("source?.CreatedAltHeadingElementId", quickVm, StringComparison.Ordinal);
         Assert.Contains("MatchesRequiredAnchor", coordinator, StringComparison.Ordinal);
         Assert.Contains("FindAnchorBlockEnd", coordinator, StringComparison.Ordinal);
+        Assert.Contains("MoveTableToAnchorBlockEnd", coordinator, StringComparison.Ordinal);
         Assert.DoesNotContain("new ReportStructureService", quick, StringComparison.Ordinal);
         Assert.DoesNotContain("new OpenXmlExcelWorkbookReader", quick, StringComparison.Ordinal);
     }
