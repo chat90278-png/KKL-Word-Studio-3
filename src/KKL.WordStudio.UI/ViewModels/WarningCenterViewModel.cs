@@ -20,7 +20,12 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
 
     public int Count => Items.Count;
     public bool HasItems => Count > 0;
-    public string HeaderText => HasItems ? $"{Count} uyarı bulundu" : "Uyarı yok";
+    public string HeaderText => !HasItems
+        ? "Rapor Word'e hazır"
+        : $"{_store.ErrorCount} hata · {_store.WarningCount} uyarı · {_store.InformationCount} bilgi";
+    public string DetailText => !HasItems
+        ? "Önizleme doğrulamasında sorun bulunmadı."
+        : $"{Count} grup içinde {_store.TotalOccurrenceCount} bulgu birleştirildi.";
 
     public WarningCenterViewModel(
         PreviewDiagnosticsStore store,
@@ -46,6 +51,7 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
         var previewNavigated = false;
         if (diagnostic.ElementId is { } elementId)
         {
+            ReportPaneViewModel.Shared.OpenForAction();
             _previewViewModel.NavigateToElement(elementId);
             previewNavigated = true;
         }
@@ -62,10 +68,10 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
 
         NavigationStatusText = (previewNavigated, excelNavigated) switch
         {
-            (true, true) => "Önizleme tablosu ve Excel kaynağı vurgulandı.",
-            (true, false) => "Önizleme tablosuna gidildi; kaynak hücre bulunamadı.",
+            (true, true) => "Önizleme öğesi ve Excel kaynağı vurgulandı.",
+            (true, false) => "Önizleme öğesine gidildi; belirli kaynak hücresi bulunamadı.",
             (false, true) => "Excel kaynağına gidildi.",
-            _ => "Bu uyarı için doğrudan gidilebilecek bir hedef yok."
+            _ => "Bu bulgu için doğrudan gidilebilecek bir hedef yok."
         };
     }
 
@@ -73,8 +79,15 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
 
     private void Diagnostics_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(PreviewDiagnosticsStore.Count) or nameof(PreviewDiagnosticsStore.HasItems))
+        if (e.PropertyName is nameof(PreviewDiagnosticsStore.Count)
+            or nameof(PreviewDiagnosticsStore.TotalOccurrenceCount)
+            or nameof(PreviewDiagnosticsStore.ErrorCount)
+            or nameof(PreviewDiagnosticsStore.WarningCount)
+            or nameof(PreviewDiagnosticsStore.InformationCount)
+            or nameof(PreviewDiagnosticsStore.HasItems))
+        {
             PublishSummaryProperties();
+        }
     }
 
     private void RebuildItems()
@@ -92,6 +105,7 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
         OnPropertyChanged(nameof(Count));
         OnPropertyChanged(nameof(HasItems));
         OnPropertyChanged(nameof(HeaderText));
+        OnPropertyChanged(nameof(DetailText));
     }
 }
 
@@ -104,6 +118,29 @@ public sealed class WarningDiagnosticItemViewModel
     }
 
     public PreviewDiagnostic Diagnostic { get; }
+    public PreviewDiagnosticSeverity Severity => Diagnostic.Severity;
+    public string SeverityText => Severity switch
+    {
+        PreviewDiagnosticSeverity.Error => "Hata",
+        PreviewDiagnosticSeverity.Warning => "Uyarı",
+        _ => "Bilgi"
+    };
+    public string SeverityAccent => Severity switch
+    {
+        PreviewDiagnosticSeverity.Error => "#FFD92D20",
+        PreviewDiagnosticSeverity.Warning => "#FFF2B84B",
+        _ => "#FF3B82F6"
+    };
+    public string SeverityBackground => Severity switch
+    {
+        PreviewDiagnosticSeverity.Error => "#FFFFE8E7",
+        PreviewDiagnosticSeverity.Warning => "#FFFFF4D6",
+        _ => "#FFEAF2FF"
+    };
+    public string OccurrenceText => Diagnostic.OccurrenceCount > 1
+        ? $"{Diagnostic.OccurrenceCount} kez"
+        : string.Empty;
+    public bool HasMultipleOccurrences => Diagnostic.OccurrenceCount > 1;
     public string Title => Diagnostic.Title;
     public string Message => Diagnostic.Message;
     public string ElementName => Diagnostic.ElementName ?? string.Empty;
