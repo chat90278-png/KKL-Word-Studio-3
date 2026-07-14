@@ -189,6 +189,24 @@
                                                      IsEnabled="{Binding IncludeAltHeading}" />
                                         </Grid>
 
+                                        <Grid Margin="44,0,0,7"
+                                              Visibility="{Binding RequiresPlacementTarget, Converter={StaticResource BoolToVisibility}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="76" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding PlacementTargetLabel}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1">
+                                                <ComboBox ItemsSource="{Binding PlacementTargets}"
+                                                          SelectedItem="{Binding SelectedPlacementTarget, Mode=TwoWay}"
+                                                          DisplayMemberPath="DisplayText"
+                                                          ToolTip="{Binding PlacementTargetHint}" />
+                                                <TextBlock Text="{Binding PlacementTargetHint}" Margin="2,3,0,0"
+                                                           FontSize="9.5" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Grid>
+
                                         <Grid Margin="44,0,0,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="76" />
