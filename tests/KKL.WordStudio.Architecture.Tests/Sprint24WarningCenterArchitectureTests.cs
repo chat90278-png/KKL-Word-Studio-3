@@ -56,17 +56,23 @@ public sealed class Sprint24WarningCenterArchitectureTests
         var summary = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnosticSummaryService.cs");
         var view = Read(root, "src", "KKL.WordStudio.UI", "Views", "WarningCenterView.xaml");
         var viewModel = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "WarningCenterViewModel.cs");
+        var occurrenceDetails = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "WarningCenterViewModel.OccurrenceDetails.cs");
 
         Assert.Contains("QUANTITY_INVALID", catalog, StringComparison.Ordinal);
         Assert.Contains("SRC_FILE_MISSING", catalog, StringComparison.Ordinal);
         Assert.Contains("TABLE_SPLIT", catalog, StringComparison.Ordinal);
+        Assert.Contains("ROWS_SKIPPED", catalog, StringComparison.Ordinal);
+        Assert.Contains("DEFAULT_TITLE_USED", catalog, StringComparison.Ordinal);
         Assert.Contains("first.Code", summary, StringComparison.Ordinal);
         Assert.Contains("RowNumbers", summary, StringComparison.Ordinal);
         Assert.Contains("Content=\"İlk Kayda Git\"", view, StringComparison.Ordinal);
         Assert.Contains("Content=\"Sonraki\"", view, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Tümünü Göster\"", view, StringComparison.Ordinal);
         Assert.Contains("NavigateFirstCommand", view, StringComparison.Ordinal);
         Assert.Contains("NavigateNextCommand", view, StringComparison.Ordinal);
+        Assert.Contains("ShowAllOccurrencesCommand", view, StringComparison.Ordinal);
         Assert.Contains("GetNavigationKey", viewModel, StringComparison.Ordinal);
+        Assert.Contains("NavigationStatusText = string.Join", occurrenceDetails, StringComparison.Ordinal);
         Assert.Contains("Word'e hazır", viewModel, StringComparison.Ordinal);
     }
 
