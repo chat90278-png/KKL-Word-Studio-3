@@ -64,7 +64,7 @@ public sealed class Sprint24PaginationParityArchitectureTests
     {
         var root = SolutionRootLocator.Find();
         var implementationPattern = new Regex(
-            @"\b(?:class|record)\s+\w+[^\r\n{]*:\s*[^\r\n{]*\bIDocumentLayoutEngine\b",
+            @"\b(?:class|record)\s+\w+(?:<[^>\r\n]+>)?\s*:\s*[^\r\n{]*\bIDocumentLayoutEngine\b",
             RegexOptions.CultureInvariant);
         var implementations = EnumerateProductionSourceFiles(Path.Combine(root, "src"))
             .Where(file => implementationPattern.IsMatch(File.ReadAllText(file)))
