@@ -36,7 +36,7 @@ public sealed class Sprint24PaginationParityTests
                     Kind = ReportContentKind.AltHeading,
                     Text = "Alt heading"
                 },
-                CreateTable(tableId, rowCount: 2, repeatHeader: true)
+                CreateTable(tableId, rowCount: 5, repeatHeader: true)
             ]);
 
         var layout = await LayoutAsync(document);
@@ -51,7 +51,7 @@ public sealed class Sprint24PaginationParityTests
         Assert.Equal(headingPage, altHeadingPage);
         Assert.Equal(headingPage, tablePage);
         Assert.NotNull(firstTableFragment.Caption);
-        Assert.NotEmpty(firstTableFragment.Rows);
+        Assert.True(firstTableFragment.Rows.Count >= 3);
     }
 
     [Fact]
