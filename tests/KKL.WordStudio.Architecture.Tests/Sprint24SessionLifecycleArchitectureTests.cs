@@ -56,7 +56,8 @@ public sealed class Sprint24SessionLifecycleArchitectureTests
         var quick = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.QuickAssembly.cs");
         var normal = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.TransferPlacement.cs");
 
-        Assert.Contains("_transferService.Transfer(project, report, request)", quick, StringComparison.Ordinal);
+        Assert.Contains("ExcelTransferPlacementCoordinator.Transfer", quick, StringComparison.Ordinal);
+        Assert.Contains("_transferService", quick, StringComparison.Ordinal);
         Assert.Contains("ExcelTransferPlacementCoordinator.Transfer", normal, StringComparison.Ordinal);
         Assert.DoesNotContain("new ExcelReportTransferService", quick, StringComparison.Ordinal);
         Assert.DoesNotContain("önce bir proje oluşturun veya açın", quick, StringComparison.OrdinalIgnoreCase);
