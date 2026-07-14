@@ -144,7 +144,11 @@ public sealed class WarningDiagnosticItemViewModel
     public string Title => Diagnostic.Title;
     public string Message => Diagnostic.Message;
     public string ElementName => Diagnostic.ElementName ?? string.Empty;
-    public string KeyText => string.IsNullOrWhiteSpace(Diagnostic.KeyValue) ? string.Empty : $"Anahtar: {Diagnostic.KeyValue}";
+    public string KeyText => string.IsNullOrWhiteSpace(Diagnostic.KeyValue)
+        ? string.Empty
+        : Diagnostic.OccurrenceCount > 1
+            ? $"Örnek anahtar: {Diagnostic.KeyValue}"
+            : $"Anahtar: {Diagnostic.KeyValue}";
     public string SourceText { get; }
     public bool HasElementName => !string.IsNullOrWhiteSpace(ElementName);
     public bool HasKey => !string.IsNullOrWhiteSpace(Diagnostic.KeyValue);
