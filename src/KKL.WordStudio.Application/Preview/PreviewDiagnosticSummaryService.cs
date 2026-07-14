@@ -51,6 +51,8 @@ public static class PreviewDiagnosticSummaryService
                         : PreviewDiagnosticCatalog.BuildGroupMessage(
                             first.Code,
                             occurrenceCount,
+                            keyValues.Count,
+                            rows.Count,
                             first.AffectedColumn,
                             messageTemplate),
                     ElementId = group.Key.ElementId,
