@@ -83,7 +83,7 @@ public sealed class Sprint23SelectedHeadingTablePlacementTests
         WorkbookFilePath = "/tmp/source.xlsx",
         WorkbookFileName = "source.xlsx",
         WorksheetName = "Sheet1",
-        Range = new DataRange
+        Range = new()
         {
             HeaderRowIndex = 1,
             DataStartRow = 2,
