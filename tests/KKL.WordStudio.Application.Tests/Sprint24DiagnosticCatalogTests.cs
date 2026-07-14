@@ -15,6 +15,15 @@ public sealed class Sprint24DiagnosticCatalogTests
         Assert.Equal(PreviewDiagnosticSeverity.Warning, rule.Severity);
         Assert.Equal("Adet", rule.AffectedColumn);
         Assert.Contains("Adet", rule.UserMessage, StringComparison.Ordinal);
+
+        var mergeMessage = PreviewDiagnosticCatalog.BuildGroupMessage(
+            PreviewDiagnosticCodes.MergeConflict,
+            occurrenceCount: 2,
+            distinctKeyCount: 1,
+            rowCount: 0,
+            affectedColumn: null,
+            fallback: string.Empty);
+        Assert.Contains("1 kayıt anahtarında 2 çelişkili değer", mergeMessage, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -52,7 +61,7 @@ public sealed class Sprint24DiagnosticCatalogTests
         Assert.Equal(new[] { "1001", "1002" }, group.KeyValues);
         Assert.Equal(new[] { 4, 7 }, group.RowNumbers);
         Assert.Equal("Adet", group.AffectedColumn);
-        Assert.Contains("2 kayıt", group.Message, StringComparison.Ordinal);
+        Assert.Contains("2 satırda", group.Message, StringComparison.Ordinal);
     }
 
     [Fact]
