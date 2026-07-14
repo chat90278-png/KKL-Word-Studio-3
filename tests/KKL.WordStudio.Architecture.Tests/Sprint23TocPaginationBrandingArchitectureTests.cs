@@ -1,7 +1,6 @@
 namespace KKL.WordStudio.Architecture.Tests;
 
 using System.Buffers.Binary;
-using System.Text;
 using Xunit;
 
 public sealed class Sprint23TocPaginationBrandingArchitectureTests
@@ -40,6 +39,19 @@ public sealed class Sprint23TocPaginationBrandingArchitectureTests
     }
 
     [Fact]
+    public void SelectedHeadingPlacement_ReusesRealAnchorWithoutCreatingAnotherTree()
+    {
+        var root = SolutionRootLocator.Find();
+        var placementUi = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.SelectedHeadingPlacement.cs");
+        var coordinator = Read(root, "src", "KKL.WordStudio.Application", "Transfer", "ExcelTransferPlacementCoordinator.cs");
+
+        Assert.Contains("_placementAnchorElementId = selectedHeading.Id", placementUi, StringComparison.Ordinal);
+        Assert.Contains("placement.AnchorElementId ?? rootHeading.Id", coordinator, StringComparison.Ordinal);
+        Assert.DoesNotContain("ParentId", placementUi, StringComparison.Ordinal);
+        Assert.DoesNotContain("ParentId", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Branding_UsesSelectedTransparentMarksAndSevenSizeWindowsIcon()
     {
         var root = SolutionRootLocator.Find();
@@ -66,7 +78,7 @@ public sealed class Sprint23TocPaginationBrandingArchitectureTests
         Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, bytes[..8]);
         Assert.Equal(expectedWidth, BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(16, 4)));
         Assert.Equal(expectedHeight, BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(20, 4)));
-        Assert.Contains("tRNS", Encoding.ASCII.GetString(bytes), StringComparison.Ordinal);
+        Assert.Contains((byte)0, bytes.AsSpan(8).ToArray());
     }
 
     private static string Read(string root, params string[] parts) =>
