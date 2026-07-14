@@ -1,7 +1,6 @@
 namespace KKL.WordStudio.Engine.Tests;
 
 using KKL.WordStudio.Application.Content;
-using KKL.WordStudio.Application.Formatting;
 using KKL.WordStudio.Application.Layout;
 using KKL.WordStudio.Engine.Layout;
 using Xunit;
@@ -9,103 +8,118 @@ using Xunit;
 public sealed class Sprint24HeadingChainPaginationTests
 {
     [Fact]
-    public void PageBreakBeforeFollowingTable_CarriesWholeTrailingHeadingChain()
+    public async Task PublicLayout_CarriesWholeTrailingHeadingChainWithFollowingTableStart()
     {
+        var spacerId = Guid.NewGuid();
         var headingId = Guid.NewGuid();
         var altHeadingId = Guid.NewGuid();
         var tableId = Guid.NewGuid();
-        var flow = CreateFlow();
+        var document = CreateDocument(
+            pageHeightMillimeters: 80d,
+            bodyNodes:
+            [
+                new ImageContentNode
+                {
+                    ElementId = spacerId,
+                    Kind = ReportContentKind.Image,
+                    Name = "Deterministic spacer"
+                },
+                CreateText(headingId, ReportContentKind.Heading, "Heading"),
+                CreateText(altHeadingId, ReportContentKind.AltHeading, "Alt heading"),
+                CreateTable(tableId, rowCount: 3)
+            ]);
 
-        flow.AddBodyBlock(TextBlock(Guid.NewGuid(), ReportContentKind.Paragraph, flow.BodyYMillimeters, 180d));
-        flow.AddBodyBlock(TextBlock(headingId, ReportContentKind.Heading, flow.BodyYMillimeters, 8d));
-        flow.AddBodyBlock(TextBlock(altHeadingId, ReportContentKind.AltHeading, flow.BodyYMillimeters, 8d));
+        var layout = await LayoutAsync(document);
+        var spacerPage = FirstPageFor(layout, spacerId);
+        var headingPage = FirstPageFor(layout, headingId);
+        var altHeadingPage = FirstPageFor(layout, altHeadingId);
+        var tablePage = FirstPageFor(layout, tableId);
 
-        // This is the same boundary requested by the table paginator when its
-        // caption/header/first-row minimum cannot fit in the remaining space.
-        flow.NewPage();
-        flow.AddBodyBlock(TableBlock(tableId, flow.BodyYMillimeters, 30d));
-
-        var pages = flow.Complete();
-
-        Assert.Equal(2, pages.Count);
-        Assert.DoesNotContain(pages[0].Blocks, block =>
-            block.ElementId == headingId || block.ElementId == altHeadingId);
-        Assert.Collection(
-            pages[1].Blocks.Where(block => block.Region == DocumentPageRegion.Body),
-            block => Assert.Equal(headingId, block.ElementId),
-            block => Assert.Equal(altHeadingId, block.ElementId),
-            block => Assert.Equal(tableId, block.ElementId));
+        Assert.True(headingPage > spacerPage);
+        Assert.Equal(headingPage, altHeadingPage);
+        Assert.Equal(headingPage, tablePage);
+        Assert.All(layout.Pages, AssertHasBodyContent);
     }
 
     [Fact]
-    public void HeadingOnlyFreshPage_IsNotMovedAgainAndDoesNotCreateEmptyPage()
+    public async Task PublicLayout_DoesNotCreateEmptyIntermediatePageWhenHeadingStartsFreshPage()
     {
         var headingId = Guid.NewGuid();
-        var flow = CreateFlow();
-        flow.AddBodyBlock(TextBlock(headingId, ReportContentKind.Heading, flow.BodyYMillimeters, 8d));
+        var tableId = Guid.NewGuid();
+        var document = CreateDocument(
+            pageHeightMillimeters: 55d,
+            bodyNodes:
+            [
+                CreateText(headingId, ReportContentKind.Heading, "Heading"),
+                CreateTable(tableId, rowCount: 12)
+            ]);
 
-        flow.NewPage();
-        flow.AddBodyBlock(TableBlock(Guid.NewGuid(), flow.BodyYMillimeters, 30d));
+        var layout = await LayoutAsync(document);
 
-        var pages = flow.Complete();
-
-        Assert.Equal(2, pages.Count);
-        Assert.Contains(pages[0].Blocks, block => block.ElementId == headingId);
-        Assert.NotEmpty(pages[0].Blocks.Where(block => block.Region == DocumentPageRegion.Body));
-        Assert.NotEmpty(pages[1].Blocks.Where(block => block.Region == DocumentPageRegion.Body));
+        Assert.Equal(1, FirstPageFor(layout, headingId));
+        Assert.True(FirstPageFor(layout, tableId) >= FirstPageFor(layout, headingId));
+        Assert.All(layout.Pages, AssertHasBodyContent);
+        Assert.Equal(
+            Enumerable.Range(1, layout.Pages.Count),
+            layout.Pages.Select(page => page.PageNumber));
     }
 
-    private static LayoutPageFlow CreateFlow() => new(
-        firstPageNumber: 1,
-        DocumentPageOrigin.GeneratedReport,
-        new PageLayout
+    private static Task<DocumentLayoutResult> LayoutAsync(ReportContentDocument document) =>
+        new DeterministicDocumentLayoutEngine().LayoutAsync(new DocumentLayoutRequest
+        {
+            ReportContent = document,
+            FrontMatter = null
+        });
+
+    private static ReportContentDocument CreateDocument(
+        double pageHeightMillimeters,
+        IReadOnlyList<ReportContentNode> bodyNodes) => new()
+    {
+        HeaderNodes = [],
+        BodyNodes = bodyNodes,
+        FooterNodes = [],
+        TableOfContents = [],
+        PageLayout = new PageLayout
         {
             WidthMillimeters = 210d,
-            HeightMillimeters = 297d,
-            MarginTopMillimeters = 20d,
-            MarginBottomMillimeters = 20d,
+            HeightMillimeters = pageHeightMillimeters,
+            MarginTopMillimeters = 10d,
+            MarginBottomMillimeters = 10d,
             MarginLeftMillimeters = 20d,
             MarginRightMillimeters = 20d,
             ShowPageNumbers = false
-        });
-
-    private static PositionedPageBlock TextBlock(
-        Guid id,
-        ReportContentKind kind,
-        double y,
-        double height) => new()
-    {
-        ElementId = id,
-        Region = DocumentPageRegion.Body,
-        Kind = PageBlockKind.Text,
-        XMillimeters = 20d,
-        YMillimeters = y,
-        WidthMillimeters = 170d,
-        HeightMillimeters = height,
-        FragmentIndex = 0,
-        IsContinuation = false,
-        IsEditableReportElement = true,
-        Payload = new TextPageBlockPayload
-        {
-            Runs = [],
-            SemanticKind = kind,
-            Alignment = ParagraphAlignment.Left,
-            Format = DefaultFormatProfiles.BodyText
         }
     };
 
-    private static PositionedPageBlock TableBlock(Guid id, double y, double height) => new()
+    private static TextContentNode CreateText(
+        Guid elementId,
+        ReportContentKind kind,
+        string text) => new()
     {
-        ElementId = id,
-        Region = DocumentPageRegion.Body,
-        Kind = PageBlockKind.Table,
-        XMillimeters = 20d,
-        YMillimeters = y,
-        WidthMillimeters = 170d,
-        HeightMillimeters = height,
-        FragmentIndex = 0,
-        IsContinuation = false,
-        IsEditableReportElement = true,
-        Payload = new UnsupportedPageBlockPayload { Description = "Table sentinel" }
+        ElementId = elementId,
+        Kind = kind,
+        Text = text
     };
+
+    private static TableContentNode CreateTable(Guid elementId, int rowCount) => new()
+    {
+        ElementId = elementId,
+        Kind = ReportContentKind.Table,
+        Name = "Pagination table",
+        Caption = "Pagination table",
+        ColumnHeaders = ["No", "Part", "Quantity"],
+        Rows = Enumerable.Range(1, rowCount)
+            .Select(index => (IReadOnlyList<string>)[index.ToString(), $"Part {index}", "1"])
+            .ToList(),
+        SourceCount = 0
+    };
+
+    private static int FirstPageFor(DocumentLayoutResult layout, Guid elementId) =>
+        layout.Pages
+            .Where(page => page.Blocks.Any(block => block.ElementId == elementId))
+            .Select(page => page.PageNumber)
+            .First();
+
+    private static void AssertHasBodyContent(DocumentPageLayout page) =>
+        Assert.Contains(page.Blocks, block => block.Region == DocumentPageRegion.Body);
 }
