@@ -1,5 +1,7 @@
 namespace KKL.WordStudio.UI.ViewModels;
 
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using KKL.WordStudio.Application.Structure;
 using KKL.WordStudio.Application.Styling;
 using KKL.WordStudio.Domain.Elements;
@@ -7,8 +9,17 @@ using KKL.WordStudio.Domain.Visitors;
 
 public sealed partial class ExcelWorkspaceViewModel
 {
+    [ObservableProperty]
+    private bool _hasSelectedHeadingTransferParent;
+
+    [ObservableProperty]
+    private string _selectedHeadingTransferParentText = string.Empty;
+
     partial void OnIsTransferPlacementOpenChanged(bool value)
     {
+        HasSelectedHeadingTransferParent = false;
+        SelectedHeadingTransferParentText = string.Empty;
+
         if (!value || !CreateNewTable)
             return;
 
@@ -27,7 +38,19 @@ public sealed partial class ExcelWorkspaceViewModel
 
         _placementAnchorElementId = selectedHeading.Id;
         PlacementParentText = NormalizePlacementParentText(selectedHeading, isRoot);
-        StatusText = "Seçili başlık parent olarak kullanılacak. Yeni başlık satırlarını kaldırırsanız tablo doğrudan bu başlığın altına eklenir.";
+        SelectedHeadingTransferParentText = PlacementParentText;
+        HasSelectedHeadingTransferParent = true;
+    }
+
+    [RelayCommand]
+    private void PlaceDirectlyUnderSelectedHeading()
+    {
+        if (!HasSelectedHeadingTransferParent)
+            return;
+
+        IncludePlacementHeading = false;
+        IncludePlacementAltHeading = false;
+        StatusText = $"Yeni tablo {SelectedHeadingTransferParentText} başlığının altına doğrudan eklenecek.";
     }
 
     private static string NormalizePlacementParentText(TextElement heading, bool isRoot)
