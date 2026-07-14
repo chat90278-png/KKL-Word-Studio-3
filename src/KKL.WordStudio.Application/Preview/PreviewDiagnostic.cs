@@ -15,6 +15,13 @@ public sealed class PreviewDiagnostic
     public string? ElementName { get; init; }
     public string? KeyValue { get; init; }
     public IReadOnlyList<PreviewDiagnosticSource> Sources { get; init; } = Array.Empty<PreviewDiagnosticSource>();
+
+    /// <summary>
+    /// Number of equivalent raw Preview findings represented by this item.
+    /// Raw producers leave the default value at one; the UI-facing consolidator
+    /// raises it when repeated row-level findings are grouped.
+    /// </summary>
+    public int OccurrenceCount { get; init; } = 1;
 }
 
 public enum PreviewDiagnosticSeverity
