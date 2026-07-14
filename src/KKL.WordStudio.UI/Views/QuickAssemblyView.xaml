@@ -210,7 +210,7 @@
             </ScrollViewer>
 
             <StackPanel Grid.Row="2" Margin="0,12,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
-                <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" />
+                <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}" />
                 <TextBlock Text="{Binding CurrentItemText}" Margin="0,6,0,0" FontSize="10.5"
                            Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" />
             </StackPanel>
