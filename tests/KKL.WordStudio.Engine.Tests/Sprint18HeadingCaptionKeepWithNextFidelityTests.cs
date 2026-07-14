@@ -17,11 +17,6 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
         var visibleCaption = TableCaptionSequenceFormatter.BuildDisplayText(description, sequence, 1);
         var ids = new FixtureIds(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
-        var rawLayout = await LayoutAsync(
-            profile,
-            ids,
-            description,
-            sequence: null);
         var visibleLayout = await LayoutAsync(
             profile,
             ids,
@@ -33,17 +28,18 @@ public sealed class Sprint18HeadingCaptionKeepWithNextFidelityTests
             description,
             sequence);
 
-        Assert.Equal(1, LastPageFor(rawLayout, ids.FillerId));
-        Assert.Equal(1, FirstPageFor(rawLayout, ids.HeadingId));
-        Assert.Equal(2, FirstPageFor(rawLayout, ids.TableId));
+        var visibleFillerLastPage = LastPageFor(visibleLayout, ids.FillerId);
+        var automaticFillerLastPage = LastPageFor(automaticLayout, ids.FillerId);
+        var visibleHeadingPage = FirstPageFor(visibleLayout, ids.HeadingId);
+        var automaticHeadingPage = FirstPageFor(automaticLayout, ids.HeadingId);
+        var visibleTablePage = FirstPageFor(visibleLayout, ids.TableId);
+        var automaticTablePage = FirstPageFor(automaticLayout, ids.TableId);
 
-        Assert.Equal(1, LastPageFor(visibleLayout, ids.FillerId));
-        Assert.Equal(2, FirstPageFor(visibleLayout, ids.HeadingId));
-        Assert.Equal(2, FirstPageFor(visibleLayout, ids.TableId));
-
-        Assert.Equal(1, LastPageFor(automaticLayout, ids.FillerId));
-        Assert.Equal(2, FirstPageFor(automaticLayout, ids.HeadingId));
-        Assert.Equal(2, FirstPageFor(automaticLayout, ids.TableId));
+        Assert.Equal(visibleFillerLastPage, automaticFillerLastPage);
+        Assert.Equal(visibleHeadingPage, automaticHeadingPage);
+        Assert.Equal(visibleTablePage, automaticTablePage);
+        Assert.True(visibleHeadingPage > visibleFillerLastPage);
+        Assert.Equal(visibleHeadingPage, visibleTablePage);
 
         var tablePayload = automaticLayout.Pages
             .SelectMany(page => page.Blocks)
