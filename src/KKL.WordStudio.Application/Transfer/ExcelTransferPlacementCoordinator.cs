@@ -1,13 +1,13 @@
 namespace KKL.WordStudio.Application.Transfer;
 
 using KKL.WordStudio.Application.Excel;
+using KKL.WordStudio.Application.Structure;
 using KKL.WordStudio.Application.Styling;
 using KKL.WordStudio.Application.TableComposition;
 using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Expressions;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
-using KKL.WordStudio.Domain.Styling;
 using KKL.WordStudio.Domain.Visitors;
 
 public enum ExcelTransferDestinationMode
@@ -48,14 +48,17 @@ public sealed class ExcelTransferPlacementResult
 
 /// <summary>
 /// Application-level coordinator for the Word-transfer confirmation surface.
-/// It keeps the existing transfer engine authoritative, adds/removes the proposed
-/// heading chain atomically, preserves selected Excel columns in source order and
-/// creates a normal report text element for the visible table title so Preview and
-/// Word consume the same title without a second rendering path.
+/// It keeps the existing transfer engine authoritative, composes the proposed
+/// heading chain atomically, preserves the active Excel grid order and delegates
+/// visible table numbering to the existing TableElement.Caption pipeline shared
+/// by Preview and Word.
 /// </summary>
 public static class ExcelTransferPlacementCoordinator
 {
     public const string DefaultRootHeadingText = "System Test Procedure Configuration List";
+
+    // Kept only to remove titles created by earlier Tranche 02 heads. New output
+    // uses TableElement.Caption and the existing SEQ Tablo renderer/exporter.
     public const string TableTitleElementNamePrefix = "Table Title:";
 
     public static ExcelTransferPlacementResult Transfer(
@@ -84,16 +87,13 @@ public static class ExcelTransferPlacementCoordinator
     }
 
     /// <summary>
-    /// Preserves the physical left-to-right order from the active Excel grid.
-    /// Semantic roles still drive automatic selection and binding identity, but
-    /// they no longer rearrange the user's chosen source columns.
+    /// SourceOrder is synchronized from the DataGrid's live DisplayIndex order,
+    /// so Preview and Word follow exactly what the user sees from left to right.
     /// </summary>
     public static IReadOnlyList<TransferColumnSelection> OrderColumns(IEnumerable<TransferColumnSelection> columns)
     {
         ArgumentNullException.ThrowIfNull(columns);
-        return columns
-            .OrderBy(column => column.SourceOrder)
-            .ToList();
+        return columns.OrderBy(column => column.SourceOrder).ToList();
     }
 
     private static ExcelTransferPlacementResult UpdateExistingTable(
@@ -121,7 +121,8 @@ public static class ExcelTransferPlacementCoordinator
             return new ExcelTransferPlacementResult { TransferResult = result };
 
         ApplyTableIdentityAndColumns(result.Table, placement.TableName, includedColumns);
-        EnsureTableTitle(report, result.Table, result.Table.Name);
+        RemoveLegacyTableTitle(report, result.Table);
+        ReportHeadingNumberingService.Renumber(report);
         return new ExcelTransferPlacementResult { TransferResult = result };
     }
 
@@ -153,7 +154,8 @@ public static class ExcelTransferPlacementCoordinator
             {
                 Name = "Heading",
                 Style = HeadingStylePresets.CreateHeadingStyle(),
-                Content = Expression.Literal(NormalizeTitle(placement.HeadingText, "Yeni başlık"))
+                Content = Expression.Literal(ReportHeadingNumberingService.StripVisibleNumber(
+                    NormalizeTitle(placement.HeadingText, "Yeni başlık")))
             };
             body.Root.Children.Insert(insertionIndex++, heading);
             created.Add(heading);
@@ -163,11 +165,12 @@ public static class ExcelTransferPlacementCoordinator
         {
             altHeading = new TextElement
             {
-                Name = "Alt Heading",
+                Name = placement.IncludeHeading ? "Alt Heading" : "Heading",
                 Style = placement.IncludeHeading
                     ? HeadingStylePresets.CreateAltHeadingStyle()
                     : HeadingStylePresets.CreateHeadingStyle(),
-                Content = Expression.Literal(NormalizeTitle(placement.AltHeadingText, "Yeni alt başlık"))
+                Content = Expression.Literal(ReportHeadingNumberingService.StripVisibleNumber(
+                    NormalizeTitle(placement.AltHeadingText, "Yeni alt başlık")))
             };
             body.Root.Children.Insert(insertionIndex++, altHeading);
             created.Add(altHeading);
@@ -187,9 +190,8 @@ public static class ExcelTransferPlacementCoordinator
         }
 
         ApplyTableIdentityAndColumns(result.Table, placement.TableName, includedColumns);
-        var tableTitle = EnsureTableTitle(body.Root, result.Table, result.Table.Name);
-        if (tableTitle is not null)
-            created.Add(tableTitle);
+        RemoveLegacyTableTitle(report, result.Table);
+        ReportHeadingNumberingService.Renumber(report);
 
         return new ExcelTransferPlacementResult
         {
@@ -203,7 +205,9 @@ public static class ExcelTransferPlacementCoordinator
         string tableName,
         IReadOnlyList<TransferColumnSelection> includedColumns)
     {
-        table.Name = NormalizeTitle(tableName, table.Name);
+        var normalizedName = NormalizeTitle(tableName, table.Name);
+        table.Name = normalizedName;
+        table.Caption = ResolveRawCaption(normalizedName);
         table.Columns.Clear();
         foreach (var selection in includedColumns)
         {
@@ -221,55 +225,33 @@ public static class ExcelTransferPlacementCoordinator
             table.Rows.Add(new TableRow { Kind = TableRowKind.Detail });
     }
 
-    private static TextElement? EnsureTableTitle(Report report, TableElement table, string tableName)
+    private static string? ResolveRawCaption(string tableName)
+    {
+        if (!tableName.StartsWith("Tablo ", StringComparison.OrdinalIgnoreCase))
+            return tableName;
+
+        var separator = tableName.IndexOf(':');
+        if (separator >= 0 && separator + 1 < tableName.Length)
+            return tableName[(separator + 1)..].Trim();
+
+        return null;
+    }
+
+    private static void RemoveLegacyTableTitle(Report report, TableElement table)
     {
         foreach (var section in report.Pages.SelectMany(page => page.Sections))
         {
             var container = FindContainerOf(section.Root, table);
-            if (container is not null)
-                return EnsureTableTitle(container, table, tableName);
+            if (container is null)
+                continue;
+
+            var legacyName = TableTitleElementNamePrefix + table.Id.ToString("N");
+            var legacyTitle = container.Children.OfType<TextElement>()
+                .FirstOrDefault(element => string.Equals(element.Name, legacyName, StringComparison.Ordinal));
+            if (legacyTitle is not null)
+                container.Children.Remove(legacyTitle);
+            return;
         }
-        return null;
-    }
-
-    private static TextElement? EnsureTableTitle(Container container, TableElement table, string tableName)
-    {
-        var tableIndex = container.Children.IndexOf(table);
-        if (tableIndex < 0)
-            return null;
-
-        var titleElementName = TableTitleElementNamePrefix + table.Id.ToString("N");
-        var title = container.Children
-            .OfType<TextElement>()
-            .FirstOrDefault(element => string.Equals(element.Name, titleElementName, StringComparison.Ordinal));
-
-        if (title is null)
-        {
-            title = new TextElement
-            {
-                Name = titleElementName,
-                Style = new Style { FontSize = 11, Bold = true },
-                Content = Expression.Literal(NormalizeTitle(tableName, table.Name))
-            };
-            container.Children.Insert(tableIndex, title);
-            return title;
-        }
-
-        title.Content = Expression.Literal(NormalizeTitle(tableName, table.Name));
-        title.Style.Bold = true;
-        if (title.Style.FontSize < 10)
-            title.Style.FontSize = 11;
-
-        var currentTitleIndex = container.Children.IndexOf(title);
-        tableIndex = container.Children.IndexOf(table);
-        if (currentTitleIndex != tableIndex - 1)
-        {
-            container.Children.Remove(title);
-            tableIndex = container.Children.IndexOf(table);
-            container.Children.Insert(tableIndex, title);
-        }
-
-        return title;
     }
 
     private static ExcelTransferRequest CloneTransfer(
