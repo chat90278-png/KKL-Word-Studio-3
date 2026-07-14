@@ -1,7 +1,10 @@
 namespace KKL.WordStudio.UI.ViewModels;
 
 using KKL.WordStudio.Application.QuickAssembly;
+using KKL.WordStudio.Application.Styling;
 using KKL.WordStudio.Application.Transfer;
+using KKL.WordStudio.Domain.Elements;
+using KKL.WordStudio.Domain.Visitors;
 
 public sealed partial class ExcelWorkspaceViewModel
 {
@@ -149,13 +152,15 @@ public sealed partial class ExcelWorkspaceViewModel
                         "Hızlı rapor yeni tablo oluşturmadığı için güvenlik amacıyla başarı sayılmadı.");
                 }
 
-                var createdIndex = 0;
-                Guid? createdHeadingId = null;
-                Guid? createdAltHeadingId = null;
-                if (target.IncludeHeading && coordinated.CreatedElementIds.Count > createdIndex)
-                    createdHeadingId = coordinated.CreatedElementIds[createdIndex++];
-                if (target.IncludeAltHeading && coordinated.CreatedElementIds.Count > createdIndex)
-                    createdAltHeadingId = coordinated.CreatedElementIds[createdIndex];
+                var createdTexts = coordinated.CreatedElementIds
+                    .Select(elementId => ReportElementFlattener.FindById(report, elementId))
+                    .OfType<TextElement>()
+                    .Where(text => !string.Equals(text.Name, "Document Root", StringComparison.Ordinal))
+                    .ToList();
+                var createdHeadingId = createdTexts
+                    .FirstOrDefault(text => HeadingStylePresets.IsHeading(text.Style))?.Id;
+                var createdAltHeadingId = createdTexts
+                    .FirstOrDefault(text => HeadingStylePresets.IsAltHeading(text.Style))?.Id;
 
                 target.CreatedHeadingElementId = createdHeadingId;
                 target.CreatedAltHeadingElementId = createdAltHeadingId;
