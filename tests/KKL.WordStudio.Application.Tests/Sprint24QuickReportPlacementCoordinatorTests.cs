@@ -41,7 +41,7 @@ public sealed class Sprint24QuickReportPlacementCoordinatorTests
     }
 
     [Fact]
-    public void AltHeadingAnchor_WithBothRowsDisabled_InsertsOnlyNewTableDirectlyUnderIt()
+    public void AltHeadingAnchor_WithBothRowsDisabled_AppendsOnlyNewTableToThatBlock()
     {
         var (project, report, body) = CreateProjectAndReport();
         var heading = Heading("Parent");
@@ -67,8 +67,7 @@ public sealed class Sprint24QuickReportPlacementCoordinatorTests
         Assert.Single(result.CreatedElementIds);
         var createdTable = Assert.IsType<TableElement>(result.TransferResult.Table);
         Assert.True(result.TransferResult.CreatedNewTable);
-        Assert.Equal(body.Root.Children.IndexOf(alt) + 1, body.Root.Children.IndexOf(createdTable));
-        Assert.True(body.Root.Children.IndexOf(createdTable) < body.Root.Children.IndexOf(existingTable));
+        Assert.True(body.Root.Children.IndexOf(createdTable) > body.Root.Children.IndexOf(existingTable));
         Assert.True(body.Root.Children.IndexOf(createdTable) < body.Root.Children.IndexOf(nextHeading));
     }
 
@@ -92,7 +91,7 @@ public sealed class Sprint24QuickReportPlacementCoordinatorTests
 
         Assert.Equal(TransferOutcome.Failed, result.TransferResult.Outcome);
         Assert.Equal(beforeCount, body.Root.Children.Count);
-        Assert.Empty(result.CreatedElementIds);
+        Assert.Equal(0, result.CreatedElementIds.Count);
     }
 
     private static ExcelTransferPlacementRequest Placement(
