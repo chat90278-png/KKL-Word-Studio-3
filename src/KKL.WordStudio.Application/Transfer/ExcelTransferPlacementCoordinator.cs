@@ -1,5 +1,6 @@
 namespace KKL.WordStudio.Application.Transfer;
 
+using System.Text.RegularExpressions;
 using KKL.WordStudio.Application.Excel;
 using KKL.WordStudio.Application.Structure;
 using KKL.WordStudio.Application.Styling;
@@ -61,6 +62,10 @@ public static class ExcelTransferPlacementCoordinator
     // uses TableElement.Caption and the existing SEQ Tablo renderer/exporter.
     public const string TableTitleElementNamePrefix = "Table Title:";
 
+    private static readonly Regex TableNumberPrefix = new(
+        @"^\s*Tablo\s+\d+(?:\s*:\s*|\s+|$)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     public static ExcelTransferPlacementResult Transfer(
         IExcelReportTransferService transferService,
         Project project,
@@ -120,7 +125,7 @@ public static class ExcelTransferPlacementCoordinator
         if (result.Outcome != TransferOutcome.Success || result.Table is null)
             return new ExcelTransferPlacementResult { TransferResult = result };
 
-        ApplyTableIdentityAndColumns(result.Table, placement.TableName, includedColumns);
+        ApplyTableIdentityAndColumns(report, result.Table, placement.TableName, includedColumns);
         RemoveLegacyTableTitle(report, result.Table);
         ReportHeadingNumberingService.Renumber(report);
         return new ExcelTransferPlacementResult { TransferResult = result };
@@ -189,7 +194,7 @@ public static class ExcelTransferPlacementCoordinator
             return new ExcelTransferPlacementResult { TransferResult = result };
         }
 
-        ApplyTableIdentityAndColumns(result.Table, placement.TableName, includedColumns);
+        ApplyTableIdentityAndColumns(report, result.Table, placement.TableName, includedColumns);
         RemoveLegacyTableTitle(report, result.Table);
         ReportHeadingNumberingService.Renumber(report);
 
@@ -201,13 +206,14 @@ public static class ExcelTransferPlacementCoordinator
     }
 
     private static void ApplyTableIdentityAndColumns(
+        Report report,
         TableElement table,
         string tableName,
         IReadOnlyList<TransferColumnSelection> includedColumns)
     {
-        var normalizedName = NormalizeTitle(tableName, table.Name);
-        table.Name = normalizedName;
-        table.Caption = ResolveRawCaption(normalizedName);
+        var tableNumber = ResolveTableNumber(report, table);
+        table.Name = ResolveRawCaption(tableName, tableNumber);
+        table.Caption = ResolveRawCaption(table.Name, tableNumber);
         table.Columns.Clear();
         foreach (var selection in includedColumns)
         {
@@ -225,16 +231,34 @@ public static class ExcelTransferPlacementCoordinator
             table.Rows.Add(new TableRow { Kind = TableRowKind.Detail });
     }
 
-    private static string? ResolveRawCaption(string tableName)
+    /// <summary>
+    /// TableElement.Caption stores only the raw text after the renderer-owned
+    /// "Tablo N:" prefix. Generated/default names deliberately remain as
+    /// "Tablo N", producing "Tablo N: Tablo N". Any user-entered numeric
+    /// prefixes are stripped repeatedly so Preview and Word never duplicate them.
+    /// </summary>
+    private static string ResolveRawCaption(string? tableName, int tableNumber)
     {
-        if (!tableName.StartsWith("Tablo ", StringComparison.OrdinalIgnoreCase))
-            return tableName;
+        var fallback = $"Tablo {Math.Max(1, tableNumber)}";
+        var normalized = tableName?.Trim() ?? string.Empty;
 
-        var separator = tableName.IndexOf(':');
-        if (separator >= 0 && separator + 1 < tableName.Length)
-            return tableName[(separator + 1)..].Trim();
+        while (normalized.Length > 0)
+        {
+            var match = TableNumberPrefix.Match(normalized);
+            if (!match.Success || match.Length == 0)
+                break;
 
-        return null;
+            normalized = normalized[match.Length..].Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(normalized) ? fallback : normalized;
+    }
+
+    private static int ResolveTableNumber(Report report, TableElement table)
+    {
+        var tables = ReportElementFlattener.Flatten(report).OfType<TableElement>().ToList();
+        var index = tables.FindIndex(candidate => candidate.Id == table.Id);
+        return index >= 0 ? index + 1 : Math.Max(1, tables.Count);
     }
 
     private static void RemoveLegacyTableTitle(Report report, TableElement table)
