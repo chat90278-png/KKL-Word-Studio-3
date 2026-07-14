@@ -31,13 +31,22 @@ public sealed partial class ExcelWorkspaceViewModel
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Set the sheet first so workbook activation and the explicit await
-            // both resolve the same target. The awaited load is authoritative.
+            // A failed sheet read must never leave the previous target's preview
+            // eligible for transfer. Clear the authoritative state before the
+            // selection hooks and explicit awaited load run.
+            _currentPreview = null;
+            DetectedDataEndRow = null;
             workbook.SelectedSheetName = target.WorksheetName;
             SelectedWorkbook = workbook;
             await LoadPreviewAsync();
 
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (!ReferenceEquals(SelectedWorkbook, workbook)
+                || !string.Equals(SelectedWorkbook.SelectedSheetName, target.WorksheetName, StringComparison.Ordinal))
+            {
+                return CreateQuickAssemblyFailed("Hızlı rapor hedefi yükleme sırasında değişti.");
+            }
 
             var project = _workspace.ActiveProject;
             var report = _workspace.ActiveReport;
