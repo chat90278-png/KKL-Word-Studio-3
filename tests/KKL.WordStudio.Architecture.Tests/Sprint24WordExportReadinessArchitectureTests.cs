@@ -12,6 +12,8 @@ public sealed class Sprint24WordExportReadinessArchitectureTests
         var main = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "MainViewModel.cs");
         var store = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "PreviewDiagnosticsStore.cs");
         var dialogContract = Read(root, "src", "KKL.WordStudio.UI", "Services", "IDialogService.cs");
+        var dialogView = Read(root, "src", "KKL.WordStudio.UI", "Views", "ExportWarningDecisionWindow.xaml");
+        var dialogService = Read(root, "src", "KKL.WordStudio.UI", "Services", "DialogService.cs");
 
         Assert.Contains("PreviewDiagnosticGroup", assessment, StringComparison.Ordinal);
         Assert.Contains("PreviewDiagnosticSummaryService.Group", assessment, StringComparison.Ordinal);
@@ -28,6 +30,10 @@ public sealed class Sprint24WordExportReadinessArchitectureTests
         Assert.Contains("Continue", dialogContract, StringComparison.Ordinal);
         Assert.Contains("Review", dialogContract, StringComparison.Ordinal);
         Assert.Contains("Cancel", dialogContract, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Devam Et\"", dialogView, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Kontrol Et\"", dialogView, StringComparison.Ordinal);
+        Assert.Contains("Content=\"İptal\"", dialogView, StringComparison.Ordinal);
+        Assert.Contains("new ExportWarningDecisionWindow", dialogService, StringComparison.Ordinal);
 
         Assert.DoesNotContain("new PreviewRenderer", main, StringComparison.Ordinal);
         Assert.DoesNotContain("new ReportValidator", main, StringComparison.Ordinal);
