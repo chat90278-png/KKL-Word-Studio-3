@@ -67,13 +67,13 @@ The persisted report stays the established flat `Section.Root.Children` sequence
 
 Added:
 
-- Application tests: `+10`
+- Application tests: `+11`
 - Architecture tests: `+2`
 
 Expected total:
 
 ```text
-575 / 575
+576 / 576
 ```
 
 ## Pending Windows gate
