@@ -15,10 +15,13 @@ public sealed class Sprint21QuickAssemblyArchitectureTests
 
         Assert.Contains("Text=\"Hızlı Rapor\"", loadedSources, StringComparison.Ordinal);
         Assert.Contains("QuickAssemblyPopup", loadedSources, StringComparison.Ordinal);
-        Assert.Contains("Hızlı Rapor Oluştur", quickView, StringComparison.Ordinal);
-        Assert.Contains("Seçilenleri Rapora Aktar", quickView, StringComparison.Ordinal);
+        Assert.Contains("Tam rapor yapısı oluştur", quickView, StringComparison.Ordinal);
+        Assert.Contains("Rapor Yapısını Oluştur", quickView, StringComparison.Ordinal);
         Assert.Contains("ItemsSource=\"{Binding Sources}\"", quickView, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding Caption", quickView, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding OrderedSelectedSheets}\"", quickView, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding HeadingText", quickView, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding AltHeadingText", quickView, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding TableName", quickView, StringComparison.Ordinal);
         Assert.Contains("QuickAssemblySelection", quickViewModel, StringComparison.Ordinal);
         Assert.Contains("QuickAssemblyBatchOrchestrator", quickViewModel, StringComparison.Ordinal);
         Assert.Contains("_excelWorkspace.OpenWorkbooks", quickViewModel, StringComparison.Ordinal);
@@ -37,16 +40,20 @@ public sealed class Sprint21QuickAssemblyArchitectureTests
         var excelBatch = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.QuickAssembly.cs");
         var orchestrator = Read(root, "src", "KKL.WordStudio.Application", "QuickAssembly", "QuickAssemblyBatchOrchestrator.cs");
 
-        Assert.Contains("_transferService.Transfer", excelBatch, StringComparison.Ordinal);
+        Assert.Contains("ExcelTransferPlacementCoordinator.Transfer", excelBatch, StringComparison.Ordinal);
+        Assert.Contains("_transferService", excelBatch, StringComparison.Ordinal);
         Assert.Contains("BuildCurrentRange", excelBatch, StringComparison.Ordinal);
         Assert.Contains("GetHeaderRowTexts", excelBatch, StringComparison.Ordinal);
         Assert.Contains("WorkingDataColumns", excelBatch, StringComparison.Ordinal);
-        Assert.Contains("TargetElementId = null", excelBatch, StringComparison.Ordinal);
+        Assert.Contains("DestinationMode = ExcelTransferDestinationMode.CreateNewTable", excelBatch, StringComparison.Ordinal);
+        Assert.Contains("ExistingTableId = null", excelBatch, StringComparison.Ordinal);
+        Assert.Contains("AnchorElementId = _workspace.SelectedReportElementId", excelBatch, StringComparison.Ordinal);
         Assert.Contains("result.CreatedNewTable", excelBatch, StringComparison.Ordinal);
-        Assert.Contains("result.Table.Caption", excelBatch, StringComparison.Ordinal);
         Assert.Contains("transferSingleTargetAsync", orchestrator, StringComparison.Ordinal);
+        Assert.Contains("SelectionOrder ?? int.MaxValue", orchestrator, StringComparison.Ordinal);
         Assert.Contains("catch (Exception exception)", orchestrator, StringComparison.Ordinal);
 
+        Assert.DoesNotContain("new OpenXmlExcelWorkbookReader", excelBatch, StringComparison.Ordinal);
         Assert.DoesNotContain("IExcelWorkbookReader", orchestrator, StringComparison.Ordinal);
         Assert.DoesNotContain("TableElement", orchestrator, StringComparison.Ordinal);
         Assert.DoesNotContain("WordprocessingDocument", excelBatch, StringComparison.Ordinal);
