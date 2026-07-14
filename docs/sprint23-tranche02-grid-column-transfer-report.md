@@ -36,22 +36,13 @@
 
 ### Word/Preview column order
 
-Selected columns preserve their current physical left-to-right order in the Excel source grid.
+Selected columns preserve the DataGrid's actual current `DisplayIndex` order.
+The order is synchronized after generated columns are laid out, so a visual source order such as `A, B, C, E, D, F` reaches the `TableElement` as exactly `A, B, C, E, D, F`.
 Semantic roles continue to control automatic selection and stable binding identity, but they do not rearrange the output table.
-
-Example source order:
-
-1. No
-2. Part Number
-3. Serial Number
-4. NSN
-5. Quantity
-
-The same order is used by the resulting `TableElement.Columns`, Preview and Word.
 
 ### Word transfer placement confirmation
 
-`Word'e Aktar` now opens one placement confirmation surface instead of mutating immediately.
+`Word'e Aktar` opens one placement confirmation surface instead of mutating immediately.
 
 - Existing selected table: `Var olan <table> tablosunu güncelle` or `Yeni tablo olarak ekle`.
 - New table mode shows only the relevant parent chain, not unrelated equal-level siblings.
@@ -60,14 +51,24 @@ The same order is used by the resulting `TableElement.Columns`, Preview and Word
 - Confirmation creates/updates the table and refreshes report selection/Preview.
 - Cancellation performs no report mutation.
 - A failed transfer rolls back the proposed root/heading chain.
-- A first new transfer establishes the fixed document-root heading metadata; full numbering/deletion policy is completed in Tranche 03.
 
-### Visible table title
+### Shared visible heading numbering
 
-- The popup's table-name field now produces a real bold report text element immediately above the table.
-- The title is visible in both Preview and Word because it uses the existing `TextElement` rendering/export path.
-- Updating an existing table updates or creates the associated title without replacing the table object.
-- The title is not a heading and therefore does not create an extra Contents entry.
+- The root heading is rendered as `1. System Test Procedure Configuration List`.
+- Heading and alt-heading text is normalized as `1.1`, `1.1.1`, `1.2`, `1.2.1`, and so on.
+- Re-running the numbering service is idempotent and does not duplicate prefixes.
+- Headings remain real `TextElement` objects with the existing heading/alt-heading style presets.
+- Contents, Preview and Word therefore consume the same numbered text and the same heading-style identity.
+- The popup strips an existing visible prefix before showing its parent line, preventing `1. 1.` duplication.
+
+### Native numbered table caption
+
+- The popup table name is assigned to the existing `TableElement.Caption` contract.
+- Preview continues to use the existing document-order caption resolver.
+- Word continues to use the existing real `SEQ Tablo` field path.
+- A table named `Deneme` renders as centered `Tablo 1: Deneme`.
+- Temporary standalone title elements produced by earlier Tranche 02 heads are removed when that table is updated.
+- The caption is not a heading and does not create an extra Contents entry.
 
 ## Architecture constraints preserved
 
@@ -75,7 +76,7 @@ The same order is used by the resulting `TableElement.Columns`, Preview and Word
 - `ExcelTransferPlacementCoordinator` composes placement around that engine; no second renderer, data provider or report engine was introduced.
 - Source workbook remains read-only.
 - Contents remains a projection of the real ordered report elements.
-- Preview and Word consume the same ordered `TableElement.Columns` collection and normal `TextElement` table title.
+- Preview and Word consume the same ordered `TableElement.Columns`, heading elements and native `TableElement.Caption`.
 
 ## Test delta
 
@@ -84,17 +85,17 @@ Baseline after Tranche 01: `552`
 Added:
 
 - Domain: `+2`
-- Application: `+5`
-- Expected total: `559`
+- Application: `+8`
+- Expected total: `562`
 
 Expected project totals:
 
 - Domain: `20`
-- Application: `239`
+- Application: `242`
 - Engine: `60`
 - Architecture: `101`
 - Infrastructure: `139`
-- Total: `559`
+- Total: `562`
 
 ## Windows correction passes
 
@@ -105,9 +106,14 @@ Expected project totals:
 
 ### Pass 2
 
-- Corrected selected-column output from semantic/canonical rearrangement to active Excel grid source order.
-- Materialized the popup table name as a visible bold title immediately above the table.
+- Corrected selected-column output from semantic/canonical rearrangement to source-order projection.
 - Updated the remaining ObservableProperty architecture guard without changing its historical method identity.
+
+### Pass 3
+
+- Synchronized output order from the live DataGrid `DisplayIndex`, not stale persisted/source-letter ordering.
+- Replaced the temporary standalone table title with the established centered `Tablo n:` caption pipeline.
+- Added the shared visible heading-numbering policy and preserved real heading styles.
 
 ## Windows gate — pending final head
 
@@ -129,19 +135,19 @@ Manual smoke:
 
 1. Source headers display `A/B/C/...` and clicking them does not sort rows.
 2. Header checkboxes include/exclude transfer columns.
-3. English Part Name is preferred when both language columns exist.
-4. Editing the worksheet header row survives rerender and appears in the report table header.
-5. `Veri Aralığını Düzenle` appears beside `Word'e Aktar`; the lower duplicate is gone.
-6. `Word'e Aktar` opens the placement confirmation popup.
-7. Heading/alt heading/table name are editable; remove buttons remove the proposed row.
-8. Output columns follow the selected Excel grid's left-to-right order.
-9. The popup table name appears as a bold title immediately above the table.
+3. Editing the worksheet header row survives rerender and appears in the report table header.
+4. `Word'e Aktar` opens the placement confirmation popup.
+5. Heading/alt-heading/table name are editable; remove buttons remove the proposed row.
+6. Output columns follow the Excel grid's actual visible left-to-right order.
+7. Preview shows `1.`, `1.1`, and `1.1.1` numbering on real heading elements.
+8. Contents shows the same numbered headings.
+9. The table caption renders centered as `Tablo 1: <name>`.
 10. Existing selected table can be updated or a new table can be created.
 11. Cancelling the popup leaves the report unchanged.
 
 ## Deferred to Tranche 03
 
-- Full persisted root-heading invariant for every new/opened project.
-- Final `1 / 1.1 / 1.1.1` numbering resolver shared by Contents, Preview and Word.
+- Full persisted root-heading invariant for every newly created/opened legacy project, independent of transfer.
 - Root delete/outdent protection and legacy-project migration.
+- Automatic renumber invocation after every non-transfer structure move/indent/drag-drop operation.
 - Final sibling-block move/indent/drag-drop semantics.
