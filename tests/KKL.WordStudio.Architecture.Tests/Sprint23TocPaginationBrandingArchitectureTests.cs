@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.Architecture.Tests;
 
 using System.Buffers.Binary;
+using System.Text;
 using Xunit;
 
 public sealed class Sprint23TocPaginationBrandingArchitectureTests
@@ -65,7 +66,7 @@ public sealed class Sprint23TocPaginationBrandingArchitectureTests
         Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, bytes[..8]);
         Assert.Equal(expectedWidth, BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(16, 4)));
         Assert.Equal(expectedHeight, BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(20, 4)));
-        Assert.Contains((byte)0, bytes.AsSpan(8).ToArray()); // transparent palette data remains embedded
+        Assert.Contains("tRNS", Encoding.ASCII.GetString(bytes), StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] parts) =>
