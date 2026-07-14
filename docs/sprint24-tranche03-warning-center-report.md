@@ -13,9 +13,11 @@ Preview diagnostics already carry severity, stable report `ElementId`, source me
 ## Implemented behavior
 
 - Raw diagnostics remain intact for rendering and debugging.
-- `PreviewDiagnosticSummaryService` creates deterministic user-facing groups by severity, title, message and report element.
+- `PreviewDiagnosticSummaryService` creates deterministic user-facing groups by severity, title, normalized message template and report element.
+- Occurrence-specific key values embedded inside raw messages are replaced by a display placeholder before grouping.
 - Repeated row/key occurrences become one card with a repeat count.
 - Distinct key values and source candidates remain available for navigation.
+- Different problem types on the same table remain separate actions.
 - Equivalent source references are deduplicated.
 - Groups are ordered Error → Warning → Information.
 - Context Dock badge shows actionable group count, capped at `99+`.
@@ -36,16 +38,17 @@ Preview diagnostics already carry severity, stable report `ElementId`, source me
 
 ## Test delta
 
-- Application: `+4`
+- Application: `+5`
 - Architecture: `+3`
-- Expected total: `624/624`
+- Expected total: `625/625`
 
 ## Manual smoke
 
 1. Open a report that previously displayed hundreds of warnings.
 2. Confirm the dock badge shows grouped action count rather than raw occurrence count.
-3. Open Uyarılar and confirm repeat badges such as `25 tekrar` appear.
-4. Switch between Tümü, Hata, Uyarı and Bilgi filters.
-5. Click a grouped card and confirm report/Excel navigation still works.
-6. Confirm an Error group uses the red badge state.
-7. Confirm Preview and Word creation behavior remain unchanged.
+3. Confirm all `Adet değeri eksik veya geçersiz` occurrences on the same table collapse into one card with an `x tekrar` badge.
+4. Confirm different problem types such as missing quantity and conflicting merged values remain separate cards.
+5. Switch between Tümü, Hata, Uyarı and Bilgi filters.
+6. Click a grouped card and confirm report/Excel navigation still works.
+7. Confirm an Error group uses the red badge state.
+8. Confirm Preview and Word creation behavior remain unchanged.
