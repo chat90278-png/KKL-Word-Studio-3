@@ -21,7 +21,9 @@ public sealed class Sprint23TableHeadingWordPageBreakTests
             .Single(paragraph => paragraph.InnerText == "Heading after table");
 
         Assert.NotNull(heading.ParagraphProperties?.GetFirstChild<PageBreakBefore>());
-        Assert.Empty(body.Descendants<Break>().Where(br => br.Type?.Value == BreakValues.Page));
+        Assert.DoesNotContain(
+            body.Descendants<Break>(),
+            br => br.Type?.Value == BreakValues.Page);
         Assert.Equal(2, body.ChildElements.Count);
     }
 
