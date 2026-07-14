@@ -20,6 +20,8 @@ public sealed class Sprint24WarningCenterSummaryTests
 
         Assert.Equal(3, group.OccurrenceCount);
         Assert.Equal(new[] { "A-1", "A-2", "A-3" }, group.KeyValues);
+        Assert.Contains("PN/key '…'", group.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("A-1", group.Message, StringComparison.Ordinal);
         Assert.Single(group.Sources);
     }
 
@@ -78,6 +80,28 @@ public sealed class Sprint24WarningCenterSummaryTests
         Assert.Equal(elementId, group.ElementId);
     }
 
+    [Fact]
+    public void Group_DoesNotMergeDifferentProblemTemplatesOnSameTable()
+    {
+        var elementId = Guid.NewGuid();
+        var missingQuantity = Diagnostic("d1", PreviewDiagnosticSeverity.Warning, elementId, "K1");
+        var conflictingName = new PreviewDiagnostic
+        {
+            Id = "d2",
+            Severity = PreviewDiagnosticSeverity.Warning,
+            Title = "Birleştirilecek satırlarda çelişki var",
+            Message = "PN/key 'K2' için 'Tr Isim' alanında çelişkili değerler var; satırlar birleştirilmedi.",
+            ElementId = elementId,
+            ElementName = "Tablo 1",
+            KeyValue = "K2"
+        };
+
+        Assert.Collection(
+            PreviewDiagnosticSummaryService.Group([missingQuantity, conflictingName]),
+            _ => { },
+            _ => { });
+    }
+
     private static PreviewDiagnostic Diagnostic(
         string id,
         PreviewDiagnosticSeverity severity,
@@ -86,8 +110,10 @@ public sealed class Sprint24WarningCenterSummaryTests
     {
         Id = id,
         Severity = severity,
-        Title = "Eşleşmeyen kayıt",
-        Message = "Kaynak anahtar rapor tablosunda çözülemedi.",
+        Title = "Adet değeri eksik veya geçersiz",
+        Message = string.IsNullOrWhiteSpace(key)
+            ? "Geçerli Adet değeri bulunamadı; satırlar birleştirilmedi."
+            : $"PN/key '{key}' için geçerli Adet değeri bulunamadı; satırlar birleştirilmedi.",
         ElementId = elementId,
         ElementName = "Tablo 1",
         KeyValue = key,
