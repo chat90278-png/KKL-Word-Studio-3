@@ -20,10 +20,13 @@ public sealed partial class WarningCenterViewModel
             parts.Add($"Sütun: {group.AffectedColumn}");
 
         if (group.RowNumbers.Count > 0)
-            parts.Add($"Satırlar: {string.Join(", ", group.RowNumbers.Take(25))}{(group.RowNumbers.Count > 25 ? ", …" : string.Empty)}");
+            parts.Add($"Etkilenen satırlar: {string.Join(", ", group.RowNumbers.Take(25))}{(group.RowNumbers.Count > 25 ? ", …" : string.Empty)}");
 
         if (group.KeyValues.Count > 0)
-            parts.Add($"Anahtarlar: {string.Join(", ", group.KeyValues.Take(25))}{(group.KeyValues.Count > 25 ? ", …" : string.Empty)}");
+        {
+            parts.Add(item.DistinctKeyText);
+            parts.Add($"Kayıt anahtarları: {string.Join(", ", group.KeyValues.Take(25))}{(group.KeyValues.Count > 25 ? ", …" : string.Empty)}");
+        }
 
         NavigationStatusText = string.Join("  •  ", parts);
     }
