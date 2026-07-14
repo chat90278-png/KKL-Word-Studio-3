@@ -106,16 +106,6 @@ public sealed class Sprint24HeadingChainPaginationTests
         FragmentIndex = 0,
         IsContinuation = false,
         IsEditableReportElement = true,
-        Payload = new TablePageBlockPayload
-        {
-            Name = "Table",
-            ColumnHeaders = ["No"],
-            Rows = [["1"]],
-            CellSpans = [],
-            StartRowIndex = 0,
-            HasHeader = true,
-            IsHeaderRepeated = false,
-            Format = DefaultFormatProfiles.Table
-        }
+        Payload = new UnsupportedPageBlockPayload { Description = "Table sentinel" }
     };
 }
