@@ -19,7 +19,8 @@ public sealed class Sprint21ColumnSelectionArchitectureTests
         Assert.Contains("ToolTip = \"Bu sütunu Word tablosuna aktar\"", headerSurface, StringComparison.Ordinal);
         Assert.Contains("SetColumnIncluded(identity, true)", headerSurface, StringComparison.Ordinal);
         Assert.Contains("SetColumnIncluded(identity, false)", headerSurface, StringComparison.Ordinal);
-        Assert.Contains("private bool _isIncluded = true;", row, StringComparison.Ordinal);
+        Assert.Contains("[ObservableProperty]", row, StringComparison.Ordinal);
+        Assert.Contains("private bool _isIncluded;", row, StringComparison.Ordinal);
         Assert.Contains("PersistTransferColumnOptions", viewModel, StringComparison.Ordinal);
         Assert.Contains("selectedOptions.Count == 0", viewModel, StringComparison.Ordinal);
 
