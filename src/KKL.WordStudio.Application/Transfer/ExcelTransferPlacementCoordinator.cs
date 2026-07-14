@@ -181,7 +181,10 @@ public static class ExcelTransferPlacementCoordinator
             created.Add(altHeading);
         }
 
-        var anchorId = altHeading?.Id ?? heading?.Id ?? rootHeading.Id;
+        // When the optional proposal rows are removed, keep the selected
+        // heading/alt-heading as the real transfer anchor instead of silently
+        // falling back to the document root.
+        var anchorId = altHeading?.Id ?? heading?.Id ?? placement.AnchorElementId ?? rootHeading.Id;
         var transferRequest = CloneTransfer(
             placement.Transfer,
             targetElementId: anchorId,
