@@ -1,5 +1,6 @@
 namespace KKL.WordStudio.Architecture.Tests;
 
+using System.Text.RegularExpressions;
 using Xunit;
 
 public sealed class Sprint24PaginationParityArchitectureTests
@@ -35,7 +36,7 @@ public sealed class Sprint24PaginationParityArchitectureTests
     {
         var root = SolutionRootLocator.Find();
         var uiRoot = Path.Combine(root, "src", "KKL.WordStudio.UI");
-        var uiSources = Directory.GetFiles(uiRoot, "*.cs", SearchOption.AllDirectories)
+        var uiSources = EnumerateProductionSourceFiles(uiRoot)
             .Select(File.ReadAllText)
             .ToList();
 
@@ -62,16 +63,23 @@ public sealed class Sprint24PaginationParityArchitectureTests
     public void ExactlyOneDocumentLayoutEngine_ImplementsTheApplicationContract()
     {
         var root = SolutionRootLocator.Find();
-        var implementations = Directory.GetFiles(
-                Path.Combine(root, "src"),
-                "*.cs",
-                SearchOption.AllDirectories)
-            .Where(file => File.ReadAllText(file).Contains(": IDocumentLayoutEngine", StringComparison.Ordinal))
+        var implementationPattern = new Regex(
+            @"\b(?:class|record)\s+\w+[^\r\n{]*:\s*[^\r\n{]*\bIDocumentLayoutEngine\b",
+            RegexOptions.CultureInvariant);
+        var implementations = EnumerateProductionSourceFiles(Path.Combine(root, "src"))
+            .Where(file => implementationPattern.IsMatch(File.ReadAllText(file)))
             .ToList();
 
         var implementation = Assert.Single(implementations);
         Assert.Contains("DeterministicDocumentLayoutEngine.cs", implementation, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static IEnumerable<string> EnumerateProductionSourceFiles(string root) =>
+        Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file
+                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Any(segment => segment.Equals("bin", StringComparison.OrdinalIgnoreCase)
+                    || segment.Equals("obj", StringComparison.OrdinalIgnoreCase)));
 
     private static string Read(string root, params string[] parts) =>
         File.ReadAllText(Path.Combine(new[] { root }.Concat(parts).ToArray()));
