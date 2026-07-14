@@ -77,14 +77,36 @@ internal static class WordContentWriter
 
     private static void ApplyTablePaginationPolicy(Table table)
     {
-        if (!ReportFlowPaginationPolicy.KeepTableRowsIntact)
+        var rows = table.Elements<TableRow>().ToList();
+        if (ReportFlowPaginationPolicy.KeepTableRowsIntact)
+        {
+            foreach (var row in rows)
+            {
+                row.TableRowProperties ??= new TableRowProperties();
+                if (row.TableRowProperties.GetFirstChild<CantSplit>() is null)
+                    row.TableRowProperties.AddChild(new CantSplit(), true);
+            }
+        }
+
+        if (rows.Count == 0)
             return;
 
-        foreach (var row in table.Elements<TableRow>())
+        var hasHeader = rows[0].TableRowProperties?.GetFirstChild<TableHeader>() is not null;
+        var dataRowCount = Math.Max(0, rows.Count - (hasHeader ? 1 : 0));
+        var requiredDataRows = ReportFlowPaginationPolicy.ResolveMinimumTableStartDataRowCount(dataRowCount);
+        var requiredStartRowCount = requiredDataRows + (hasHeader ? 1 : 0);
+
+        // Native Word pagination has no explicit table-fragment object. KeepNext
+        // on the header and leading data-row paragraphs expresses the same shared
+        // start requirement without splitting or rebuilding the semantic table.
+        for (var rowIndex = 0; rowIndex < requiredStartRowCount - 1; rowIndex++)
         {
-            row.TableRowProperties ??= new TableRowProperties();
-            if (row.TableRowProperties.GetFirstChild<CantSplit>() is null)
-                row.TableRowProperties.AddChild(new CantSplit(), true);
+            foreach (var paragraph in rows[rowIndex].Descendants<Paragraph>())
+            {
+                paragraph.ParagraphProperties ??= new ParagraphProperties();
+                if (paragraph.ParagraphProperties.GetFirstChild<KeepNext>() is null)
+                    paragraph.ParagraphProperties.AddChild(new KeepNext(), true);
+            }
         }
     }
 }
