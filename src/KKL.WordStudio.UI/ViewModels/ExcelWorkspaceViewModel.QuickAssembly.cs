@@ -44,7 +44,7 @@ public sealed partial class ExcelWorkspaceViewModel
             var project = _workspace.ActiveProject;
             var report = _workspace.ActiveReport;
             if (project is null || report is null)
-                return CreateQuickAssemblyFailed("Etkin rapor yok — önce bir proje oluşturun veya açın.");
+                return CreateQuickAssemblyFailed("Rapor çalışma alanı hazır değil.");
 
             if (_currentPreview is null || _currentPreview.ColumnCount <= 0)
                 return CreateQuickAssemblyFailed("Sayfa önizlemesi yüklenemedi.");
