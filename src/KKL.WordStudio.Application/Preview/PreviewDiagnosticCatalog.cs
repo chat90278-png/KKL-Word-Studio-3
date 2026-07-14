@@ -121,30 +121,58 @@ public static class PreviewDiagnosticCatalog
                 "Tablo birden fazla sayfaya bölündü",
                 "Tablo uzun olduğu için Word sayfaları arasında otomatik olarak bölündü.");
 
+        // Preserve the established title used by existing consumers while the
+        // stable code and readable message carry the richer Control semantics.
         return new(PreviewDiagnosticCodes.LayoutWarning, PreviewDiagnosticSeverity.Warning,
-            "Önizleme yerleşimi kontrol edilmeli",
+            "Önizleme yerleşim uyarısı",
             "Sayfa yerleşiminde kullanıcı kontrolü gerektiren bir durum bulundu.");
     }
 
     public static string BuildGroupMessage(
         string code,
         int occurrenceCount,
+        int distinctKeyCount,
+        int rowCount,
         string? affectedColumn,
         string fallback)
     {
-        var countText = occurrenceCount == 1 ? "1 kayıt" : $"{occurrenceCount} kayıt";
+        var findingText = occurrenceCount == 1 ? "1 bulgu" : $"{occurrenceCount} bulgu";
+        var keyText = distinctKeyCount == 1
+            ? "1 kayıt anahtarında"
+            : $"{distinctKeyCount} kayıt anahtarında";
+
         return code switch
         {
-            PreviewDiagnosticCodes.QuantityInvalid => $"{countText} içinde Adet alanı boş veya sayıya dönüştürülemiyor.",
-            PreviewDiagnosticCodes.SerialDuplicate => $"{countText} içinde seri numarası tekrarı bulundu.",
-            PreviewDiagnosticCodes.MergeConflict => $"{countText} içinde birleştirme değerleri çelişiyor; satırlar ayrı bırakıldı.",
-            PreviewDiagnosticCodes.RowsNotMerged => $"{countText} güvenli biçimde birleştirilemedi ve ayrı tutuldu.",
-            PreviewDiagnosticCodes.EmptyCells => $"{countText} içinde boş hücre bulundu.",
-            PreviewDiagnosticCodes.RowsSkipped => $"{countText} tamamen boş olduğu için aktarım dışında bırakıldı.",
-            PreviewDiagnosticCodes.DefaultTitleUsed => "Varsayılan başlık kullanılıyor; istenirse İçindekiler veya Preview üzerinden değiştirilebilir.",
-            PreviewDiagnosticCodes.TableTooWide => "Tablo Word sayfasına geniş geliyor; çıktıdaki okunabilirliği kontrol edin.",
-            PreviewDiagnosticCodes.TableSplit => "Tablo uzun olduğu için birden fazla Word sayfasına bölündü.",
-            _ when !string.IsNullOrWhiteSpace(affectedColumn) => $"{affectedColumn} alanında {countText} kontrol edilmeli.",
+            PreviewDiagnosticCodes.QuantityInvalid when rowCount > 0 =>
+                $"{rowCount} satırda Adet alanı boş veya sayıya dönüştürülemiyor.",
+            PreviewDiagnosticCodes.QuantityInvalid =>
+                $"Adet alanı için {findingText} bulundu; boş veya sayıya dönüştürülemeyen değerleri kontrol edin.",
+            PreviewDiagnosticCodes.SerialDuplicate when distinctKeyCount > 0 =>
+                $"{distinctKeyCount} benzersiz seri numarası için toplam {findingText} bulundu.",
+            PreviewDiagnosticCodes.SerialDuplicate =>
+                $"Seri numarası tekrarıyla ilgili {findingText} bulundu.",
+            PreviewDiagnosticCodes.MergeConflict when distinctKeyCount > 0 =>
+                $"{keyText} {occurrenceCount} çelişkili değer bulundu; satırlar ayrı bırakıldı.",
+            PreviewDiagnosticCodes.MergeConflict =>
+                $"Birleştirme değerlerinde {findingText} bulundu; satırlar ayrı bırakıldı.",
+            PreviewDiagnosticCodes.RowsNotMerged when distinctKeyCount > 0 =>
+                $"{keyText} satırlar güvenli biçimde birleştirilemedi ve ayrı tutuldu.",
+            PreviewDiagnosticCodes.RowsNotMerged =>
+                $"{findingText} güvenli biçimde birleştirilemedi ve ayrı tutuldu.",
+            PreviewDiagnosticCodes.EmptyCells when rowCount > 0 =>
+                $"{rowCount} satırda boş hücre bulundu.",
+            PreviewDiagnosticCodes.EmptyCells =>
+                $"Boş hücrelerle ilgili {findingText} bulundu.",
+            PreviewDiagnosticCodes.RowsSkipped =>
+                $"{findingText} tamamen boş olduğu için aktarım dışında bırakıldı.",
+            PreviewDiagnosticCodes.DefaultTitleUsed =>
+                "Varsayılan başlık kullanılıyor; istenirse İçindekiler veya Preview üzerinden değiştirilebilir.",
+            PreviewDiagnosticCodes.TableTooWide =>
+                "Tablo Word sayfasına geniş geliyor; çıktıdaki okunabilirliği kontrol edin.",
+            PreviewDiagnosticCodes.TableSplit =>
+                "Tablo uzun olduğu için birden fazla Word sayfasına bölündü.",
+            _ when !string.IsNullOrWhiteSpace(affectedColumn) =>
+                $"{affectedColumn} alanında {findingText} kontrol edilmeli.",
             _ => fallback
         };
     }
