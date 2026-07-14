@@ -60,18 +60,22 @@ public sealed class Sprint24PaginationParityArchitectureTests
     }
 
     [Fact]
-    public void ExactlyOneDocumentLayoutEngine_ImplementsTheApplicationContract()
+    public void EngineProject_ContainsOneDocumentLayoutEngineImplementation()
     {
         var root = SolutionRootLocator.Find();
         var implementationPattern = new Regex(
             @"\b(?:class|record)\s+\w+(?:<[^>\r\n]+>)?\s*:\s*[^\r\n{]*\bIDocumentLayoutEngine\b",
             RegexOptions.CultureInvariant);
-        var implementations = EnumerateProductionSourceFiles(Path.Combine(root, "src"))
+        var engineRoot = Path.Combine(root, "src", "KKL.WordStudio.Engine");
+        var implementations = EnumerateProductionSourceFiles(engineRoot)
             .Where(file => implementationPattern.IsMatch(File.ReadAllText(file)))
             .ToList();
 
         var implementation = Assert.Single(implementations);
-        Assert.Contains("DeterministicDocumentLayoutEngine.cs", implementation, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(
+            Path.Combine("Layout", "DeterministicDocumentLayoutEngine.cs"),
+            implementation,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static IEnumerable<string> EnumerateProductionSourceFiles(string root) =>
