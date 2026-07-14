@@ -11,9 +11,9 @@ public sealed class Sprint24ReportReadinessTests
         var elementId = Guid.NewGuid();
         var diagnostics = new[]
         {
-            Diagnostic("row-1", PreviewDiagnosticSeverity.Warning, elementId, "1001", "A3:F3"),
-            Diagnostic("row-2", PreviewDiagnosticSeverity.Warning, elementId, "1002", "A4:F4"),
-            Diagnostic("row-3", PreviewDiagnosticSeverity.Warning, elementId, "1003", "A5:F5")
+            Diagnostic("row-1", PreviewDiagnosticSeverity.Warning, elementId, "1001", "A3:F3", "PN/key '1001' yinelenen seri içeriyor."),
+            Diagnostic("row-2", PreviewDiagnosticSeverity.Warning, elementId, "1002", "A4:F4", "PN/key '1002' yinelenen seri içeriyor."),
+            Diagnostic("row-3", PreviewDiagnosticSeverity.Warning, elementId, "1003", "A5:F5", "PN/key '1003' yinelenen seri içeriyor.")
         };
 
         var consolidated = PreviewDiagnosticConsolidator.Consolidate(diagnostics);
@@ -60,6 +60,7 @@ public sealed class Sprint24ReportReadinessTests
         Assert.True(readiness.BlocksExport);
         Assert.False(readiness.RequiresWarningConfirmation);
         Assert.Equal(2, readiness.ErrorGroupCount);
+        Assert.Equal(2, readiness.ErrorOccurrenceCount);
         Assert.Equal(1, readiness.WarningGroupCount);
     }
 
@@ -79,6 +80,7 @@ public sealed class Sprint24ReportReadinessTests
         Assert.False(readiness.BlocksExport);
         Assert.True(readiness.RequiresWarningConfirmation);
         Assert.Equal(1, readiness.WarningGroupCount);
+        Assert.Equal(2, readiness.WarningOccurrenceCount);
         Assert.Equal(1, readiness.InformationGroupCount);
         Assert.Equal(3, readiness.TotalOccurrenceCount);
     }
@@ -88,12 +90,13 @@ public sealed class Sprint24ReportReadinessTests
         PreviewDiagnosticSeverity severity,
         Guid elementId,
         string? keyValue,
-        string range) => new()
+        string range,
+        string message = "Aynı seri numarası birden fazla satırda bulundu.") => new()
     {
         Id = id,
         Severity = severity,
         Title = "Tekrarlanan seri numarası",
-        Message = "Aynı seri numarası birden fazla satırda bulundu.",
+        Message = message,
         ElementId = elementId,
         ElementName = "Tablo 1",
         KeyValue = keyValue,
