@@ -55,11 +55,19 @@ public sealed class Sprint23CurrentContractCharacterizationTests
         var root = SolutionRootLocator.Find();
         var xaml = Read(root, "src", "KKL.WordStudio.UI", "MainWindow.xaml");
 
-        Assert.Contains("Content=\"＋ Yeni\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Aç\"", xaml, StringComparison.Ordinal);
+        // The test name remains stable for the baseline inventory, while the
+        // assertions now describe the accepted Sprint 23 responsive-shell contract.
+        Assert.DoesNotContain("Content=\"＋ Yeni\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Content=\"Aç\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Content=\"Kaydet\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Header=\"Farklı Kaydet\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Word Dosyası Oluştur\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ReportPaneShell\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ReportPaneToggleButton\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ReportPaneColumn\" Width=\"Auto\"", xaml, StringComparison.Ordinal);
         Assert.Contains("<ContentControl x:Name=\"ExcelWorkspaceHost\" Grid.Column=\"0\" />", xaml, StringComparison.Ordinal);
-        Assert.Contains("<ContentControl x:Name=\"PreviewHost\" Grid.Column=\"2\" />", xaml, StringComparison.Ordinal);
-        Assert.Contains("<ContentControl x:Name=\"ContextDockHost\" Grid.Column=\"4\" />", xaml, StringComparison.Ordinal);
+        Assert.Contains("<ContentControl x:Name=\"PreviewHost\" Grid.Column=\"0\" />", xaml, StringComparison.Ordinal);
+        Assert.Contains("<ContentControl x:Name=\"ContextDockHost\" Grid.Column=\"2\" />", xaml, StringComparison.Ordinal);
         Assert.Contains("<ColumnDefinition x:Name=\"DockColumn\" Width=\"350\" />", xaml, StringComparison.Ordinal);
     }
 

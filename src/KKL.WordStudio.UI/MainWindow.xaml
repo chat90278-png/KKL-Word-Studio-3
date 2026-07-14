@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="KKL Word Studio"
         Width="1600" Height="950"
+        MinWidth="860" MinHeight="620"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Brush.App.Background}">
 
@@ -10,33 +11,27 @@
         <DockPanel LastChildFill="True">
 
             <!-- ===================== Title bar ===================== -->
-            <Border DockPanel.Dock="Top" Height="38" Background="#FFF9FBFD" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
-                <StackPanel Orientation="Horizontal" Margin="14,0">
-                    <Image Width="24"
-                           Height="24"
+            <Border DockPanel.Dock="Top" Height="40" Background="#FFF9FBFD" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal" Margin="12,0">
+                    <Image Width="30"
+                           Height="30"
                            VerticalAlignment="Center"
                            Stretch="Uniform"
                            Source="Assets/Brand/BrandMarkSmall.png"
                            ToolTip="KKL Word Studio" />
-                    <TextBlock Text="KKL Word Studio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="9,0,0,0" />
+                    <TextBlock Text="KKL Word Studio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="8,0,0,0" />
                     <TextBlock Text="{Binding CurrentProject.Name}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="10,0,0,0" />
                 </StackPanel>
             </Border>
 
-            <!-- ===================== Command bar ===================== -->
-            <Border DockPanel.Dock="Top" Height="58" Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
-                <DockPanel Margin="16,0">
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                        <Button Content="＋ Yeni" Style="{StaticResource Btn.Base}" Command="{Binding NewProjectCommand}" Margin="0,0,4,0" />
-                        <Button Content="Aç" Style="{StaticResource Btn.Base}" Command="{Binding OpenProjectCommand}" Margin="0,0,4,0" />
-                        <Border Width="1" Height="24" Background="{DynamicResource Brush.Border}" Margin="4,0" />
-                        <Button Content="Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectCommand}" Margin="0,0,4,0" />
-                        <Button Content="Farklı Kaydet" Style="{StaticResource Btn.Base}" Command="{Binding SaveProjectAsCommand}" Margin="0,0,12,0" />
-                        <Border Width="1" Height="24" Background="{DynamicResource Brush.Border}" Margin="0,0,12,0" />
+            <!-- ===================== Simplified command bar ===================== -->
+            <Border DockPanel.Dock="Top" Height="54" Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                <DockPanel Margin="14,0">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                         <ContentControl x:Name="LoadedSourcesHost" VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                         <Button Content="Word Dosyası Oluştur" Style="{StaticResource Btn.Primary}" Command="{Binding ExportToWordCommand}" />
                     </StackPanel>
 
@@ -66,32 +61,57 @@
                 </StatusBarItem>
             </StatusBar>
 
-            <!-- ===================== Workspace (fills all remaining space) ===================== -->
-            <Grid>
+            <!-- ===================== Responsive workspace ===================== -->
+            <Grid x:Name="WorkspaceGrid" ClipToBounds="True">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MinWidth="430" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="1.16*" MinWidth="470" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition x:Name="DockColumn" Width="350" />
+                    <ColumnDefinition Width="*" MinWidth="420" />
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition x:Name="ReportPaneColumn" Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Excel Workspace: Sprint 8 reclaims the decorative rail width. -->
                 <ContentControl x:Name="ExcelWorkspaceHost" Grid.Column="0" />
-                <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource Brush.Border}" />
 
-                <!-- Live Word Preview -->
-                <ContentControl x:Name="PreviewHost" Grid.Column="2" />
-                <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource Brush.Border}" />
+                <!-- Always-visible narrow edge handle. -->
+                <Border Grid.Column="1"
+                        Background="#FFF7F9FC"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="1,0">
+                    <Button x:Name="ReportPaneToggleButton"
+                            Content="{Binding ReportPane.ToggleText}"
+                            Click="ReportPaneToggleButton_Click"
+                            ToolTip="{Binding ReportPane.ToggleToolTip}"
+                            Style="{StaticResource Btn.Base}"
+                            Padding="0"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center" />
+                </Border>
 
-                <!-- Right Context Dock -->
-                <ContentControl x:Name="ContextDockHost" Grid.Column="4" />
+                <!-- Preview and Context Dock travel as one report workspace. -->
+                <Border x:Name="ReportPaneShell"
+                        Grid.Column="2"
+                        Width="760"
+                        ClipToBounds="True"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="1,0,0,0"
+                        Background="{DynamicResource Brush.App.Background}">
+                    <Grid MinWidth="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="420" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition x:Name="DockColumn" Width="350" />
+                        </Grid.ColumnDefinitions>
+
+                        <ContentControl x:Name="PreviewHost" Grid.Column="0" />
+                        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource Brush.Border}" />
+                        <ContentControl x:Name="ContextDockHost" Grid.Column="2" />
+                    </Grid>
+                </Border>
             </Grid>
         </DockPanel>
 
-        <!-- Full-shell interaction shield for measured long operations. This is
-             intentionally an in-window overlay rather than a second popup/window,
-             so focus cannot escape behind the busy surface. -->
+        <!-- Full-shell interaction shield for measured long operations. -->
         <Border Panel.ZIndex="1000"
                 Background="#73111A2B"
                 Visibility="{Binding LongOperation.IsBusy, Converter={StaticResource BoolToVisibility}}">

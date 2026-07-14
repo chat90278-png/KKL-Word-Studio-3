@@ -34,6 +34,7 @@ public partial class ContentsView : UserControl
         if (node is null)
             return;
 
+        ReportPaneViewModel.Shared.OpenForAction();
         _previewViewModel.NavigateToElement(node.ElementId);
         e.Handled = true;
     }
