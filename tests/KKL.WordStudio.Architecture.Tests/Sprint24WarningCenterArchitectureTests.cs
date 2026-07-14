@@ -12,7 +12,7 @@ public sealed class Sprint24WarningCenterArchitectureTests
         var store = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "PreviewDiagnosticsStore.cs");
 
         Assert.Contains("GroupBy(CreateKey)", summary, StringComparison.Ordinal);
-        Assert.Contains("OccurrenceCount = group.Count()", summary, StringComparison.Ordinal);
+        Assert.Contains("OccurrenceCount = occurrenceCount", summary, StringComparison.Ordinal);
         Assert.Contains("public int RawCount", store, StringComparison.Ordinal);
         Assert.Contains("PreviewDiagnosticSummaryService.Group(Items)", store, StringComparison.Ordinal);
         Assert.DoesNotContain("Items.Remove", store, StringComparison.Ordinal);
@@ -41,10 +41,33 @@ public sealed class Sprint24WarningCenterArchitectureTests
         var dock = Read(root, "src", "KKL.WordStudio.UI", "Views", "ContextDockView.xaml");
         var store = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "PreviewDiagnosticsStore.cs");
 
+        Assert.Contains("Text=\"Kontrol\"", dock, StringComparison.Ordinal);
         Assert.Contains("Diagnostics.CountText", dock, StringComparison.Ordinal);
         Assert.Contains("Diagnostics.BadgeBackground", dock, StringComparison.Ordinal);
         Assert.Contains("HasBlockingErrors", store, StringComparison.Ordinal);
         Assert.Contains("Count > 99 ? \"99+\"", store, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ControlCenter_UsesStableCodesReadableCardsAndOccurrenceNavigation()
+    {
+        var root = SolutionRootLocator.Find();
+        var catalog = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnosticCatalog.cs");
+        var summary = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnosticSummaryService.cs");
+        var view = Read(root, "src", "KKL.WordStudio.UI", "Views", "WarningCenterView.xaml");
+        var viewModel = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "WarningCenterViewModel.cs");
+
+        Assert.Contains("QUANTITY_INVALID", catalog, StringComparison.Ordinal);
+        Assert.Contains("SRC_FILE_MISSING", catalog, StringComparison.Ordinal);
+        Assert.Contains("TABLE_SPLIT", catalog, StringComparison.Ordinal);
+        Assert.Contains("first.Code", summary, StringComparison.Ordinal);
+        Assert.Contains("RowNumbers", summary, StringComparison.Ordinal);
+        Assert.Contains("Content=\"İlk Kayda Git\"", view, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Sonraki\"", view, StringComparison.Ordinal);
+        Assert.Contains("NavigateFirstCommand", view, StringComparison.Ordinal);
+        Assert.Contains("NavigateNextCommand", view, StringComparison.Ordinal);
+        Assert.Contains("GetNavigationKey", viewModel, StringComparison.Ordinal);
+        Assert.Contains("Word'e hazır", viewModel, StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] parts) =>
