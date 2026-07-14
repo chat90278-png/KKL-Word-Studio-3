@@ -9,8 +9,8 @@ using KKL.WordStudio.Domain.Reports;
 
 /// <summary>
 /// Projects existing report-content warnings into runtime diagnostics with
-/// stable report/source navigation metadata. It does not change composition or
-/// layout decisions and never repairs data automatically.
+/// stable codes and report/source navigation metadata. It never repairs data
+/// automatically and does not introduce a second validation pipeline.
 /// </summary>
 public static partial class PreviewDiagnosticFactory
 {
@@ -42,15 +42,19 @@ public static partial class PreviewDiagnosticFactory
             foreach (var warning in tableNode.CompositionWarnings.Where(message => !string.IsNullOrWhiteSpace(message)))
             {
                 var message = warning.Trim();
+                var rule = PreviewDiagnosticCatalog.ResolveComposition(message);
                 tableMessages.Add(message);
                 diagnostics.Add(new PreviewDiagnostic
                 {
                     Id = $"table:{tableNode.ElementId:N}:{ordinal++}",
-                    Severity = PreviewDiagnosticSeverity.Warning,
-                    Title = ResolveTitle(message),
+                    Code = rule.Code,
+                    Severity = rule.Severity,
+                    Title = rule.Title,
                     Message = message,
                     ElementId = tableNode.ElementId,
                     ElementName = tableNode.Name,
+                    AffectedColumn = rule.AffectedColumn,
+                    RowNumber = TryExtractRowNumber(message),
                     KeyValue = TryExtractKey(message),
                     Sources = sources
                 });
@@ -58,16 +62,20 @@ public static partial class PreviewDiagnosticFactory
 
             if (!string.IsNullOrWhiteSpace(tableNode.SourceError))
             {
-                var message = $"'{tableNode.Name}' tablosu kaynak hatası içeriyor: {tableNode.SourceError}";
+                var sourceError = tableNode.SourceError.Trim();
+                var rule = PreviewDiagnosticCatalog.ResolveSourceError(sourceError);
+                var message = $"'{tableNode.Name}' tablosu kaynak hatası içeriyor: {sourceError}";
                 tableMessages.Add(message);
                 diagnostics.Add(new PreviewDiagnostic
                 {
                     Id = $"source:{tableNode.ElementId:N}:{ordinal++}",
-                    Severity = PreviewDiagnosticSeverity.Error,
-                    Title = "Kaynak veriye erişilemedi",
+                    Code = rule.Code,
+                    Severity = rule.Severity,
+                    Title = rule.Title,
                     Message = message,
                     ElementId = tableNode.ElementId,
                     ElementName = tableNode.Name,
+                    AffectedColumn = rule.AffectedColumn,
                     Sources = sources
                 });
             }
@@ -82,12 +90,15 @@ public static partial class PreviewDiagnosticFactory
                 continue;
             }
 
+            var rule = PreviewDiagnosticCatalog.ResolveLayout(message);
             diagnostics.Add(new PreviewDiagnostic
             {
                 Id = $"layout:{ordinal++}",
-                Severity = PreviewDiagnosticSeverity.Warning,
-                Title = "Önizleme yerleşim uyarısı",
-                Message = message
+                Code = rule.Code,
+                Severity = rule.Severity,
+                Title = rule.Title,
+                Message = message,
+                AffectedColumn = rule.AffectedColumn
             });
         }
 
@@ -170,26 +181,23 @@ public static partial class PreviewDiagnosticFactory
         }
     }
 
-    private static string ResolveTitle(string message)
-    {
-        if (message.Contains("geçerli Adet değeri", StringComparison.OrdinalIgnoreCase))
-            return "Adet değeri eksik veya geçersiz";
-        if (message.Contains("çelişkili değerler", StringComparison.OrdinalIgnoreCase))
-            return "Birleştirilecek satırlarda çelişki var";
-        if (message.Contains("yinelenen seri", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("duplicate", StringComparison.OrdinalIgnoreCase))
-            return "Seri numarası tekrarı";
-        if (message.Contains("birleştirilmedi", StringComparison.OrdinalIgnoreCase))
-            return "Satırlar güvenli biçimde birleştirilemedi";
-        return "Tablo verisi uyarısı";
-    }
-
     private static string? TryExtractKey(string message)
     {
         var match = PartNumberKeyRegex().Match(message);
         return match.Success ? match.Groups["key"].Value : null;
     }
 
+    private static int? TryExtractRowNumber(string message)
+    {
+        var match = RowNumberRegex().Match(message);
+        return match.Success && int.TryParse(match.Groups["row"].Value, out var row)
+            ? row
+            : null;
+    }
+
     [GeneratedRegex("PN/key\\s+'(?<key>[^']+)'", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex PartNumberKeyRegex();
+
+    [GeneratedRegex("(?:satır|row)\\s*[:#-]?\\s*(?<row>\\d+)", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex RowNumberRegex();
 }
