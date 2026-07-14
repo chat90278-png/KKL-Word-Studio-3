@@ -9,7 +9,8 @@ public sealed class Sprint24PaginationParityArchitectureTests
     {
         var root = SolutionRootLocator.Find();
         var policy = Read(root, "src", "KKL.WordStudio.Application", "Content", "ReportFlowPaginationPolicy.cs");
-        var preview = Read(root, "src", "KKL.WordStudio.Engine", "Layout", "LayoutPageFlow.cs");
+        var previewFlow = Read(root, "src", "KKL.WordStudio.Engine", "Layout", "LayoutPageFlow.cs");
+        var previewTable = Read(root, "src", "KKL.WordStudio.Engine", "Layout", "DeterministicTablePaginator.cs");
         var word = Read(root, "src", "KKL.WordStudio.Infrastructure", "Export", "Exporters", "Word", "WordContentWriter.cs");
         var exporter = Read(root, "src", "KKL.WordStudio.Infrastructure", "Export", "Exporters", "WordExporter.cs");
 
@@ -17,8 +18,10 @@ public sealed class Sprint24PaginationParityArchitectureTests
         Assert.Contains("ResolveMinimumTableStartDataRowCount", policy, StringComparison.Ordinal);
         Assert.Contains("KeepTableCaptionWithTable", policy, StringComparison.Ordinal);
         Assert.Contains("KeepTableRowsIntact", policy, StringComparison.Ordinal);
-        Assert.Contains("RemoveTrailingHeadingChainWhenPageHasEarlierBodyContent", preview, StringComparison.Ordinal);
-        Assert.Contains("ReportFlowPaginationPolicy.IsHeading", preview, StringComparison.Ordinal);
+        Assert.Contains("RemoveTrailingHeadingChainWhenPageHasEarlierBodyContent", previewFlow, StringComparison.Ordinal);
+        Assert.Contains("ReportFlowPaginationPolicy.IsHeading", previewFlow, StringComparison.Ordinal);
+        Assert.Contains("ResolveMinimumTableStartDataRowCount", previewTable, StringComparison.Ordinal);
+        Assert.Contains("EstimateRequiredStartRowsHeight", previewTable, StringComparison.Ordinal);
         Assert.Contains("ResolveMinimumTableStartDataRowCount", word, StringComparison.Ordinal);
         Assert.Contains("new KeepNext()", word, StringComparison.Ordinal);
         Assert.Contains("new CantSplit()", word, StringComparison.Ordinal);
