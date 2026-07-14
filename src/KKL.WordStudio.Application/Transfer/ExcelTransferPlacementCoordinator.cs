@@ -243,6 +243,14 @@ public static class ExcelTransferPlacementCoordinator
             return new ExcelTransferPlacementResult { TransferResult = result };
         }
 
+        if (!placement.IncludeHeading
+            && !placement.IncludeAltHeading
+            && requiredAnchor is not null
+            && placement.RequiredAnchorKind == ExcelTransferPlacementAnchorKind.AltHeading)
+        {
+            MoveTableToAnchorBlockEnd(insertionContainer, requiredAnchor, result.Table);
+        }
+
         ApplyTableIdentityAndColumns(report, result.Table, placement.TableName, includedColumns);
         RemoveLegacyTableTitle(report, result.Table);
         ReportHeadingNumberingService.Renumber(report);
@@ -416,6 +424,22 @@ public static class ExcelTransferPlacementCoordinator
         }
 
         return container.Children.Count;
+    }
+
+    private static void MoveTableToAnchorBlockEnd(
+        Container container,
+        ReportElement anchor,
+        TableElement table)
+    {
+        var anchorIndex = container.Children.IndexOf(anchor);
+        if (anchorIndex < 0 || !container.Children.Remove(table))
+            return;
+
+        var insertionIndex = FindAnchorBlockEnd(
+            container,
+            anchorIndex,
+            ExcelTransferPlacementAnchorKind.AltHeading);
+        container.Children.Insert(insertionIndex, table);
     }
 
     private static int FindAnchorBlockEnd(
