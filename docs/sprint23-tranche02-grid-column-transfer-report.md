@@ -26,7 +26,7 @@
 - When English and Turkish Part Name both exist, English is selected by default and Turkish remains available but unchecked.
 - Unknown extra columns remain visible and unchecked; the user can explicitly include one from the grid header.
 - Selection, semantic role, logical field identity and edited display header persist per workbook/worksheet.
-- Logical binding identity is separate from the user-visible header so renaming a header does not break canonical ordering.
+- Logical binding identity is separate from the user-visible header so renaming a header does not break binding.
 
 ### Source toolbar
 
@@ -34,18 +34,20 @@
 - The duplicate bottom range-editor button was removed.
 - The bottom strip now shows only range/provenance and concise status text.
 
-### Fixed Word table order
+### Word/Preview column order
 
-The shared Application coordinator orders selected standard fields as:
+Selected columns preserve their current physical left-to-right order in the Excel source grid.
+Semantic roles continue to control automatic selection and stable binding identity, but they do not rearrange the output table.
+
+Example source order:
 
 1. No
-2. Part Name
-3. Part Number
+2. Part Number
+3. Serial Number
 4. NSN
-5. Serial Number
-6. Quantity
+5. Quantity
 
-Source Excel order remains untouched. Explicitly selected unknown fields follow the canonical fields in source order. The resulting `TableElement.Columns` order is shared by Preview and Word.
+The same order is used by the resulting `TableElement.Columns`, Preview and Word.
 
 ### Word transfer placement confirmation
 
@@ -60,13 +62,20 @@ Source Excel order remains untouched. Explicitly selected unknown fields follow 
 - A failed transfer rolls back the proposed root/heading chain.
 - A first new transfer establishes the fixed document-root heading metadata; full numbering/deletion policy is completed in Tranche 03.
 
+### Visible table title
+
+- The popup's table-name field now produces a real bold report text element immediately above the table.
+- The title is visible in both Preview and Word because it uses the existing `TextElement` rendering/export path.
+- Updating an existing table updates or creates the associated title without replacing the table object.
+- The title is not a heading and therefore does not create an extra Contents entry.
+
 ## Architecture constraints preserved
 
 - Existing `IExcelReportTransferService` remains the authoritative transfer engine.
 - `ExcelTransferPlacementCoordinator` composes placement around that engine; no second renderer, data provider or report engine was introduced.
 - Source workbook remains read-only.
 - Contents remains a projection of the real ordered report elements.
-- Preview and Word consume the same ordered `TableElement.Columns` collection.
+- Preview and Word consume the same ordered `TableElement.Columns` collection and normal `TextElement` table title.
 
 ## Test delta
 
@@ -87,19 +96,20 @@ Expected project totals:
 - Infrastructure: `139`
 - Total: `559`
 
-## Windows correction pass
+## Windows correction passes
 
-The first Windows run exposed three compatibility issues:
+### Pass 1
 
-1. `ColumnMappingRowViewModel.Selection.cs` duplicated the new source-generated `IsIncluded` property. The obsolete partial file was removed; `ColumnMappingRowViewModel.cs` is now the single authoritative definition.
-2. The Sprint 21 mapping-surface architecture test still required the removed drawer. Its identity was preserved, but its assertions now guard the direct checkbox-in-column-header surface and verify that the old drawer remains absent.
-3. The Sprint 21 Domain guard prohibited all persistence. Sprint 23 intentionally persists worksheet transfer preferences on the existing `ColumnMapping`; the guard now verifies that this state does not leak into `TableElement` and does not introduce source-Excel writing.
+- Removed obsolete `ColumnMappingRowViewModel.Selection.cs`, which duplicated the generated `IsIncluded` property.
+- Updated Sprint 21 architecture guards for the new header-checkbox surface and worksheet-level persistence.
 
-The historical test method names remain unchanged because the baseline inventory tracks those identities.
+### Pass 2
 
-## Windows gate — pending rerun
+- Corrected selected-column output from semantic/canonical rearrangement to active Excel grid source order.
+- Materialized the popup table name as a visible bold title immediately above the table.
+- Updated the remaining ObservableProperty architecture guard without changing its historical method identity.
 
-Run against the final exact branch head:
+## Windows gate — pending final head
 
 ```bat
 git fetch origin
@@ -108,6 +118,7 @@ git reset --hard origin/sprint23/02-grid-column-transfer
 git rev-parse HEAD
 git status --short
 
+dotnet clean -c Release
 dotnet restore
 dotnet build -c Release
 dotnet test -c Release --no-build
@@ -123,9 +134,10 @@ Manual smoke:
 5. `Veri Aralığını Düzenle` appears beside `Word'e Aktar`; the lower duplicate is gone.
 6. `Word'e Aktar` opens the placement confirmation popup.
 7. Heading/alt heading/table name are editable; remove buttons remove the proposed row.
-8. New table output follows the fixed semantic order regardless of Excel source order.
-9. Existing selected table can be updated or a new table can be created.
-10. Cancelling the popup leaves the report unchanged.
+8. Output columns follow the selected Excel grid's left-to-right order.
+9. The popup table name appears as a bold title immediately above the table.
+10. Existing selected table can be updated or a new table can be created.
+11. Cancelling the popup leaves the report unchanged.
 
 ## Deferred to Tranche 03
 
