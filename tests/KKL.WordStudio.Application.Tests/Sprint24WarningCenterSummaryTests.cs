@@ -32,7 +32,10 @@ public sealed class Sprint24WarningCenterSummaryTests
             Diagnostic("d2", PreviewDiagnosticSeverity.Warning, Guid.NewGuid(), "A-1")
         };
 
-        Assert.Equal(2, PreviewDiagnosticSummaryService.Group(diagnostics).Count);
+        Assert.Collection(
+            PreviewDiagnosticSummaryService.Group(diagnostics),
+            _ => { },
+            _ => { });
     }
 
     [Fact]
@@ -71,7 +74,7 @@ public sealed class Sprint24WarningCenterSummaryTests
 
         Assert.Single(group.Sources);
         Assert.Equal("Sheet1", group.Sources[0].WorksheetName);
-        Assert.Equal(2, group.KeyValues.Count);
+        Assert.Collection(group.KeyValues, key => Assert.Equal("K1", key), key => Assert.Equal("K2", key));
         Assert.Equal(elementId, group.ElementId);
     }
 
