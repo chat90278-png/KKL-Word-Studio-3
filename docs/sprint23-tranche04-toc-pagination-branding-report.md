@@ -77,12 +77,12 @@ Added tests:
 - Application: `+7`
 - Engine: `+2`
 - Infrastructure: `+3`
-- Architecture: `+3`
+- Architecture: `+4`
 
 Expected Windows total:
 
 ```text
-591 / 591
+592 / 592
 ```
 
 ## Pending Windows gate
