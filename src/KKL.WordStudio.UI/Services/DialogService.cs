@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.UI.Services;
 
 using System.Windows;
+using KKL.WordStudio.UI.Views;
 
 public sealed class DialogService : IDialogService
 {
@@ -12,17 +13,11 @@ public sealed class DialogService : IDialogService
 
     public ExportWarningDecision ShowExportWarningDecision(string message, string title = "Uyarılarla Devam Et")
     {
-        var result = MessageBox.Show(
-            $"{message}\n\nEvet: Word dosyasını oluştur\nHayır: Kontrol merkezine git\nİptal: İşlemi durdur",
-            title,
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Warning);
+        var dialog = new ExportWarningDecisionWindow(message, title);
+        if (Application.Current?.MainWindow is { } owner && !ReferenceEquals(owner, dialog))
+            dialog.Owner = owner;
 
-        return result switch
-        {
-            MessageBoxResult.Yes => ExportWarningDecision.Continue,
-            MessageBoxResult.No => ExportWarningDecision.Review,
-            _ => ExportWarningDecision.Cancel
-        };
+        dialog.ShowDialog();
+        return dialog.Decision;
     }
 }
