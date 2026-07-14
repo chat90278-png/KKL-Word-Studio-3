@@ -62,8 +62,7 @@ internal sealed class LayoutPageFlow
         if (addGapAfter)
             _currentPage.BodyYMillimeters += BlockGapMillimeters;
 
-        if (currentKind is not null)
-            _lastBodyContentKind = currentKind;
+        _lastBodyContentKind = currentKind;
     }
 
     public void AdvanceBody(double millimeters)
@@ -99,12 +98,12 @@ internal sealed class LayoutPageFlow
         Payload = block.Payload
     };
 
-    private static ReportContentKind? ResolveContentKind(PositionedPageBlock block) => block switch
+    private static ReportContentKind ResolveContentKind(PositionedPageBlock block) => block switch
     {
         { Kind: PageBlockKind.Table } => ReportContentKind.Table,
-        { Kind: PageBlockKind.Text, Payload: TextPageBlockPayload text } => text.SemanticKind,
+        { Kind: PageBlockKind.Text, Payload: TextPageBlockPayload text } => text.SemanticKind ?? ReportContentKind.Other,
         { Kind: PageBlockKind.Image } => ReportContentKind.Image,
-        _ => null
+        _ => ReportContentKind.Other
     };
 
     private MutableLayoutPage CreatePage()
