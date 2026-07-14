@@ -17,8 +17,6 @@
                                         <DataTrigger Binding="{Binding Kind}" Value="Heading">
                                             <Setter Property="FontWeight" Value="Bold" />
                                         </DataTrigger>
-                                        <!-- Hide the label for the selected node while an
-                                             inline rename is active. -->
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
                                                 <Condition Binding="{Binding IsSelected}" Value="True" />
@@ -30,20 +28,11 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <!-- Real inline rename editor for the selected node.
-                             Enter → commit, Escape → cancel, focus-loss → commit
-                             (unless cancelled). Visible only for the selected row
-                             while IsRenaming is true. -->
                         <TextBox x:Name="RenameBox"
                                  Text="{Binding DataContext.RenameText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
                                  LostFocus="RenameBox_LostFocus">
                             <TextBox.Style>
                                 <Style TargetType="TextBox">
-                                    <!-- Default hidden via a Style Setter (NOT a local
-                                         value) so the MultiDataTrigger below can override
-                                         it to Visible. A local Visibility value would win
-                                         over the trigger in WPF precedence and keep the
-                                         inline editor permanently collapsed. -->
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
                                         <MultiDataTrigger>
@@ -57,7 +46,7 @@
                                 </Style>
                             </TextBox.Style>
                             <TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding DataContext.CommitRenameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                <KeyBinding Key="Enter" Command="{Binding DataContext.CommitStructuredRenameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                                 <KeyBinding Key="Esc" Command="{Binding DataContext.CancelRenameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             </TextBox.InputBindings>
                         </TextBox>
@@ -70,18 +59,15 @@
     </UserControl.Resources>
 
     <DockPanel>
-        <!-- Compact inline "+" command strip — preserves Add Heading/Alt Heading/Table/Header/Footer/TOC
-             without a permanent wide toolbar (Variant 2.5: adapt placement, don't drop functionality). -->
         <WrapPanel DockPanel.Dock="Top" Margin="10,10,10,6">
-            <Button Content="+ Başlık" Style="{StaticResource Btn.Mini}" Command="{Binding AddHeadingCommand}" Margin="0,0,6,6" />
-            <Button Content="+ Alt Başlık" Style="{StaticResource Btn.Mini}" Command="{Binding AddAltHeadingCommand}" Margin="0,0,6,6" />
-            <Button Content="+ Tablo" Style="{StaticResource Btn.Mini}" Command="{Binding AddTableCommand}" Margin="0,0,6,6" />
+            <Button Content="+ Başlık" Style="{StaticResource Btn.Mini}" Command="{Binding AddStructuredHeadingCommand}" Margin="0,0,6,6" />
+            <Button Content="+ Alt Başlık" Style="{StaticResource Btn.Mini}" Command="{Binding AddStructuredAltHeadingCommand}" Margin="0,0,6,6" />
+            <Button Content="+ Tablo" Style="{StaticResource Btn.Mini}" Command="{Binding AddStructuredTableCommand}" Margin="0,0,6,6" />
             <Button Content="+ Üst Bilgi" Style="{StaticResource Btn.Mini}" Command="{Binding AddHeaderTextCommand}" Margin="0,0,6,6" />
             <Button Content="+ Alt Bilgi" Style="{StaticResource Btn.Mini}" Command="{Binding AddFooterTextCommand}" Margin="0,0,6,6" />
         </WrapPanel>
         <CheckBox DockPanel.Dock="Top" Content="İçindekiler Tablosu" IsChecked="{Binding IncludeTableOfContents}" Margin="12,0,10,8" />
 
-        <!-- Compact selection summary at the bottom — deliberately does not auto-switch to Properties. -->
         <Border DockPanel.Dock="Bottom" Margin="10,6,10,10" Padding="11,10" CornerRadius="9"
                 Background="{DynamicResource Brush.Soft}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
                 Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibility}}">
@@ -89,19 +75,15 @@
                 <TextBlock Text="{Binding SelectedTitle}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding SelectedSubtitle}" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="11" Margin="0,4,0,7" TextWrapping="Wrap" />
 
-                <!-- Sprint 12: compact structure actions for the selected node.
-                     Kept intentionally minimal (not a ribbon). -->
                 <WrapPanel Margin="0,0,0,4">
                     <Button Content="Yeniden Adlandır" Style="{StaticResource Btn.Mini}" Command="{Binding BeginRenameCommand}" Margin="0,0,6,6" />
-                    <Button Content="Sil" Style="{StaticResource Btn.Mini}" Command="{Binding DeleteSelectedCommand}" Margin="0,0,6,6" />
-                    <Button Content="Yukarı" Style="{StaticResource Btn.Mini}" Command="{Binding MoveUpCommand}" Margin="0,0,6,6" />
-                    <Button Content="Aşağı" Style="{StaticResource Btn.Mini}" Command="{Binding MoveDownCommand}" Margin="0,0,6,6" />
-                    <Button Content="Girintiyi Artır" Style="{StaticResource Btn.Mini}" Command="{Binding IndentCommand}" Margin="0,0,6,6" />
-                    <Button Content="Girintiyi Azalt" Style="{StaticResource Btn.Mini}" Command="{Binding OutdentCommand}" Margin="0,0,6,6" />
+                    <Button Content="Sil" Style="{StaticResource Btn.Mini}" Command="{Binding DeleteStructuredSelectedCommand}" Margin="0,0,6,6" />
+                    <Button Content="Yukarı" Style="{StaticResource Btn.Mini}" Command="{Binding MoveStructuredUpCommand}" Margin="0,0,6,6" />
+                    <Button Content="Aşağı" Style="{StaticResource Btn.Mini}" Command="{Binding MoveStructuredDownCommand}" Margin="0,0,6,6" />
+                    <Button Content="Girintiyi Artır" Style="{StaticResource Btn.Mini}" Command="{Binding IndentStructuredCommand}" Margin="0,0,6,6" />
+                    <Button Content="Girintiyi Azalt" Style="{StaticResource Btn.Mini}" Command="{Binding OutdentStructuredCommand}" Margin="0,0,6,6" />
                 </WrapPanel>
 
-                <!-- Non-modal failure feedback (gap E): shows the short Turkish
-                     Result.Error for a rejected structure operation. -->
                 <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="#FFB4553C" TextWrapping="Wrap"
                            Margin="0,0,0,6"
                            Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibility}}" />
@@ -110,26 +92,23 @@
             </StackPanel>
         </Border>
 
-        <TreeView x:Name="Tree" ItemsSource="{Binding RootNodes}" BorderThickness="0" Background="Transparent"
+        <TreeView x:Name="Tree" ItemsSource="{Binding StructuredRootNodes}" BorderThickness="0" Background="Transparent"
                   SelectedItemChanged="Tree_SelectedItemChanged" Margin="4,0"
                   AllowDrop="True"
                   PreviewMouseLeftButtonDown="Tree_PreviewMouseLeftButtonDown"
                   MouseMove="Tree_MouseMove"
+                  DragOver="Tree_DragOver"
+                  DragLeave="Tree_DragLeave"
                   Drop="Tree_Drop">
             <TreeView.InputBindings>
-                <!-- F2 → begin inline rename, Delete → delete selected node. -->
                 <KeyBinding Key="F2" Command="{Binding BeginRenameCommand}" />
-                <KeyBinding Key="Delete" Command="{Binding DeleteSelectedCommand}" />
+                <KeyBinding Key="Delete" Command="{Binding DeleteStructuredSelectedCommand}" />
             </TreeView.InputBindings>
-            <!-- Sprint 7 shared selection: TreeViewItem.IsSelected is two-way
-                 bound to the node VM, so a selection made on the Preview
-                 design surface highlights the matching row here (and vice
-                 versa, through the one Workspace selection state). Nodes are
-                 expanded by default so a synced selection is always visible. -->
             <TreeView.ItemContainerStyle>
                 <Style TargetType="TreeViewItem">
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                     <Setter Property="IsExpanded" Value="True" />
+                    <Setter Property="Padding" Value="2" />
                 </Style>
             </TreeView.ItemContainerStyle>
         </TreeView>
