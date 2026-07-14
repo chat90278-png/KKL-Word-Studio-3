@@ -72,10 +72,11 @@ public sealed class Sprint24PaginationParityArchitectureTests
             .ToList();
 
         var implementation = Assert.Single(implementations);
-        Assert.EndsWith(
-            Path.Combine("Layout", "DeterministicDocumentLayoutEngine.cs"),
-            implementation,
-            StringComparison.OrdinalIgnoreCase);
+        Assert.True(
+            implementation.EndsWith(
+                Path.Combine("Layout", "DeterministicDocumentLayoutEngine.cs"),
+                StringComparison.OrdinalIgnoreCase),
+            $"Unexpected layout engine implementation: {implementation}");
     }
 
     private static IEnumerable<string> EnumerateProductionSourceFiles(string root) =>
