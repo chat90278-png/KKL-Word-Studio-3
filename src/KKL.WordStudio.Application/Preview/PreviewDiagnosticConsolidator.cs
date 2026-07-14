@@ -38,7 +38,7 @@ public static class PreviewDiagnosticConsolidator
                     Message = first.Message,
                     ElementId = first.ElementId,
                     ElementName = first.ElementName,
-                    KeyValue = keys.Count == 1 ? keys[0] : null,
+                    KeyValue = keys.FirstOrDefault(),
                     Sources = sources,
                     OccurrenceCount = group.Sum(diagnostic => Math.Max(1, diagnostic.OccurrenceCount))
                 };
