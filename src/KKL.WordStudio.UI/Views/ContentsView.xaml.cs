@@ -9,13 +9,15 @@ using KKL.WordStudio.UI.ViewModels;
 
 public partial class ContentsView : UserControl
 {
+    private readonly PreviewViewModel _previewViewModel;
     private Point _dragStart;
     private ContentsNodeViewModel? _dragSource;
     private TreeViewItem? _dropTargetItem;
 
-    public ContentsView(ContentsViewModel viewModel)
+    public ContentsView(ContentsViewModel viewModel, PreviewViewModel previewViewModel)
     {
         InitializeComponent();
+        _previewViewModel = previewViewModel;
         DataContext = viewModel;
     }
 
@@ -23,6 +25,17 @@ public partial class ContentsView : UserControl
     {
         if (e.NewValue is ContentsNodeViewModel node)
             node.OnSelected?.Invoke();
+    }
+
+    private void Tree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        var node = FindAncestor<TreeViewItem>(e.OriginalSource as DependencyObject)?.DataContext
+            as ContentsNodeViewModel;
+        if (node is null)
+            return;
+
+        _previewViewModel.NavigateToElement(node.ElementId);
+        e.Handled = true;
     }
 
     private void Tree_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
