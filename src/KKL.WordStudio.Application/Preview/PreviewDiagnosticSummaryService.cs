@@ -7,6 +7,8 @@ namespace KKL.WordStudio.Application.Preview;
 /// </summary>
 public static class PreviewDiagnosticSummaryService
 {
+    private const string KeyPlaceholder = "…";
+
     public static IReadOnlyList<PreviewDiagnosticGroup> Group(
         IEnumerable<PreviewDiagnostic> diagnostics)
     {
@@ -18,7 +20,7 @@ public static class PreviewDiagnosticSummaryService
             {
                 Severity = group.Key.Severity,
                 Title = group.Key.Title,
-                Message = group.Key.Message,
+                Message = group.Key.MessageTemplate,
                 ElementId = group.Key.ElementId,
                 ElementName = group.Select(item => item.ElementName)
                     .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)),
@@ -47,9 +49,27 @@ public static class PreviewDiagnosticSummaryService
     private static PreviewDiagnosticGroupKey CreateKey(PreviewDiagnostic diagnostic) => new(
         diagnostic.Severity,
         Normalize(diagnostic.Title),
-        Normalize(diagnostic.Message),
+        NormalizeMessageTemplate(diagnostic),
         diagnostic.ElementId,
         Normalize(diagnostic.ElementName));
+
+    /// <summary>
+    /// Diagnostics deliberately retain their concrete key in the raw message for
+    /// debugging and direct navigation. The warning-center grouping key must not
+    /// treat that occurrence-specific value as a different root problem.
+    /// </summary>
+    private static string NormalizeMessageTemplate(PreviewDiagnostic diagnostic)
+    {
+        var message = Normalize(diagnostic.Message);
+        var keyValue = Normalize(diagnostic.KeyValue);
+        if (string.IsNullOrWhiteSpace(keyValue))
+            return message;
+
+        return message.Replace(
+            keyValue,
+            KeyPlaceholder,
+            StringComparison.OrdinalIgnoreCase);
+    }
 
     private static string CreateSourceKey(PreviewDiagnosticSource source) => string.Join("\u001f",
         Normalize(source.DataSourceName),
@@ -70,7 +90,7 @@ public static class PreviewDiagnosticSummaryService
     private readonly record struct PreviewDiagnosticGroupKey(
         PreviewDiagnosticSeverity Severity,
         string Title,
-        string Message,
+        string MessageTemplate,
         Guid? ElementId,
         string ElementName);
 }
