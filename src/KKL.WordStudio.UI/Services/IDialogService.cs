@@ -12,5 +12,11 @@ public interface IDialogService
 {
     void ShowError(string message, string title = "Error");
     bool ShowConfirmation(string message, string title = "Confirm");
-    ExportWarningDecision ShowExportWarningDecision(string message, string title = "Uyarılarla Devam Et");
+
+    ExportWarningDecision ShowExportWarningDecision(
+        string message,
+        string title = "Uyarılarla Devam Et") =>
+        ShowConfirmation(message, title)
+            ? ExportWarningDecision.Continue
+            : ExportWarningDecision.Review;
 }
