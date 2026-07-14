@@ -224,12 +224,11 @@ public static class ExcelTransferPlacementCoordinator
             created.Add(altHeading);
         }
 
-        // When both proposal rows are disabled, append the table to the selected
-        // alt-heading block rather than repeatedly inserting immediately after its
-        // caption and reversing the user's click order.
+        // With both proposal rows disabled, the selected alt heading itself stays
+        // the transfer target. Passing a table from its block would update that
+        // table instead of creating a new one.
         var anchorIdForTransfer = altHeading?.Id
             ?? heading?.Id
-            ?? ResolveTailAnchorId(insertionContainer, placement.AnchorElementId, placement.RequiredAnchorKind)
             ?? placement.AnchorElementId
             ?? rootHeading.Id;
         var transferRequest = CloneTransfer(
@@ -259,14 +258,14 @@ public static class ExcelTransferPlacementCoordinator
         ReportElement? element,
         ExcelTransferPlacementAnchorKind requiredKind) =>
         element is TextElement text
-        && requiredKind switch
+        && (requiredKind switch
         {
             ExcelTransferPlacementAnchorKind.Heading =>
                 HeadingStylePresets.IsHeading(text.Style)
                 && !string.Equals(text.Name, "Document Root", StringComparison.Ordinal),
             ExcelTransferPlacementAnchorKind.AltHeading => HeadingStylePresets.IsAltHeading(text.Style),
             _ => false
-        };
+        });
 
     private static void ApplyTableIdentityAndColumns(
         Report report,
@@ -417,23 +416,6 @@ public static class ExcelTransferPlacementCoordinator
         }
 
         return container.Children.Count;
-    }
-
-    private static Guid? ResolveTailAnchorId(
-        Container container,
-        Guid? anchorElementId,
-        ExcelTransferPlacementAnchorKind? requiredKind)
-    {
-        if (anchorElementId is not { } anchorId || requiredKind is not { } kind)
-            return null;
-
-        var anchorIndex = container.Children.FindIndex(element => element.Id == anchorId);
-        if (anchorIndex < 0)
-            return null;
-
-        var endExclusive = FindAnchorBlockEnd(container, anchorIndex, kind);
-        var tailIndex = Math.Max(anchorIndex, endExclusive - 1);
-        return container.Children[tailIndex].Id;
     }
 
     private static int FindAnchorBlockEnd(
