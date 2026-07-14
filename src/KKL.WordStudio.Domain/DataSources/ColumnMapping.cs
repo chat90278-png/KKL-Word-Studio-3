@@ -9,7 +9,20 @@ namespace KKL.WordStudio.Domain.DataSources;
 /// </summary>
 public sealed class ColumnMapping
 {
-    /// <summary>Either a column letter ("B") or a header name ("CustomerName"), depending on DataRange.HasHeaderRow.</summary>
+    /// <summary>Either a column letter ("B") or a stable working-data source field.</summary>
     public required string SourceColumn { get; init; }
+
     public required Domain.DataBinding.DataField TargetField { get; init; }
+
+    /// <summary>
+    /// Whether this source column participates in the next standard Word-table
+    /// transfer. Existing projects default to included for backward compatibility.
+    /// </summary>
+    public bool IsIncluded { get; set; } = true;
+
+    /// <summary>
+    /// Optional canonical Excel semantic role name (ItemNumber, PartNumber,
+    /// SerialNumber, etc.). Kept as text so Domain does not depend on Application.
+    /// </summary>
+    public string? SemanticRole { get; set; }
 }
