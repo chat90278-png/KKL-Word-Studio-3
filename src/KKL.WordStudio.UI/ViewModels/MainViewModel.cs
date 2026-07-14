@@ -77,7 +77,7 @@ public sealed partial class MainViewModel : ViewModelBase
         var readiness = ReportReadinessAssessment.FromGroups(DockViewModel.Diagnostics.Groups);
         if (readiness.BlocksExport)
         {
-            OpenControlCenter();
+            OpenControlCenter(PreviewDiagnosticSeverity.Error);
             StatusText = $"Word dosyası oluşturulmadı — önce {readiness.ErrorGroupCount} kritik hatayı düzeltin.";
             _dialogService?.ShowError(
                 $"Raporda {readiness.ErrorGroupCount} kritik hata türü ve {readiness.ErrorOccurrenceCount} hata kaydı var. Kontrol sekmesindeki kırmızı hatalar düzeltilmeden Word dosyası oluşturulamaz.",
@@ -93,7 +93,7 @@ public sealed partial class MainViewModel : ViewModelBase
 
             if (decision == ExportWarningDecision.Review)
             {
-                OpenControlCenter();
+                OpenControlCenter(PreviewDiagnosticSeverity.Warning);
                 StatusText = "Word dosyası oluşturulmadı — uyarılar Kontrol merkezinde açıldı.";
                 return;
             }
@@ -127,10 +127,15 @@ public sealed partial class MainViewModel : ViewModelBase
         _logger.LogInformation("Exported report {ReportId} to {Path}", report.Id, path);
     }
 
-    private void OpenControlCenter()
+    private void OpenControlCenter(PreviewDiagnosticSeverity severity)
     {
         ReportPaneViewModel.Shared.OpenForAction();
         DockViewModel.ShowWarningsCommand.Execute(null);
+
+        var firstTarget = DockViewModel.Diagnostics.Groups
+            .FirstOrDefault(group => group.Severity == severity && group.ElementId.HasValue);
+        if (firstTarget?.ElementId is { } elementId)
+            _workspace.SetSelectedReportElement(elementId);
     }
 
     [RelayCommand(CanExecute = nameof(HasLastExportedFile))]
