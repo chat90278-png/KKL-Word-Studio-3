@@ -1,6 +1,8 @@
 namespace KKL.WordStudio.Application.Tests;
 
 using KKL.WordStudio.Application.Content;
+using KKL.WordStudio.Application.Formatting;
+using KKL.WordStudio.Application.Layout;
 using Xunit;
 
 public sealed class ReportFlowPaginationPolicyTests
@@ -73,10 +75,7 @@ public sealed class ReportFlowPaginationPolicyTests
             ElementId = Guid.NewGuid(),
             Kind = ReportContentKind.Paragraph,
             Text = "Lead",
-            Format = new()
-            {
-                KeepWithNext = true
-            }
+            Format = CreateBodyFormat(keepWithNext: true)
         };
         IReadOnlyList<ReportContentNode> nodes =
         [
@@ -116,6 +115,23 @@ public sealed class ReportFlowPaginationPolicyTests
         ElementId = Guid.NewGuid(),
         Kind = kind,
         Text = text
+    };
+
+    private static ResolvedTextFormat CreateBodyFormat(bool keepWithNext) => new()
+    {
+        FontFamilyName = "Segoe UI",
+        FontSizePoints = 10d,
+        Bold = false,
+        Italic = false,
+        Underline = false,
+        ForegroundColor = "#FF000000",
+        Alignment = ParagraphAlignment.Left,
+        SpaceBeforePoints = 0d,
+        SpaceAfterPoints = 0d,
+        LineSpacingMultiple = 1d,
+        LeftIndentMillimeters = 0d,
+        FirstLineIndentMillimeters = 0d,
+        KeepWithNext = keepWithNext
     };
 
     private static TableContentNode CreateTable() => new()
