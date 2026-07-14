@@ -68,10 +68,15 @@ public sealed class ReportFlowPaginationPolicyTests
     [Fact]
     public void OrdinaryKeepNextParagraph_StopsAfterImmediateNonKeepingBlock()
     {
-        var keepingParagraph = CreateText(ReportContentKind.Paragraph, "Lead");
-        keepingParagraph.Format = new()
+        var keepingParagraph = new TextContentNode
         {
-            KeepWithNext = true
+            ElementId = Guid.NewGuid(),
+            Kind = ReportContentKind.Paragraph,
+            Text = "Lead",
+            Format = new()
+            {
+                KeepWithNext = true
+            }
         };
         IReadOnlyList<ReportContentNode> nodes =
         [
