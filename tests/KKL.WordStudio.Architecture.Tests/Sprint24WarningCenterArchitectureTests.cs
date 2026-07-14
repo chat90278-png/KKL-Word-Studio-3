@@ -28,6 +28,10 @@ public sealed class Sprint24WarningCenterArchitectureTests
         Assert.Contains("ShowErrorsCommand", view, StringComparison.Ordinal);
         Assert.Contains("ShowWarningsCommand", view, StringComparison.Ordinal);
         Assert.Contains("ShowInformationCommand", view, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Tümü\"", view, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Hata\"", view, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Uyarı\"", view, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Bilgi\"", view, StringComparison.Ordinal);
         Assert.Contains("OccurrenceText", view, StringComparison.Ordinal);
         Assert.Contains("ReportPaneViewModel.Shared.OpenForAction()", viewModel, StringComparison.Ordinal);
         Assert.Contains("_previewViewModel.NavigateToElement(elementId)", viewModel, StringComparison.Ordinal);
@@ -65,12 +69,14 @@ public sealed class Sprint24WarningCenterArchitectureTests
         Assert.Contains("DEFAULT_TITLE_USED", catalog, StringComparison.Ordinal);
         Assert.Contains("first.Code", summary, StringComparison.Ordinal);
         Assert.Contains("RowNumbers", summary, StringComparison.Ordinal);
-        Assert.Contains("Content=\"İlk Kayda Git\"", view, StringComparison.Ordinal);
+        Assert.Contains("Content=\"{Binding PrimaryNavigationText}\"", view, StringComparison.Ordinal);
         Assert.Contains("Content=\"Sonraki\"", view, StringComparison.Ordinal);
         Assert.Contains("Content=\"Tümünü Göster\"", view, StringComparison.Ordinal);
         Assert.Contains("NavigateFirstCommand", view, StringComparison.Ordinal);
         Assert.Contains("NavigateNextCommand", view, StringComparison.Ordinal);
         Assert.Contains("ShowAllOccurrencesCommand", view, StringComparison.Ordinal);
+        Assert.Contains("PrimaryNavigationText", viewModel, StringComparison.Ordinal);
+        Assert.Contains("CanNavigateNext => NavigationTargetCount > 1", viewModel, StringComparison.Ordinal);
         Assert.Contains("GetNavigationKey", viewModel, StringComparison.Ordinal);
         Assert.Contains("NavigationStatusText = string.Join", occurrenceDetails, StringComparison.Ordinal);
         Assert.Contains("Word'e hazır", viewModel, StringComparison.Ordinal);
