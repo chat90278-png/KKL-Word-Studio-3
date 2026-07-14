@@ -14,9 +14,13 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
     [Fact]
     public void OrderColumns_UsesCanonicalRoleOrderAndKeepsUnknownsInSourceOrder()
     {
+        // Historical test name is retained for baseline-inventory compatibility.
+        // The accepted Sprint 23 behavior now preserves selected Excel columns in
+        // physical left-to-right source order; semantic roles drive selection and
+        // binding identity, not output rearrangement.
         var ordered = ExcelTransferPlacementCoordinator.OrderColumns(
         [
-            Column("F", "Quantity", "Qty", ExcelSemanticFieldRole.Quantity, 1),
+            Column("F", "Quantity", "Qty", ExcelSemanticFieldRole.Quantity, 5),
             Column("B", "UnknownB", "Extra B", ExcelSemanticFieldRole.Unknown, 1),
             Column("E", "ItemNumber", "No", ExcelSemanticFieldRole.ItemNumber, 4),
             Column("A", "UnknownA", "Extra A", ExcelSemanticFieldRole.Unknown, 0),
@@ -25,13 +29,15 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
         ]);
 
         Assert.Equal(
-            ["ItemNumber", "PartNumber", "SerialNumber", "Quantity", "UnknownA", "UnknownB"],
+            ["UnknownA", "UnknownB", "SerialNumber", "PartNumber", "ItemNumber", "Quantity"],
             ordered.Select(column => column.LogicalField));
     }
 
     [Fact]
     public void CreateNewTable_CreatesRootHeadingAltHeadingAndCanonicalColumns()
     {
+        // Historical method name is retained. Columns now follow the active Excel
+        // source order and the table name is materialized as a visible text element.
         var (project, report, body) = CreateProjectAndReport();
         var placement = new ExcelTransferPlacementRequest
         {
@@ -52,28 +58,34 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
             placement);
 
         Assert.Equal(TransferOutcome.Success, result.TransferResult.Outcome);
-        Assert.Equal(4, body.Root.Children.Count);
+        Assert.Equal(5, body.Root.Children.Count);
         var root = Assert.IsType<TextElement>(body.Root.Children[0]);
         var heading = Assert.IsType<TextElement>(body.Root.Children[1]);
         var altHeading = Assert.IsType<TextElement>(body.Root.Children[2]);
-        var table = Assert.IsType<TableElement>(body.Root.Children[3]);
+        var title = Assert.IsType<TextElement>(body.Root.Children[3]);
+        var table = Assert.IsType<TableElement>(body.Root.Children[4]);
 
         Assert.Equal("Document Root", root.Name);
         Assert.Equal(ExcelTransferPlacementCoordinator.DefaultRootHeadingText, root.Content.Text);
         Assert.Equal("Main Assembly", heading.Content.Text);
         Assert.Equal("Installed Parts", altHeading.Content.Text);
+        Assert.StartsWith(ExcelTransferPlacementCoordinator.TableTitleElementNamePrefix, title.Name, StringComparison.Ordinal);
+        Assert.Equal("Configuration List", title.Content.Text);
+        Assert.True(title.Style.Bold);
         Assert.Equal("Configuration List", table.Name);
         Assert.Equal(
-            ["ItemNumber", "PartNameEnglish", "PartNumber", "Nsn", "SerialNumber", "Quantity"],
+            ["Nsn", "Quantity", "SerialNumber", "PartNumber", "ItemNumber", "PartNameEnglish"],
             table.Columns.Select(column => column.SourceField));
         Assert.Equal(
-            ["No", "English Part Name", "Part No", "NSN", "Serial No", "Qty"],
+            ["NSN", "Qty", "Serial No", "Part No", "No", "English Part Name"],
             table.Columns.Select(column => column.Header));
     }
 
     [Fact]
     public void UpdateExistingTable_RenamesAndCanonicalizesWithoutMovingTheTable()
     {
+        // Historical method name is retained. Updating creates/updates the visible
+        // title immediately before the same table object and preserves source order.
         var (project, report, body) = CreateProjectAndReport();
         var table = new TableElement
         {
@@ -99,12 +111,14 @@ public sealed class Sprint23TransferPlacementCoordinatorTests
             placement);
 
         Assert.Equal(TransferOutcome.Success, result.TransferResult.Outcome);
-        Assert.Single(body.Root.Children);
-        Assert.Same(table, body.Root.Children[0]);
+        Assert.Equal(2, body.Root.Children.Count);
+        var title = Assert.IsType<TextElement>(body.Root.Children[0]);
+        Assert.Same(table, body.Root.Children[1]);
+        Assert.Equal("Updated Table", title.Content.Text);
         Assert.Equal("Updated Table", table.Name);
         Assert.Equal("Sheet1", table.Binding?.WorksheetName);
-        Assert.Equal("ItemNumber", table.Columns[0].SourceField);
-        Assert.Equal("Quantity", table.Columns[^1].SourceField);
+        Assert.Equal("Nsn", table.Columns[0].SourceField);
+        Assert.Equal("PartNameEnglish", table.Columns[^1].SourceField);
     }
 
     [Fact]
