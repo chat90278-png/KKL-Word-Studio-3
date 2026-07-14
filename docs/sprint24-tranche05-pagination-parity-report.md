@@ -20,7 +20,8 @@
 ### Table start and continuation
 
 - One semantic policy defines a table-start target of caption + column header + up to three meaningful data rows, naturally shrinking for short tables.
-- Preview retains deterministic caption/header/row measurement and carries a trailing heading chain when the table start requests a fresh page.
+- `DeterministicTablePaginator` consumes this policy for both heading preflight measurement and actual fragment-start placement.
+- Caption/header-only Preview fragments are no longer emitted when the first data row must move; caption, header and at least one row stay together.
 - Short tables remain one fragment.
 - Long tables retain every source row exactly once and repeat column headers on continuation fragments.
 - Word captions receive native `KeepNext` so a caption cannot be stranded below a page boundary.
@@ -38,9 +39,11 @@
 
 - `ReportFlowPaginationPolicy` remains the single Application semantic policy.
 - `LayoutPageFlow` remains the existing Preview page-flow owner.
+- `DeterministicTablePaginator` remains the single Preview table-fragment owner.
 - `WordContentWriter` translates the same policy to native OpenXML properties.
-- Existing deterministic table paginator and Word table writer remain authoritative.
+- Existing Word table writer and DOCX exporter remain authoritative.
 - No second paginator, Preview renderer, Word exporter or warning implementation was added.
+- UI contains no pagination calculation.
 - Warning/Control UX is untouched.
 
 ## Test delta
@@ -51,13 +54,13 @@ Added cases:
 
 - Application semantic policy: `+9`;
 - Engine pagination: `+6`;
-- Infrastructure OpenXML pagination: `+3`;
-- Architecture: `+1`.
+- Infrastructure OpenXML pagination: `+4`;
+- Architecture: `+4`.
 
 Expected current total:
 
 ```text
-648 / 648
+652 / 652
 ```
 
 Coverage includes:
@@ -70,11 +73,20 @@ Coverage includes:
 - row `CantSplit`;
 - native repeated header row;
 - short and long deterministic table fragment continuity;
-- stable repeated layout plan.
+- caption only on the first table fragment;
+- exact row-count/order preservation;
+- stable repeated layout plan;
+- no second paginator/export fragmenter and no UI pagination ownership.
 
 ## Windows gate
 
 ```bat
+git fetch origin
+git checkout sprint24/05-pagination-parity
+git reset --hard origin/sprint24/05-pagination-parity
+git rev-parse HEAD
+git status --short
+
 dotnet clean -c Release
 dotnet restore
 dotnet build -c Release
@@ -87,15 +99,24 @@ Expected:
 ```text
 0 warnings
 0 errors
-648 / 648 tests
+652 / 652 tests
 ```
 
 ## Manual smoke
 
 1. Fill a page close to the bottom, then place Heading → Alt Heading → captioned table.
-2. Confirm all three begin together on the next Preview page.
+2. Confirm all three begin together on the next Preview page with the header and meaningful starting rows.
 3. Confirm no blank page appears between the previous content and the moved structure.
-4. Use a short table and confirm caption/header/data stay together.
-5. Use a long table and confirm continuation pages repeat column headers and no row disappears or duplicates.
-6. Export Word and confirm caption is not left alone, rows are not split across pages, and continuation headers repeat.
-7. Confirm the existing `Kontrol` area is unchanged by this tranche.
+4. Use a short table and confirm caption/header/data stay together without an unnecessary new page.
+5. Use a 50–100 row table and confirm continuation pages repeat column headers and no row disappears, duplicates or changes order.
+6. Place two tables consecutively and confirm no blank intermediate or trailing page appears.
+7. Export Word and compare the same logical decisions: heading carry, caption attachment, table start and repeated header behavior.
+8. Confirm no manual/automatic double page break is visible.
+9. Confirm the existing `Kontrol` area is unchanged by this tranche.
+
+## Gate status
+
+- Source review: complete.
+- GitHub CI status: no checks are configured/reported for the current head.
+- Exact-head Windows build/test/manual smoke: pending user evidence.
+- PR must remain draft and must not be merged until the Windows gate is GREEN.
