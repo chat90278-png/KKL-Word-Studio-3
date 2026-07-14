@@ -25,7 +25,7 @@ public sealed class Sprint17CaptionSequenceArchitectureTests
         Assert.Contains("TableCaptionSequenceFormatter.BuildDisplayText", tablePaginator, StringComparison.Ordinal);
 
         Assert.Contains("captionSequenceCounters = new Dictionary<string, int>(StringComparer.Ordinal)", wordExporter, StringComparison.Ordinal);
-        Assert.Contains("WordContentWriter.AppendNode(body, node, captionSequenceCounters)", wordExporter, StringComparison.Ordinal);
+        Assert.Contains("WordContentWriter.AppendNode(body, node, captionSequenceCounters, startOnNewPage)", wordExporter, StringComparison.Ordinal);
         Assert.Contains("TableCaptionSequenceFormatter.ResolveNextSequenceNumber", wordContentWriter, StringComparison.Ordinal);
         Assert.Contains("cachedSequenceNumber", wordParagraphWriter, StringComparison.Ordinal);
         Assert.Contains("new SimpleField", wordParagraphWriter, StringComparison.Ordinal);
