@@ -24,10 +24,11 @@
                                              IsChecked="{Binding Page, ConverterParameter=Warnings, Converter={StaticResource EnumEqualsToBool}}"
                                              Command="{Binding ShowWarningsCommand}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Uyarılar" />
-                                        <Border Background="#FFFFE3A1" CornerRadius="7" Padding="5,1" Margin="5,0,0,0"
+                                        <TextBlock Text="Kontrol" />
+                                        <Border Background="{Binding Diagnostics.BadgeBackground}" CornerRadius="7" Padding="5,1" Margin="5,0,0,0"
                                                 Visibility="{Binding Diagnostics.HasItems, Converter={StaticResource BoolToVisibility}}">
-                                            <TextBlock Text="{Binding Diagnostics.CountText}" FontSize="9" FontWeight="Bold" Foreground="#FF8A5A00" />
+                                            <TextBlock Text="{Binding Diagnostics.CountText}" FontSize="9" FontWeight="Bold"
+                                                       Foreground="{Binding Diagnostics.BadgeForeground}" />
                                         </Border>
                                     </StackPanel>
                                 </RadioButton>
@@ -54,7 +55,7 @@
                         HorizontalAlignment="Center" Margin="0,10,0,0">
                 <Button Content="☷" ToolTip="İçindekiler" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToContentsCommand}" Margin="0,0,0,7" />
                 <Button Content="⚙" ToolTip="Özellikler" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToPropertiesCommand}" Margin="0,0,0,7" />
-                <Button Content="!" ToolTip="Uyarılar" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToWarningsCommand}" Margin="0,0,0,7" />
+                <Button Content="!" ToolTip="Rapor kontrolü" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToWarningsCommand}" Margin="0,0,0,7" />
                 <Button Content="‹" ToolTip="Geri yükle" Style="{StaticResource Btn.DockIcon}" Command="{Binding RestoreToContentsCommand}" />
             </StackPanel>
         </Grid>
