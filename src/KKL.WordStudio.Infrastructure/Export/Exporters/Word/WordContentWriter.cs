@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.Infrastructure.Export.Exporters.Word;
 
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Wordprocessing;
 using KKL.WordStudio.Application.Content;
 using KKL.WordStudio.Application.Formatting;
 
@@ -8,18 +9,34 @@ using KKL.WordStudio.Application.Formatting;
 internal static class WordContentWriter
 {
     public static void AppendNode(OpenXmlCompositeElement container, ReportContentNode node) =>
-        AppendNode(container, node, captionSequenceCounters: null);
+        AppendNode(container, node, captionSequenceCounters: null, startOnNewPage: false);
 
     public static void AppendNode(
         OpenXmlCompositeElement container,
         ReportContentNode node,
-        IDictionary<string, int>? captionSequenceCounters)
+        IDictionary<string, int>? captionSequenceCounters) =>
+        AppendNode(container, node, captionSequenceCounters, startOnNewPage: false);
+
+    public static void AppendNode(
+        OpenXmlCompositeElement container,
+        ReportContentNode node,
+        IDictionary<string, int>? captionSequenceCounters,
+        bool startOnNewPage)
     {
         switch (node)
         {
             case TextContentNode text:
-                container.AppendChild(WordParagraphWriter.BuildParagraph(text));
+            {
+                var paragraph = WordParagraphWriter.BuildParagraph(text);
+                if (startOnNewPage)
+                {
+                    paragraph.ParagraphProperties ??= new ParagraphProperties();
+                    if (paragraph.ParagraphProperties.GetFirstChild<PageBreakBefore>() is null)
+                        paragraph.ParagraphProperties.AddChild(new PageBreakBefore(), true);
+                }
+                container.AppendChild(paragraph);
                 break;
+            }
             case TableContentNode table:
                 if (!string.IsNullOrWhiteSpace(table.Caption))
                 {

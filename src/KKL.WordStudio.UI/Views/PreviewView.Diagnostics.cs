@@ -12,6 +12,7 @@ public partial class PreviewView
 {
     private bool _diagnosticNavigationAttached;
     private TextBlock? _surfaceStatusTextBlock;
+    private CancellationTokenSource? _navigationCancellation;
 
     public override void OnApplyTemplate()
     {
@@ -49,6 +50,9 @@ public partial class PreviewView
 
         _viewModel.NavigateToElementRequested -= ViewModel_NavigateToElementRequested;
         _viewModel.PropertyChanged -= ViewModel_DiagnosticsPropertyChanged;
+        _navigationCancellation?.Cancel();
+        _navigationCancellation?.Dispose();
+        _navigationCancellation = null;
         _surfaceStatusTextBlock = null;
         _diagnosticNavigationAttached = false;
     }
@@ -71,28 +75,60 @@ public partial class PreviewView
             : Visibility.Visible;
     }
 
-    private void ViewModel_NavigateToElementRequested(Guid elementId)
+    private async void ViewModel_NavigateToElementRequested(Guid elementId)
     {
-        Dispatcher.BeginInvoke(
-            DispatcherPriority.Loaded,
-            new Action(() => BringElementIntoView(elementId)));
+        _navigationCancellation?.Cancel();
+        _navigationCancellation?.Dispose();
+        var cancellation = new CancellationTokenSource();
+        _navigationCancellation = cancellation;
+
+        try
+        {
+            // A structure/edit command can request navigation while a newer Preview
+            // generation is still replacing Pages. Keep the stable element Id and
+            // resolve it only after the current projection publishes its target.
+            for (var attempt = 0; attempt < 300; attempt++)
+            {
+                cancellation.Token.ThrowIfCancellationRequested();
+                var navigated = await Dispatcher.InvokeAsync(
+                    () => BringElementIntoView(elementId),
+                    DispatcherPriority.Loaded,
+                    cancellation.Token);
+                if (navigated)
+                    return;
+
+                await Task.Delay(100, cancellation.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer navigation request or view unload superseded this target.
+        }
+        finally
+        {
+            if (ReferenceEquals(_navigationCancellation, cancellation))
+            {
+                _navigationCancellation.Dispose();
+                _navigationCancellation = null;
+            }
+        }
     }
 
-    private void BringElementIntoView(Guid elementId)
+    private bool BringElementIntoView(Guid elementId)
     {
         var page = _viewModel.Pages.FirstOrDefault(candidate =>
             candidate.Blocks.Any(block => block.ElementId == elementId));
         if (page is null)
-            return;
+            return false;
 
         var pagesControl = FindVisualDescendants<ItemsControl>(this)
             .FirstOrDefault(control => ReferenceEquals(control.ItemsSource, _viewModel.Pages));
         if (pagesControl is null)
-            return;
+            return false;
 
         pagesControl.UpdateLayout();
         if (pagesControl.ItemContainerGenerator.ContainerFromItem(page) is not FrameworkElement pageContainer)
-            return;
+            return false;
 
         pageContainer.BringIntoView();
         pageContainer.UpdateLayout();
@@ -102,6 +138,7 @@ public partial class PreviewView
                 && block.ElementId == elementId);
         (blockHost ?? pageContainer).BringIntoView();
         Scroller.Focus();
+        return true;
     }
 
     private static IEnumerable<T> FindVisualDescendants<T>(DependencyObject root)

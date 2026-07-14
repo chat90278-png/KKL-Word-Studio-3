@@ -94,6 +94,7 @@
 
         <TreeView x:Name="Tree" ItemsSource="{Binding StructuredRootNodes}" BorderThickness="0" Background="Transparent"
                   SelectedItemChanged="Tree_SelectedItemChanged" Margin="4,0"
+                  MouseDoubleClick="Tree_MouseDoubleClick"
                   AllowDrop="True"
                   PreviewMouseLeftButtonDown="Tree_PreviewMouseLeftButtonDown"
                   MouseMove="Tree_MouseMove"

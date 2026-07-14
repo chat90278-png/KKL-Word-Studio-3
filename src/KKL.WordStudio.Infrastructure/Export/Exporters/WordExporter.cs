@@ -74,8 +74,13 @@ public sealed class WordExporter : IReportExporter
                     body.AppendChild(WordParagraphWriter.BuildTocParagraph());
 
                 var captionSequenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
+                ReportContentNode? previousNode = null;
                 foreach (var node in document.BodyNodes)
-                    WordContentWriter.AppendNode(body, node, captionSequenceCounters);
+                {
+                    var startOnNewPage = ReportFlowPaginationPolicy.StartsNewPageAfterTable(previousNode, node);
+                    WordContentWriter.AppendNode(body, node, captionSequenceCounters, startOnNewPage);
+                    previousNode = node;
+                }
 
                 var sectionProperties = new SectionProperties();
                 WordHeaderFooterWriter.AppendHeaderFooterReferences(mainPart, sectionProperties, document);

@@ -12,6 +12,7 @@ internal sealed class LayoutPageFlow
     private readonly PageLayout _pageLayout;
     private int _nextPageNumber;
     private MutableLayoutPage _currentPage;
+    private ReportContentKind? _lastBodyContentKind;
 
     public LayoutPageFlow(
         int firstPageNumber,
@@ -43,10 +44,25 @@ internal sealed class LayoutPageFlow
 
     public void AddBodyBlock(PositionedPageBlock block, bool addGapAfter = true)
     {
+        ArgumentNullException.ThrowIfNull(block);
+
+        var currentKind = ResolveContentKind(block);
+        var currentPageAlreadyHasBodyContent = _currentPage.Blocks.Any(existing =>
+            existing.Region == DocumentPageRegion.Body);
+        if (block.FragmentIndex == 0
+            && ReportFlowPaginationPolicy.StartsNewPageAfterTable(_lastBodyContentKind, currentKind)
+            && currentPageAlreadyHasBodyContent)
+        {
+            NewPage();
+            block = RebaseAtCurrentBodyTop(block);
+        }
+
         _currentPage.Blocks.Add(block);
         _currentPage.BodyYMillimeters = block.YMillimeters + block.HeightMillimeters;
         if (addGapAfter)
             _currentPage.BodyYMillimeters += BlockGapMillimeters;
+
+        _lastBodyContentKind = currentKind;
     }
 
     public void AdvanceBody(double millimeters)
@@ -66,6 +82,29 @@ internal sealed class LayoutPageFlow
         CompleteCurrentPage();
         return _completedPages;
     }
+
+    private PositionedPageBlock RebaseAtCurrentBodyTop(PositionedPageBlock block) => new()
+    {
+        ElementId = block.ElementId,
+        Region = block.Region,
+        Kind = block.Kind,
+        XMillimeters = block.XMillimeters,
+        YMillimeters = BodyYMillimeters,
+        WidthMillimeters = block.WidthMillimeters,
+        HeightMillimeters = block.HeightMillimeters,
+        FragmentIndex = block.FragmentIndex,
+        IsContinuation = block.IsContinuation,
+        IsEditableReportElement = block.IsEditableReportElement,
+        Payload = block.Payload
+    };
+
+    private static ReportContentKind ResolveContentKind(PositionedPageBlock block) => block switch
+    {
+        { Kind: PageBlockKind.Table } => ReportContentKind.Table,
+        { Kind: PageBlockKind.Text, Payload: TextPageBlockPayload text } => text.SemanticKind ?? ReportContentKind.Other,
+        { Kind: PageBlockKind.Image } => ReportContentKind.Image,
+        _ => ReportContentKind.Other
+    };
 
     private MutableLayoutPage CreatePage()
     {
