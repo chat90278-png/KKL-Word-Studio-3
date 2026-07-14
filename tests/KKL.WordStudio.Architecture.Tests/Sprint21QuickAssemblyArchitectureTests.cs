@@ -22,6 +22,8 @@ public sealed class Sprint21QuickAssemblyArchitectureTests
         Assert.Contains("Text=\"{Binding HeadingText", quickView, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding AltHeadingText", quickView, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding TableName", quickView, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding PlacementTargets}\"", quickView, StringComparison.Ordinal);
+        Assert.Contains("SelectedPlacementTarget", quickView, StringComparison.Ordinal);
         Assert.Contains("QuickAssemblySelection", quickViewModel, StringComparison.Ordinal);
         Assert.Contains("QuickAssemblyBatchOrchestrator", quickViewModel, StringComparison.Ordinal);
         Assert.Contains("_excelWorkspace.OpenWorkbooks", quickViewModel, StringComparison.Ordinal);
@@ -47,7 +49,7 @@ public sealed class Sprint21QuickAssemblyArchitectureTests
         Assert.Contains("WorkingDataColumns", excelBatch, StringComparison.Ordinal);
         Assert.Contains("DestinationMode = ExcelTransferDestinationMode.CreateNewTable", excelBatch, StringComparison.Ordinal);
         Assert.Contains("ExistingTableId = null", excelBatch, StringComparison.Ordinal);
-        Assert.Contains("AnchorElementId = _workspace.SelectedReportElementId", excelBatch, StringComparison.Ordinal);
+        Assert.Contains("RequiredAnchorKind = requiredAnchorKind", excelBatch, StringComparison.Ordinal);
         Assert.Contains("result.CreatedNewTable", excelBatch, StringComparison.Ordinal);
         Assert.Contains("transferSingleTargetAsync", orchestrator, StringComparison.Ordinal);
         Assert.Contains("SelectionOrder ?? int.MaxValue", orchestrator, StringComparison.Ordinal);
