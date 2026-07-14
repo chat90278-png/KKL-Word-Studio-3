@@ -1,18 +1,21 @@
 namespace KKL.WordStudio.Application.Preview;
 
 /// <summary>
-/// One non-blocking issue surfaced by Preview. Diagnostics keep their original
-/// human-readable message while carrying optional report/source navigation
-/// metadata. They are runtime projection data and are never persisted.
+/// One issue surfaced by Preview. Diagnostics retain their original technical
+/// message while carrying stable code, severity and navigation metadata. They
+/// are runtime projection data and are never persisted.
 /// </summary>
 public sealed class PreviewDiagnostic
 {
     public required string Id { get; init; }
+    public string Code { get; init; } = PreviewDiagnosticCodes.Unclassified;
     public required PreviewDiagnosticSeverity Severity { get; init; }
     public required string Title { get; init; }
     public required string Message { get; init; }
     public Guid? ElementId { get; init; }
     public string? ElementName { get; init; }
+    public string? AffectedColumn { get; init; }
+    public int? RowNumber { get; init; }
     public string? KeyValue { get; init; }
     public IReadOnlyList<PreviewDiagnosticSource> Sources { get; init; } = Array.Empty<PreviewDiagnosticSource>();
 }
