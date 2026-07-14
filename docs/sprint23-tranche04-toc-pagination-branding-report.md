@@ -50,6 +50,21 @@ The approved Excel/Word combined logo set replaces the previous binary assets be
 
 The existing safe runtime behavior remains: WPF loads the PNG for `Window.Icon`, while the ICO is the build-time EXE/shortcut/Alt+Tab/installer icon.
 
+## Windows correction pass
+
+The first Windows run found three concrete release-gate issues:
+
+- `CS7065` because the initially transferred ICO stream was truncated and not a valid complete Win32 icon resource;
+- xUnit2029 because the new Word page-break regression used `Assert.Empty` on a filtered collection;
+- a Sprint 17 architecture guard still expected the pre-pagination `WordContentWriter.AppendNode` signature.
+
+Corrections applied:
+
+- regenerated `AppIcon.ico` from the approved transparent logo as a compact seven-entry Windows ICONDIR;
+- verified all seven directory offsets and payload lengths are inside the stream;
+- replaced `Assert.Empty` with predicate-based `Assert.DoesNotContain`;
+- updated the historical guard to require the page-break-aware append call while preserving document-order caption counters.
+
 ## Architecture
 
 - Existing Preview event/navigation path is reused.
