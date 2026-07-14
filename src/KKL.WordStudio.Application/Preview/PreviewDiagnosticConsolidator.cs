@@ -16,7 +16,6 @@ public static class PreviewDiagnosticConsolidator
                 diagnostic.Severity,
                 diagnostic.ElementId,
                 Normalize(diagnostic.Title),
-                Normalize(diagnostic.Message),
                 Normalize(diagnostic.ElementName)))
             .Select(group =>
             {
@@ -64,7 +63,6 @@ public static class PreviewDiagnosticConsolidator
         PreviewDiagnosticSeverity Severity,
         Guid? ElementId,
         string Title,
-        string Message,
         string ElementName);
 }
 
