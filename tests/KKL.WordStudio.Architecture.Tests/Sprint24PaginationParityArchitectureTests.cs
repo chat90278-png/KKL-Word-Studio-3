@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.Architecture.Tests;
 
-using System.Text.RegularExpressions;
+using KKL.WordStudio.Application.Layout;
+using KKL.WordStudio.Engine.Layout;
 using Xunit;
 
 public sealed class Sprint24PaginationParityArchitectureTests
@@ -60,23 +61,16 @@ public sealed class Sprint24PaginationParityArchitectureTests
     }
 
     [Fact]
-    public void EngineProject_ContainsOneDocumentLayoutEngineImplementation()
+    public void EngineAssembly_ContainsOneDocumentLayoutEngineImplementation()
     {
-        var root = SolutionRootLocator.Find();
-        var implementationPattern = new Regex(
-            @"\b(?:class|record)\s+\w+(?:<[^>\r\n]+>)?\s*:\s*[^\r\n{]*\bIDocumentLayoutEngine\b",
-            RegexOptions.CultureInvariant);
-        var engineRoot = Path.Combine(root, "src", "KKL.WordStudio.Engine");
-        var implementations = EnumerateProductionSourceFiles(engineRoot)
-            .Where(file => implementationPattern.IsMatch(File.ReadAllText(file)))
+        var contract = typeof(IDocumentLayoutEngine);
+        var implementations = typeof(DeterministicDocumentLayoutEngine).Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && contract.IsAssignableFrom(type))
             .ToList();
 
         var implementation = Assert.Single(implementations);
-        Assert.True(
-            implementation.EndsWith(
-                Path.Combine("Layout", "DeterministicDocumentLayoutEngine.cs"),
-                StringComparison.OrdinalIgnoreCase),
-            $"Unexpected layout engine implementation: {implementation}");
+        Assert.Equal(typeof(DeterministicDocumentLayoutEngine), implementation);
     }
 
     private static IEnumerable<string> EnumerateProductionSourceFiles(string root) =>
