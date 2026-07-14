@@ -1,74 +1,110 @@
-# Sprint 24 Tranche 04 — Word Export Readiness Gate
+# Sprint 24 Tranche 04 — Stable Control Catalog and Word Readiness
 
 ## Baseline
 
 - Base: `main@493ccc0ddbf3a032b90c310fa3743cb475fb17d9`
 - Branch: `sprint24/04-word-export-readiness`
-- Existing grouped Control center remains authoritative.
-- Previous merged test inventory: `625/625` expected.
+- Previous Windows gate: build `0/0`, tests `629/629`, startup GREEN.
+- Existing Preview diagnostics, grouped Control center and DOCX exporter remain authoritative.
 
-## Product behavior
+## Stable diagnostic catalog
 
-`Word Dosyası Oluştur` now checks the same grouped diagnostics shown in the `Kontrol` center before opening the save dialog.
+Every new Preview diagnostic carries a stable code, severity and optional affected-column/row metadata. Grouping no longer depends on user-facing message wording for catalogued findings.
 
-### Error groups
+### Blocking errors
 
-When one or more `Error` groups exist:
+- `SRC_FILE_MISSING`
+- `SRC_SHEET_MISSING`
+- `SRC_RANGE_INVALID`
+- `COLUMN_REQUIRED_MISSING`
+- `SRC_ACCESS_ERROR`
 
-- Word export is blocked;
-- the report pane opens automatically;
-- the Context Dock switches to `Kontrol`;
-- the user sees the number of critical groups and underlying error occurrences;
-- the save-file dialog and DOCX exporter are not invoked.
+These prevent Word creation, open the report pane and switch to `Kontrol` before any save dialog or exporter is invoked.
 
-### Warning groups
+### Confirmable warnings
 
-When warnings exist but no errors exist:
+- `QUANTITY_INVALID`
+- `SERIAL_DUPLICATE`
+- `MERGE_CONFLICT`
+- `ROWS_NOT_MERGED`
+- `EMPTY_CELLS`
+- `TABLE_DATA_WARNING`
+- `TABLE_TOO_WIDE`
+- `LAYOUT_WARNING`
 
-- warnings do not hard-block export;
-- one confirmation dialog shows warning-group and occurrence counts;
-- approving continues through the existing DOCX exporter;
-- cancelling leaves the report unchanged and does not open a save dialog.
+Warnings do not block Word creation. The user receives one Continue / Review / Cancel decision showing warning-type and affected-record totals.
 
-### Information-only / clean report
+### Information
 
-Information groups do not require confirmation. A report with only information findings—or no findings—exports exactly as before.
+- `TABLE_SPLIT`
+
+Information findings require no confirmation and never block export.
+
+## Control center
+
+- The dock tab is named `Kontrol` because it contains Error, Warning and Information findings.
+- The header explicitly states `Word'e hazır` or `Word'e hazır değil`.
+- Filters are labeled `Tümü`, `Hata`, `Uyarı`, `Bilgi` with grouped counts.
+- Cards display severity, stable code, affected table/column, occurrence count, distinct-key count and examples.
+- Raw technical messages remain in runtime diagnostics; user cards show a readable grouped explanation.
+- `İlk Kayda Git` opens the report element and first Excel occurrence.
+- `Sonraki` cycles through distinct keys and wraps to the beginning.
+- Fixing source data and refreshing Preview naturally removes resolved findings; no manual resolved flag is persisted.
+
+## Word decision flow
+
+### Error
+
+- export is blocked;
+- save dialog is not opened;
+- report pane opens and `Kontrol` becomes active;
+- group and occurrence totals are shown.
+
+### Warning
+
+A three-way decision is shown:
+
+- Continue: use the existing Word save/export pipeline;
+- Review: open `Kontrol` and stop before the save dialog;
+- Cancel: stop without changing the report.
+
+### Information / clean
+
+Export continues directly through the existing DOCX exporter.
 
 ## Architecture
 
-- `PreviewDiagnosticFactory` remains the raw diagnostic producer.
-- `PreviewDiagnosticSummaryService` remains the sole grouping projection.
-- `PreviewDiagnosticsStore.Groups` remains the shared Control-center state.
-- `ReportReadinessAssessment` is a pure Application projection over those existing groups.
-- `MainViewModel` applies the decision before the existing file-dialog/export pipeline.
-- No second validator, Preview renderer, report tree, Word exporter or persistence model was introduced.
+- `PreviewDiagnosticCatalog` classifies the existing raw warnings; it is not a second validator.
+- `PreviewDiagnosticFactory` remains the only raw diagnostic producer.
+- `PreviewDiagnosticSummaryService` groups catalogued findings by code + element + affected column.
+- Legacy/unclassified findings retain normalized-message grouping for backward compatibility.
+- `PreviewDiagnosticsStore.Groups` remains shared by the Control center and readiness gate.
+- `ReportReadinessAssessment` is a pure Application projection.
+- Domain, persistence, Preview layout, Excel reader and Word exporter are unchanged.
 
-## Regression coverage
+## Test delta
 
-New Application tests: `+3`
+Existing Tranche 04 tests: Application `+3`, Architecture `+1`.
 
-- group and occurrence counts by severity;
-- errors hard-block export and suppress warning confirmation;
-- warnings require confirmation while information-only reports do not.
+Additional catalog/Control coverage:
 
-New Architecture tests: `+1`
+- Application `+5`;
+- Architecture `+1`.
 
-- Word export consumes `PreviewDiagnosticsStore.Groups`, opens the existing Control center for errors and reuses the existing exporter path.
-
-Expected Windows total:
+Expected total:
 
 ```text
-629 / 629
+635 / 635
 ```
 
 ## Windows gate
 
 ```bat
-dotnet clean -c Release
+dotnet clean
 dotnet restore
-dotnet build -c Release
-dotnet test -c Release --no-build
-dotnet run -c Release --no-build --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
+dotnet build
+dotnet test
+dotnet run --project src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj
 ```
 
 Expected:
@@ -76,16 +112,18 @@ Expected:
 ```text
 0 warnings
 0 errors
-629 / 629 tests
+635 / 635 tests
 ```
 
 ## Manual smoke
 
-1. Open a report with at least one red `Hata` group.
-2. Click `Word Dosyası Oluştur`.
-3. Confirm no save dialog appears, the report pane opens and `Kontrol` becomes active.
-4. Use a report with warnings but no errors.
-5. Confirm one continuation dialog appears with grouped warning/occurrence counts.
-6. Cancel once and confirm no file is produced.
-7. Approve once and confirm the existing DOCX output is produced.
-8. Use an information-only or clean report and confirm export proceeds without readiness prompts.
+1. Create the current invalid-quantity example and confirm one `QUANTITY_INVALID` card replaces hundreds of cards.
+2. Confirm the card says affected records, `Adet` column and distinct-key count.
+3. Use `İlk Kayda Git`, then `Sonraki`; verify Excel selection moves through sample keys and wraps.
+4. Confirm the tab and collapsed tooltip say `Kontrol`.
+5. Click `Word Dosyası Oluştur` with warnings only:
+   - Continue produces Word;
+   - Review opens `Kontrol` without opening the save dialog;
+   - Cancel stops.
+6. Use a broken source and confirm a red Error card blocks export before the save dialog.
+7. Use an information-only or clean report and confirm export proceeds without readiness prompts.
