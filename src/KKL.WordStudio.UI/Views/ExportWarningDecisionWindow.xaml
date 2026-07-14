@@ -1,0 +1,41 @@
+<Window x:Class="KKL.WordStudio.UI.Views.ExportWarningDecisionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="470"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{DynamicResource Brush.App.Background}">
+    <Border Margin="16" Padding="18" CornerRadius="14"
+            Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal">
+                <Border Width="38" Height="38" CornerRadius="10" Background="#FFFFE8A8">
+                    <TextBlock Text="!" FontSize="20" FontWeight="Bold" Foreground="#FF9A6700"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Word çıktısından önce kontrol" FontSize="15" FontWeight="SemiBold" />
+                    <TextBlock Text="Uyarılar çıktıyı engellemez; kararı siz verirsiniz."
+                               FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,3,0,0" />
+                </StackPanel>
+            </StackPanel>
+
+            <TextBlock x:Name="MessageText" Grid.Row="1" Margin="0,18,0,0"
+                       FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Primary}" />
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="İptal" Style="{StaticResource Btn.Mini}" Click="Cancel_Click" Margin="0,0,8,0" Padding="14,0" Height="34" />
+                <Button Content="Kontrol Et" Style="{StaticResource Btn.Mini}" Click="Review_Click" Margin="0,0,8,0" Padding="14,0" Height="34" />
+                <Button Content="Devam Et" Style="{StaticResource Btn.Primary}" Click="Continue_Click" Padding="16,0" Height="34" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
