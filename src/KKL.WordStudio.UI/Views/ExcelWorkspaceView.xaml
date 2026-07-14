@@ -8,7 +8,6 @@
           Drop="ExcelDropTarget_Drop">
         <DockPanel Background="{DynamicResource Brush.Surface.Alt}">
 
-            <!-- Header: workbook · sheet + Map Columns -->
             <Border DockPanel.Dock="Top" Height="50" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
                 <Grid Margin="14,0">
                     <Grid.ColumnDefinitions>
@@ -25,29 +24,30 @@
                         </TextBlock>
                     </StackPanel>
                     <Button Grid.Column="1"
-                            Content="Sütunları Eşle"
+                            Content="Veri Aralığını Düzenle"
                             Style="{StaticResource Btn.Mini}"
-                            Command="{Binding OpenColumnSelectionMappingDrawerCommand}"
+                            Command="{Binding OpenRangeEditorCommand}"
+                            IsEnabled="{Binding HasOpenWorkbook}"
                             Margin="0,0,8,0"
-                            ToolTip="Rapora aktarılacak sütunları seçin ve anlamsal alan adlarını düzenleyin." />
-                    <!-- Sprint 7: THE primary action of the Excel Workspace — transfers the
-                         current sheet's configured range directly into the report design. -->
-                    <Button Grid.Column="2" Content="Word'e Aktar →" Style="{StaticResource Btn.Primary}" Height="32" Padding="14,0"
-                            Command="{Binding TransferToReportCommand}"
-                            ToolTip="Etkin sayfanın yapılandırılmış veri aralığını rapora aktarır" />
+                            ToolTip="Etkin Excel sayfasının başlık, veri ve sütun sınırlarını düzenler." />
+                    <Button Grid.Column="2"
+                            Content="Word'e Aktar →"
+                            Style="{StaticResource Btn.Primary}"
+                            Height="32"
+                            Padding="14,0"
+                            Command="{Binding OpenTransferPlacementCommand}"
+                            ToolTip="Seçili sütunları yerleşim onayından sonra rapora aktarır" />
                 </Grid>
             </Border>
 
-            <!-- Sprint 9 working-data commands. Gesture/clipboard routing stays in
-                 this view; every mutation is delegated to the ViewModel/Application service. -->
             <Border DockPanel.Dock="Top" Height="38" Background="White" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
                 <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
                     <Border Style="{StaticResource Chip}" Margin="0,0,10,0">
                         <TextBlock Style="{StaticResource Chip.Text}" Text="{Binding WorkingDataStateText}" />
                     </Border>
-                    <Button Content="Temizle" Style="{StaticResource Btn.Mini}" Click="ClearCells_Click" Margin="0,0,6,0" />
+                    <Button Content="Temizle" Style="{StaticResource Btn.Mini}" Click="ClearCellsV23_Click" Margin="0,0,6,0" />
                     <Button Content="Kopyala" Style="{StaticResource Btn.Mini}" Click="Copy_Click" Margin="0,0,6,0" />
-                    <Button Content="Yapıştır" Style="{StaticResource Btn.Mini}" Click="Paste_Click" Margin="0,0,10,0" />
+                    <Button Content="Yapıştır" Style="{StaticResource Btn.Mini}" Click="PasteV23_Click" Margin="0,0,10,0" />
                     <Button Content="Geri Al" Style="{StaticResource Btn.Mini}" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" Margin="0,0,6,0" />
                     <Button Content="Yinele" Style="{StaticResource Btn.Mini}" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" Margin="0,0,12,0" />
                     <Button Content="Kaynak Veriye Dön" Style="{StaticResource Btn.Mini}" Command="{Binding ResetToSourceCommand}"
@@ -55,17 +55,17 @@
                 </StackPanel>
             </Border>
 
-            <!-- Range status strip: normal flow shows the detected/configured range, not raw technical fields. -->
             <Border DockPanel.Dock="Bottom" Height="38" Background="{DynamicResource Brush.Surface.Alt}" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,1,0,0">
                 <Grid Margin="13,0">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" FontWeight="Bold" Text="{Binding RangeStatusText}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                    <Button Grid.Column="1" Content="Veri Aralığını Düzenle" Style="{StaticResource Btn.Mini}" Command="{Binding OpenRangeEditorCommand}" Margin="0,0,14,0" />
-                    <TextBlock Grid.Column="2" Text="{Binding StatusText}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" FontWeight="Bold" Text="{Binding RangeStatusText}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                 </Grid>
             </Border>
 
-            <!-- Sheet tabs -->
             <Border DockPanel.Dock="Bottom" Height="40" Background="{DynamicResource Brush.Soft}" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,1,0,0">
                 <ItemsControl ItemsSource="{Binding SelectedWorkbook.SheetNames}" Margin="6,4,0,0">
                     <ItemsControl.ItemsPanel>
@@ -103,20 +103,29 @@
                 </ItemsControl>
             </Border>
 
-            <!-- The grid itself IS the working surface. Sprint 8 adds an honest
-                 empty-state/drop target without creating a second import path. -->
             <Grid>
-                <DataGrid x:Name="WorkingDataGrid" ItemsSource="{Binding PreviewTable}" AutoGenerateColumns="True" IsReadOnly="False"
-                          HeadersVisibility="All" RowHeaderWidth="48" CanUserAddRows="False" CanUserResizeRows="False" SelectionMode="Extended" SelectionUnit="CellOrRowHeader"
-                          AutoGeneratingColumn="WorkingDataGrid_AutoGeneratingColumn" CellEditEnding="WorkingDataGrid_CellEditEnding"
-                          PreviewKeyDown="WorkingDataGrid_PreviewKeyDown"
+                <DataGrid x:Name="WorkingDataGrid"
+                          ItemsSource="{Binding PreviewTable}"
+                          AutoGenerateColumns="True"
+                          IsReadOnly="False"
+                          HeadersVisibility="All"
+                          RowHeaderWidth="48"
+                          CanUserAddRows="False"
+                          CanUserResizeRows="False"
+                          CanUserSortColumns="False"
+                          SelectionMode="Extended"
+                          SelectionUnit="CellOrRowHeader"
+                          AutoGeneratingColumn="WorkingDataGrid_AutoGeneratingColumn"
+                          AutoGeneratedColumns="WorkingDataGrid_AutoGeneratedColumnsV23"
+                          CellEditEnding="WorkingDataGrid_CellEditEndingV23"
+                          PreviewKeyDown="WorkingDataGridV23_PreviewKeyDown"
                           Visibility="{Binding HasOpenWorkbook, Converter={StaticResource BoolToVisibility}}">
                     <DataGrid.RowHeaderStyle>
                         <Style TargetType="DataGridRowHeader">
                             <Setter Property="Content" Value="{Binding [#]}" />
                             <Setter Property="HorizontalContentAlignment" Value="Center" />
                             <EventSetter Event="PreviewMouseLeftButtonDown" Handler="RowHeader_PreviewMouseLeftButtonDown" />
-                            <EventSetter Event="PreviewMouseRightButtonDown" Handler="RowHeader_PreviewMouseRightButtonDown" />
+                            <EventSetter Event="PreviewMouseRightButtonDown" Handler="RowHeaderV23_PreviewMouseRightButtonDown" />
                         </Style>
                     </DataGrid.RowHeaderStyle>
                     <DataGrid.ColumnHeaderStyle>
@@ -128,7 +137,7 @@
                     <DataGrid.CellStyle>
                         <Style TargetType="DataGridCell">
                             <EventSetter Event="PreviewMouseLeftButtonDown" Handler="Cell_PreviewMouseLeftButtonDown" />
-                            <EventSetter Event="PreviewMouseRightButtonDown" Handler="Cell_PreviewMouseRightButtonDown" />
+                            <EventSetter Event="PreviewMouseRightButtonDown" Handler="CellV23_PreviewMouseRightButtonDown" />
                         </Style>
                     </DataGrid.CellStyle>
                     <DataGrid.RowStyle>
@@ -172,17 +181,14 @@
                         </Style>
                     </Border.Style>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="330">
-                        <TextBlock Text="Excel dosyasını buraya sürükleyip bırakın" FontSize="16" FontWeight="SemiBold"
-                                   TextAlignment="Center" TextWrapping="Wrap" />
+                        <TextBlock Text="Excel dosyasını buraya sürükleyip bırakın" FontSize="16" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" />
                         <TextBlock Text=".xlsx ve .xlsm · üstteki Excel ekle düğmesini de kullanabilirsiniz · kaynak dosya değiştirilmez"
-                                   Margin="0,7,0,0" Foreground="{DynamicResource Brush.Text.Secondary}"
-                                   TextAlignment="Center" TextWrapping="Wrap" />
+                                   Margin="0,7,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
             </Grid>
         </DockPanel>
 
-        <!-- ============ Sprint 13: compact range editor ============ -->
         <Border Background="#38141D2B" Visibility="{Binding IsRangeEditorOpen, Converter={StaticResource BoolToVisibility}}" />
         <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="410"
                 Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="12"
@@ -215,105 +221,81 @@
             </StackPanel>
         </Border>
 
-        <!-- ============ Column selection + mapping drawer ============ -->
         <Border Background="#38141D2B"
-                Visibility="{Binding IsMappingDrawerOpen, Converter={StaticResource BoolToVisibility}}"
-                MouseLeftButtonUp="DrawerScrim_MouseLeftButtonUp" />
-        <Border HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="540" Margin="16"
+                Visibility="{Binding IsTransferPlacementOpen, Converter={StaticResource BoolToVisibility}}" />
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="540" MaxHeight="650"
                 Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="12"
-                Visibility="{Binding IsMappingDrawerOpen, Converter={StaticResource BoolToVisibility}}">
+                Visibility="{Binding IsTransferPlacementOpen, Converter={StaticResource BoolToVisibility}}">
             <Border.Effect>
                 <DropShadowEffect Color="#FF1E2A3D" Direction="270" ShadowDepth="8" BlurRadius="28" Opacity="0.2" />
             </Border.Effect>
-            <DockPanel>
-                <Border DockPanel.Dock="Top" Padding="16" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
+            <DockPanel Margin="18">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                    <TextBlock Text="WORD'E AKTAR — YERLEŞİM ONAYI" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    <TextBlock Text="Rapor yapısı aşağıdaki konuma eklenecek. Başlıkları ve tablo adını onaydan önce düzenleyebilirsiniz."
+                               FontSize="11.5" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button Content="İptal" Style="{StaticResource Btn.Mini}" Command="{Binding CancelTransferPlacementCommand}" Margin="0,0,8,0" />
+                    <Button Content="Onayla ve Önizle" Style="{StaticResource Btn.Primary}" Command="{Binding ConfirmTransferPlacementCommand}" Padding="16,0" Height="34" />
+                </StackPanel>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock Text="SÜTUNLARI SEÇ VE EŞLE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                        <TextBlock Text="{Binding SelectedWorkbook.SelectedSheetName, StringFormat='{}{0} — anlamsal alanlar'}" FontSize="14" FontWeight="SemiBold" Margin="0,3,0,0" />
-                        <TextBlock Text="Yalnızca rapora aktarılacak sütunları işaretleyin. Kaynak Excel değişmez."
-                                   FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                        <RadioButton Content="{Binding ExistingTransferTargetText}"
+                                     GroupName="TransferDestination"
+                                     IsChecked="{Binding UpdateExistingTable, Mode=TwoWay}"
+                                     Visibility="{Binding HasExistingTransferTarget, Converter={StaticResource BoolToVisibility}}"
+                                     Margin="0,0,0,8" />
+                        <RadioButton Content="Yeni tablo olarak ekle"
+                                     GroupName="TransferDestination"
+                                     IsChecked="{Binding CreateNewTable, Mode=TwoWay}"
+                                     Margin="0,0,0,14" />
+
+                        <Border Background="{DynamicResource Brush.Surface.Alt}" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="{Binding PlacementParentText}" FontWeight="SemiBold" Margin="0,0,0,10" />
+
+                                <Grid Margin="18,0,0,8" Visibility="{Binding CreateNewTable, Converter={StaticResource BoolToVisibility}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="58" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="32" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding PlacementHeadingNumber}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBox Grid.Column="1" Text="{Binding PlacementHeadingText, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IncludePlacementHeading}" />
+                                    <Button Grid.Column="2" Content="−" Style="{StaticResource Btn.Mini}" Command="{Binding RemovePlacementHeadingCommand}"
+                                            Visibility="{Binding IncludePlacementHeading, Converter={StaticResource BoolToVisibility}}" Margin="6,0,0,0" ToolTip="Yeni başlığı kaldır" />
+                                </Grid>
+
+                                <Grid Margin="36,0,0,8" Visibility="{Binding CreateNewTable, Converter={StaticResource BoolToVisibility}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="32" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding PlacementAltHeadingNumber}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBox Grid.Column="1" Text="{Binding PlacementAltHeadingText, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IncludePlacementAltHeading}" />
+                                    <Button Grid.Column="2" Content="−" Style="{StaticResource Btn.Mini}" Command="{Binding RemovePlacementAltHeadingCommand}"
+                                            Visibility="{Binding IncludePlacementAltHeading, Converter={StaticResource BoolToVisibility}}" Margin="6,0,0,0" ToolTip="Yeni alt başlığı kaldır" />
+                                </Grid>
+
+                                <Grid Margin="54,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Tablo" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBox Grid.Column="1" Text="{Binding PlacementTableName, UpdateSourceTrigger=PropertyChanged}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
-                </Border>
-
-                <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,1,0,0" Padding="14,10">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Tümünü seç" Style="{StaticResource Btn.Mini}" Command="{Binding SelectAllMappingColumnsCommand}" Margin="0,0,6,0" />
-                        <Button Grid.Column="1" Content="Hiçbirini seçme" Style="{StaticResource Btn.Mini}" Command="{Binding ClearMappingColumnSelectionCommand}" />
-                        <Button Grid.Column="3" Content="İptal" Style="{StaticResource Btn.Mini}" Command="{Binding CancelMappingCommand}" Margin="0,0,8,0" />
-                        <Button Grid.Column="4" Content="Seçimi ve Eşlemeyi Uygula" Style="{StaticResource Btn.Primary}"
-                                Command="{Binding ApplyColumnSelectionMappingCommand}" Padding="14,0" Height="32" />
-                    </Grid>
-                </Border>
-
-                <DataGrid Margin="10"
-                          ItemsSource="{Binding ColumnMappings}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          CanUserReorderColumns="False"
-                          SelectionUnit="Cell"
-                          HeadersVisibility="Column">
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Aktar" Width="58" IsReadOnly="False">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <CheckBox IsChecked="{Binding IsIncluded, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              ClickMode="Press"
-                                              Focusable="False"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              ToolTip="Bu sütunu rapora aktar" />
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Excel Sütunu" Binding="{Binding SourceColumn}" IsReadOnly="True" Width="72" />
-                        <DataGridTextColumn Header="Anlamsal Alan" Binding="{Binding FieldName, UpdateSourceTrigger=PropertyChanged}" Width="*" />
-                        <DataGridTextColumn Header="Tür" Binding="{Binding DataType, UpdateSourceTrigger=PropertyChanged}" Width="64" />
-                    </DataGrid.Columns>
-                </DataGrid>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 
-        <!-- ============ Sprint 7: transfer decision flyout ============
-             Shown only when "Word'e Aktar" targets a table that is already
-             configured (bound and/or user-customized columns). A configured
-             table is never silently overwritten — the user picks explicitly. -->
-        <Border Background="#38141D2B" Visibility="{Binding IsTransferChoiceOpen, Converter={StaticResource BoolToVisibility}}"
-                MouseLeftButtonUp="TransferChoiceScrim_MouseLeftButtonUp" />
-        <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="380"
-                Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="12"
-                Visibility="{Binding IsTransferChoiceOpen, Converter={StaticResource BoolToVisibility}}">
-            <Border.Effect>
-                <DropShadowEffect Color="#FF1E2A3D" Direction="270" ShadowDepth="8" BlurRadius="28" Opacity="0.2" />
-            </Border.Effect>
-            <StackPanel Margin="18">
-                <TextBlock Text="WORD'E AKTAR" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                <TextBlock FontSize="13" Margin="0,8,0,2" TextWrapping="Wrap">
-                    <Run Text="'" /><Run Text="{Binding TransferChoiceTableName}" FontWeight="SemiBold" /><Run Text="' tablosu zaten yapılandırılmış." />
-                </TextBlock>
-                <TextBlock Text="Mevcut sütun yapısı korunsun mu, yoksa kaynaktan yenilensin mi?" FontSize="12"
-                           Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
-                <Button Content="Veriyi Yeniden Bağla (sütunları koru)" Style="{StaticResource Btn.Mini}" Height="32"
-                        Command="{Binding TransferRebindKeepColumnsCommand}" Margin="0,0,0,8" HorizontalAlignment="Stretch" />
-                <Button Content="Sütunları Kaynaktan Yenile ve Bağla" Style="{StaticResource Btn.Primary}" Height="32"
-                        Command="{Binding TransferReplaceColumnsFromSourceCommand}" Margin="0,0,0,8" HorizontalAlignment="Stretch" />
-                <Button Content="Kaynak Olarak Ekle" Style="{StaticResource Btn.Mini}" Height="32"
-                        Command="{Binding TransferAddAsSourceCommand}" Margin="0,0,0,8" HorizontalAlignment="Stretch" />
-                <Button Content="İptal" Style="{StaticResource Btn.Mini}" Height="30"
-                        Command="{Binding CancelTransferChoiceCommand}" HorizontalAlignment="Right" Padding="14,0" />
-            </StackPanel>
-        </Border>
-
-        <!-- Sprint 10: compact field matching surface, shown only when an
-             additional source cannot be normalized safely by logical/header
-             identity. No positional guessing is performed. -->
         <Border Background="#38141D2B" Visibility="{Binding IsSourceFieldMappingOpen, Converter={StaticResource BoolToVisibility}}"
                 MouseLeftButtonUp="SourceFieldMappingScrim_MouseLeftButtonUp" />
         <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="460" MaxHeight="560"
@@ -328,15 +310,13 @@
                     <TextBlock FontSize="13" Margin="0,7,0,2" TextWrapping="Wrap">
                         <Run Text="'" /><Run Text="{Binding SourceFieldMappingTableName}" FontWeight="SemiBold" /><Run Text="' tablosuna eklenecek kaynağın alanlarını eşleyin." />
                     </TextBlock>
-                    <TextBlock Text="Yalnızca çözülemeyen şemalarda gerekir; eşleme bu tablo kaynağıyla birlikte saklanır."
+                    <TextBlock Text="Yalnızca çözülemeyen ek kaynak şemalarında gerekir; eşleme bu tablo kaynağıyla birlikte saklanır."
                                FontSize="11" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" />
                 </StackPanel>
-
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
                     <Button Content="İptal" Style="{StaticResource Btn.Mini}" Command="{Binding CancelSourceFieldMappingCommand}" Margin="0,0,8,0" />
                     <Button Content="Kaynağı Ekle" Style="{StaticResource Btn.Primary}" Command="{Binding ApplySourceFieldMappingCommand}" Padding="14,0" Height="32" />
                 </StackPanel>
-
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding SourceFieldMappingRows}">
                         <ItemsControl.ItemTemplate>
