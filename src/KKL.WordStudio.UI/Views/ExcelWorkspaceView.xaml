@@ -1,6 +1,8 @@
 <UserControl x:Class="KKL.WordStudio.UI.Views.ExcelWorkspaceView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             PreviewKeyDown="ExcelWorkspaceView_PreviewKeyDown"
+             PreviewMouseWheel="ExcelWorkspaceView_PreviewMouseWheel">
     <Grid AllowDrop="True"
           DragEnter="ExcelDropTarget_DragEnter"
           DragOver="ExcelDropTarget_DragOver"
@@ -55,14 +57,33 @@
                 </StackPanel>
             </Border>
 
+            <Border x:Name="SearchStrip" DockPanel.Dock="Top" Height="40" Visibility="Collapsed"
+                    Background="#FFF8FAFD" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,0,0,1">
+                <DockPanel Margin="12,5">
+                    <Button DockPanel.Dock="Right" Content="×" Style="{StaticResource Btn.Mini}" Click="CloseSearch_Click" Width="30" Margin="6,0,0,0" ToolTip="Aramayı kapat (Esc)" />
+                    <Button DockPanel.Dock="Right" Content="↓" Style="{StaticResource Btn.Mini}" Click="SearchNext_Click" Width="32" Margin="4,0,0,0" ToolTip="Sonraki sonuç (Enter)" />
+                    <Button DockPanel.Dock="Right" Content="↑" Style="{StaticResource Btn.Mini}" Click="SearchPrevious_Click" Width="32" Margin="8,0,0,0" ToolTip="Önceki sonuç (Shift+Enter)" />
+                    <TextBlock x:Name="SearchResultText" DockPanel.Dock="Right" Text="Aranacak metni yazın" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="12,0" />
+                    <TextBox x:Name="SearchBox" TextChanged="SearchBox_TextChanged" VerticalContentAlignment="Center" ToolTip="Etkin sayfanın görüntülenen değerlerinde ara" />
+                </DockPanel>
+            </Border>
+
             <Border DockPanel.Dock="Bottom" Height="38" Background="{DynamicResource Brush.Surface.Alt}" BorderBrush="{DynamicResource Brush.Border.Light}" BorderThickness="0,1,0,0">
                 <Grid Margin="13,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" FontWeight="Bold" Text="{Binding RangeStatusText}" VerticalAlignment="Center" Margin="0,0,14,0" />
                     <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="−" Style="{StaticResource Btn.Mini}" Click="ZoomOut_Click" Width="28" Height="26" ToolTip="Kaynak görünümünü küçült" />
+                        <Button x:Name="ZoomPercentButton" Style="{StaticResource Btn.Mini}" Click="ZoomReset_Click" Height="26" MinWidth="58" Margin="4,0" ToolTip="100% değerine dön">
+                            <TextBlock x:Name="ZoomPercentText" Text="100%" />
+                        </Button>
+                        <Button Content="+" Style="{StaticResource Btn.Mini}" Click="ZoomIn_Click" Width="28" Height="26" ToolTip="Kaynak görünümünü büyüt" />
+                    </StackPanel>
                 </Grid>
             </Border>
 
@@ -113,6 +134,10 @@
                           CanUserAddRows="False"
                           CanUserResizeRows="False"
                           CanUserSortColumns="False"
+                          EnableRowVirtualization="True"
+                          EnableColumnVirtualization="True"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
                           SelectionMode="Extended"
                           SelectionUnit="CellOrRowHeader"
                           AutoGeneratingColumn="WorkingDataGrid_AutoGeneratingColumn"
