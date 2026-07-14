@@ -12,6 +12,8 @@ public sealed class QuickAssemblyTransferOutcome
     public required QuickAssemblyTransferStatus Status { get; init; }
     public string? Message { get; init; }
     public Guid? CreatedElementId { get; init; }
+    public Guid? CreatedHeadingElementId { get; init; }
+    public Guid? CreatedAltHeadingElementId { get; init; }
 }
 
 public sealed class QuickAssemblyTargetResult
@@ -20,6 +22,8 @@ public sealed class QuickAssemblyTargetResult
     public required QuickAssemblyTransferStatus Status { get; init; }
     public string? Message { get; init; }
     public Guid? CreatedElementId { get; init; }
+    public Guid? CreatedHeadingElementId { get; init; }
+    public Guid? CreatedAltHeadingElementId { get; init; }
 }
 
 /// <summary>
@@ -96,7 +100,9 @@ public sealed class QuickAssemblyBatchOrchestrator
                     Target = target,
                     Status = outcome.Status,
                     Message = outcome.Message,
-                    CreatedElementId = outcome.CreatedElementId
+                    CreatedElementId = outcome.CreatedElementId,
+                    CreatedHeadingElementId = outcome.CreatedHeadingElementId,
+                    CreatedAltHeadingElementId = outcome.CreatedAltHeadingElementId
                 };
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
