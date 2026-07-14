@@ -17,6 +17,12 @@ public enum ExcelTransferDestinationMode
     CreateNewTable
 }
 
+public enum ExcelTransferPlacementAnchorKind
+{
+    Heading,
+    AltHeading
+}
+
 public sealed class TransferColumnSelection
 {
     public required string ProviderField { get; init; }
@@ -33,6 +39,14 @@ public sealed class ExcelTransferPlacementRequest
     public required ExcelTransferDestinationMode DestinationMode { get; init; }
     public Guid? ExistingTableId { get; init; }
     public Guid? AnchorElementId { get; init; }
+
+    /// <summary>
+    /// Optional semantic guard used by Quick Report when no new heading is
+    /// created. It prevents a table/alt-heading from silently falling back to the
+    /// document root or attaching to the wrong outline level.
+    /// </summary>
+    public ExcelTransferPlacementAnchorKind? RequiredAnchorKind { get; init; }
+
     public required string TableName { get; init; }
     public bool IncludeHeading { get; init; }
     public string HeadingText { get; init; } = "Yeni başlık";
@@ -149,7 +163,34 @@ public static class ExcelTransferPlacementCoordinator
 
         var created = new List<ReportElement>();
         var rootHeading = FindRootHeading(body.Root) ?? CreateRootHeading(body.Root, created);
-        var insertionIndex = ResolveInsertionIndex(body.Root, placement.AnchorElementId, rootHeading);
+
+        ReportElement? requiredAnchor = null;
+        if (placement.RequiredAnchorKind is { } requiredKind)
+        {
+            requiredAnchor = placement.AnchorElementId is { } anchorId
+                ? ReportElementFlattener.FindById(report, anchorId)
+                : null;
+            if (!MatchesRequiredAnchor(requiredAnchor, requiredKind))
+            {
+                RollBack(body.Root, created);
+                var expected = requiredKind == ExcelTransferPlacementAnchorKind.Heading
+                    ? "üst başlık"
+                    : "alt başlık";
+                return new ExcelTransferPlacementResult
+                {
+                    TransferResult = ExcelTransferResult.Failure($"Seçilen {expected} artık raporda bulunmuyor veya seviyesi değişti.")
+                };
+            }
+        }
+
+        var insertionContainer = requiredAnchor is null
+            ? body.Root
+            : FindContainerOf(body.Root, requiredAnchor) ?? body.Root;
+        var insertionIndex = ResolveInsertionIndex(
+            insertionContainer,
+            placement.AnchorElementId,
+            ReferenceEquals(insertionContainer, body.Root) ? rootHeading : null,
+            placement.RequiredAnchorKind);
 
         TextElement? heading = null;
         TextElement? altHeading = null;
@@ -162,38 +203,44 @@ public static class ExcelTransferPlacementCoordinator
                 Content = Expression.Literal(ReportHeadingNumberingService.StripVisibleNumber(
                     NormalizeTitle(placement.HeadingText, "Yeni başlık")))
             };
-            body.Root.Children.Insert(insertionIndex++, heading);
+            insertionContainer.Children.Insert(insertionIndex++, heading);
             created.Add(heading);
         }
 
         if (placement.IncludeAltHeading)
         {
+            var hasHeadingParent = placement.IncludeHeading
+                || placement.RequiredAnchorKind == ExcelTransferPlacementAnchorKind.Heading;
             altHeading = new TextElement
             {
-                Name = placement.IncludeHeading ? "Alt Heading" : "Heading",
-                Style = placement.IncludeHeading
+                Name = hasHeadingParent ? "Alt Heading" : "Heading",
+                Style = hasHeadingParent
                     ? HeadingStylePresets.CreateAltHeadingStyle()
                     : HeadingStylePresets.CreateHeadingStyle(),
                 Content = Expression.Literal(ReportHeadingNumberingService.StripVisibleNumber(
                     NormalizeTitle(placement.AltHeadingText, "Yeni alt başlık")))
             };
-            body.Root.Children.Insert(insertionIndex++, altHeading);
+            insertionContainer.Children.Insert(insertionIndex++, altHeading);
             created.Add(altHeading);
         }
 
-        // When the optional proposal rows are removed, keep the selected
-        // heading/alt-heading as the real transfer anchor instead of silently
-        // falling back to the document root.
-        var anchorId = altHeading?.Id ?? heading?.Id ?? placement.AnchorElementId ?? rootHeading.Id;
+        // When both proposal rows are disabled, append the table to the selected
+        // alt-heading block rather than repeatedly inserting immediately after its
+        // caption and reversing the user's click order.
+        var anchorIdForTransfer = altHeading?.Id
+            ?? heading?.Id
+            ?? ResolveTailAnchorId(insertionContainer, placement.AnchorElementId, placement.RequiredAnchorKind)
+            ?? placement.AnchorElementId
+            ?? rootHeading.Id;
         var transferRequest = CloneTransfer(
             placement.Transfer,
-            targetElementId: anchorId,
+            targetElementId: anchorIdForTransfer,
             existingTableMode: null);
         var result = transferService.Transfer(project, report, transferRequest);
 
         if (result.Outcome != TransferOutcome.Success || result.Table is null)
         {
-            RollBack(body.Root, created);
+            RollBack(insertionContainer, created);
             return new ExcelTransferPlacementResult { TransferResult = result };
         }
 
@@ -207,6 +254,19 @@ public static class ExcelTransferPlacementCoordinator
             CreatedElementIds = created.Select(element => element.Id).Append(result.Table.Id).ToList()
         };
     }
+
+    private static bool MatchesRequiredAnchor(
+        ReportElement? element,
+        ExcelTransferPlacementAnchorKind requiredKind) =>
+        element is TextElement text
+        && requiredKind switch
+        {
+            ExcelTransferPlacementAnchorKind.Heading =>
+                HeadingStylePresets.IsHeading(text.Style)
+                && !string.Equals(text.Name, "Document Root", StringComparison.Ordinal),
+            ExcelTransferPlacementAnchorKind.AltHeading => HeadingStylePresets.IsAltHeading(text.Style),
+            _ => false
+        };
 
     private static void ApplyTableIdentityAndColumns(
         Report report,
@@ -333,17 +393,69 @@ public static class ExcelTransferPlacementCoordinator
         return rootHeading;
     }
 
-    private static int ResolveInsertionIndex(Container root, Guid? anchorElementId, TextElement rootHeading)
+    private static int ResolveInsertionIndex(
+        Container container,
+        Guid? anchorElementId,
+        TextElement? rootHeading,
+        ExcelTransferPlacementAnchorKind? requiredKind)
     {
         if (anchorElementId is { } anchorId)
         {
-            var anchorIndex = root.Children.FindIndex(element => element.Id == anchorId);
+            var anchorIndex = container.Children.FindIndex(element => element.Id == anchorId);
             if (anchorIndex >= 0)
+            {
+                if (requiredKind is { } kind)
+                    return FindAnchorBlockEnd(container, anchorIndex, kind);
                 return anchorIndex + 1;
+            }
         }
 
-        var rootIndex = root.Children.IndexOf(rootHeading);
-        return Math.Max(rootIndex + 1, root.Children.Count);
+        if (rootHeading is not null)
+        {
+            var rootIndex = container.Children.IndexOf(rootHeading);
+            return Math.Max(rootIndex + 1, container.Children.Count);
+        }
+
+        return container.Children.Count;
+    }
+
+    private static Guid? ResolveTailAnchorId(
+        Container container,
+        Guid? anchorElementId,
+        ExcelTransferPlacementAnchorKind? requiredKind)
+    {
+        if (anchorElementId is not { } anchorId || requiredKind is not { } kind)
+            return null;
+
+        var anchorIndex = container.Children.FindIndex(element => element.Id == anchorId);
+        if (anchorIndex < 0)
+            return null;
+
+        var endExclusive = FindAnchorBlockEnd(container, anchorIndex, kind);
+        var tailIndex = Math.Max(anchorIndex, endExclusive - 1);
+        return container.Children[tailIndex].Id;
+    }
+
+    private static int FindAnchorBlockEnd(
+        Container container,
+        int anchorIndex,
+        ExcelTransferPlacementAnchorKind kind)
+    {
+        for (var index = anchorIndex + 1; index < container.Children.Count; index++)
+        {
+            if (container.Children[index] is not TextElement text)
+                continue;
+
+            var startsHeading = HeadingStylePresets.IsHeading(text.Style)
+                && !string.Equals(text.Name, "Document Root", StringComparison.Ordinal);
+            var startsAltHeading = HeadingStylePresets.IsAltHeading(text.Style);
+            if (kind == ExcelTransferPlacementAnchorKind.Heading && startsHeading)
+                return index;
+            if (kind == ExcelTransferPlacementAnchorKind.AltHeading && (startsHeading || startsAltHeading))
+                return index;
+        }
+
+        return container.Children.Count;
     }
 
     private static Container? FindContainerOf(Container container, ReportElement element)
