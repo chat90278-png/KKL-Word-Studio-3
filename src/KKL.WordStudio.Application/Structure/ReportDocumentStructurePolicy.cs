@@ -74,7 +74,8 @@ public static class ReportDocumentStructurePolicy
     public static Result Delete(IReportStructureService service, Report report, Guid elementId)
     {
         EnsureRootAndRenumber(report);
-        if (FindTopLevel(report, elementId) is { Element: var element } && IsRoot(element))
+        var located = FindTopLevel(report, elementId);
+        if (located is not null && IsRoot(located.Value.Element))
             return Result.Failure("Ana başlık silinemez; yalnızca adı değiştirilebilir.");
 
         return ApplyAndRenumber(report, () => service.Delete(report, elementId));
@@ -89,7 +90,7 @@ public static class ReportDocumentStructurePolicy
         if (IsRoot(located.Value.Element))
             return Result.Failure("Ana başlık taşınamaz.");
 
-        // The first user H1 has no previous H1 sibling. Prevent the legacy
+        // The first user H1 has no previous user H1 sibling. Prevent the legacy
         // service from temporarily moving it before the protected root.
         if (located.Value.Element is TextElement heading
             && HeadingStylePresets.IsHeading(heading.Style)
@@ -106,7 +107,8 @@ public static class ReportDocumentStructurePolicy
     public static Result MoveDown(IReportStructureService service, Report report, Guid elementId)
     {
         EnsureRootAndRenumber(report);
-        if (FindTopLevel(report, elementId) is { Element: var element } && IsRoot(element))
+        var located = FindTopLevel(report, elementId);
+        if (located is not null && IsRoot(located.Value.Element))
             return Result.Failure("Ana başlık taşınamaz.");
 
         return ApplyAndRenumber(report, () => service.MoveDown(report, elementId));
@@ -115,7 +117,8 @@ public static class ReportDocumentStructurePolicy
     public static Result Indent(IReportStructureService service, Report report, Guid elementId)
     {
         EnsureRootAndRenumber(report);
-        if (FindTopLevel(report, elementId) is { Element: var element } && IsRoot(element))
+        var located = FindTopLevel(report, elementId);
+        if (located is not null && IsRoot(located.Value.Element))
             return Result.Failure("Ana başlığın seviyesi değiştirilemez.");
 
         return ApplyAndRenumber(report, () => service.Indent(report, elementId));
@@ -124,7 +127,8 @@ public static class ReportDocumentStructurePolicy
     public static Result Outdent(IReportStructureService service, Report report, Guid elementId)
     {
         EnsureRootAndRenumber(report);
-        if (FindTopLevel(report, elementId) is { Element: var element } && IsRoot(element))
+        var located = FindTopLevel(report, elementId);
+        if (located is not null && IsRoot(located.Value.Element))
             return Result.Failure("Ana başlığın seviyesi değiştirilemez.");
 
         return ApplyAndRenumber(report, () => service.Outdent(report, elementId));
@@ -150,13 +154,21 @@ public static class ReportDocumentStructurePolicy
             if (mode == StructureDropMode.Before)
                 return Result.Failure("Ana başlığın önüne öğe bırakılamaz.");
 
-            // Into the fixed root means a normal top-level child, not an H2.
+            // Into/After the fixed root means a normal top-level child. Apply
+            // promotion only after a successful move so a rejected operation
+            // cannot leave the heading style partially mutated.
+            var result = service.Move(report, sourceElementId, targetElementId, StructureDropMode.After);
+            if (result.IsFailure)
+                return result;
+
             if (source.Value.Element is TextElement sourceText
                 && HeadingStylePresets.IsAltHeading(sourceText.Style))
             {
                 sourceText.Style = HeadingStylePresets.CreateHeadingStyle();
             }
-            mode = StructureDropMode.After;
+
+            EnsureRootAndRenumber(report);
+            return Result.Success();
         }
 
         return ApplyAndRenumber(report, () => service.Move(report, sourceElementId, targetElementId, mode));
@@ -165,13 +177,13 @@ public static class ReportDocumentStructurePolicy
     public static Result InsertHeading(Report report, Guid? anchorElementId, TextElement heading)
     {
         ArgumentNullException.ThrowIfNull(heading);
-        var root = EnsureRootAndRenumber(report);
+        EnsureRootAndRenumber(report);
         var body = EnsureBodySection(report);
         heading.Name = "Heading";
         heading.Style = HeadingStylePresets.CreateHeadingStyle();
         heading.Content = Expression.Literal(NormalizeHeadingText(heading.Content.Text, "Yeni başlık"));
 
-        var index = ResolveHeadingInsertIndex(body.Root.Children, anchorElementId, root);
+        var index = ResolveHeadingInsertIndex(body.Root.Children, anchorElementId);
         body.Root.Children.Insert(index, heading);
         ReportHeadingNumberingService.Renumber(report);
         return Result.Success();
@@ -180,13 +192,13 @@ public static class ReportDocumentStructurePolicy
     public static Result InsertAltHeading(Report report, Guid? anchorElementId, TextElement heading)
     {
         ArgumentNullException.ThrowIfNull(heading);
-        var root = EnsureRootAndRenumber(report);
+        EnsureRootAndRenumber(report);
         var body = EnsureBodySection(report);
         var children = body.Root.Children;
         var anchorIndex = anchorElementId is { } id ? children.FindIndex(element => element.Id == id) : -1;
 
         var useAltStyle = anchorIndex >= 0 && HasOwningUserHeading(children, anchorIndex);
-        var index = ResolveAltHeadingInsertIndex(children, anchorIndex, root, useAltStyle);
+        var index = ResolveAltHeadingInsertIndex(children, anchorIndex, useAltStyle);
 
         heading.Name = useAltStyle ? "Alt Heading" : "Heading";
         heading.Style = useAltStyle
@@ -201,10 +213,10 @@ public static class ReportDocumentStructurePolicy
     public static Result InsertTable(Report report, Guid? anchorElementId, TableElement table)
     {
         ArgumentNullException.ThrowIfNull(table);
-        var root = EnsureRootAndRenumber(report);
+        EnsureRootAndRenumber(report);
         var body = EnsureBodySection(report);
         var children = body.Root.Children;
-        var index = ResolveContentInsertIndex(children, anchorElementId, root);
+        var index = ResolveContentInsertIndex(children, anchorElementId);
         children.Insert(index, table);
         ReportHeadingNumberingService.Renumber(report);
         return Result.Success();
@@ -214,12 +226,12 @@ public static class ReportDocumentStructurePolicy
     {
         EnsureRootAndRenumber(report);
         var result = mutation();
-        if (result.IsSuccess)
+        if (!result.IsFailure)
             EnsureRootAndRenumber(report);
         return result;
     }
 
-    private static int ResolveHeadingInsertIndex(List<ReportElement> children, Guid? anchorId, TextElement root)
+    private static int ResolveHeadingInsertIndex(List<ReportElement> children, Guid? anchorId)
     {
         if (anchorId is not { } id)
             return children.Count;
@@ -248,7 +260,6 @@ public static class ReportDocumentStructurePolicy
     private static int ResolveAltHeadingInsertIndex(
         List<ReportElement> children,
         int anchorIndex,
-        TextElement root,
         bool useAltStyle)
     {
         if (anchorIndex < 0 || IsRoot(children[anchorIndex]))
@@ -269,7 +280,7 @@ public static class ReportDocumentStructurePolicy
         return anchorIndex;
     }
 
-    private static int ResolveContentInsertIndex(List<ReportElement> children, Guid? anchorId, TextElement root)
+    private static int ResolveContentInsertIndex(List<ReportElement> children, Guid? anchorId)
     {
         if (anchorId is not { } id)
             return children.Count;
