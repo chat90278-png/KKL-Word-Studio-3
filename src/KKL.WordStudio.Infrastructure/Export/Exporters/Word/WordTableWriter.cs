@@ -76,9 +76,12 @@ internal static class WordTableWriter
             Width = width.ToString()
         }, true);
         properties.AddChild(new TableBorders(
+            // CT_TblBorders is sequence-sensitive: top, left, bottom, right,
+            // insideH, insideV. Word may repair a different order on open, but
+            // OpenXmlValidator correctly rejects that malformed document XML.
             new TopBorder { Val = BorderValues.Single, Size = borderSize },
-            new BottomBorder { Val = BorderValues.Single, Size = borderSize },
             new LeftBorder { Val = BorderValues.Single, Size = borderSize },
+            new BottomBorder { Val = BorderValues.Single, Size = borderSize },
             new RightBorder { Val = BorderValues.Single, Size = borderSize },
             new InsideHorizontalBorder { Val = BorderValues.Single, Size = borderSize },
             new InsideVerticalBorder { Val = BorderValues.Single, Size = borderSize }), true);
