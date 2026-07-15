@@ -61,6 +61,7 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         var previewView = Read(root, "src", "KKL.WordStudio.UI", "Views", "PreviewView.Diagnostics.cs");
         var excelVm = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.Diagnostics.cs");
         var excelView = Read(root, "src", "KKL.WordStudio.UI", "Views", "ExcelWorkspaceView.KeyboardFlow.cs");
+        var excelEdit = Read(root, "src", "KKL.WordStudio.UI", "Views", "ExcelWorkspaceView.Sprint23.cs");
         var store = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "PreviewDiagnosticsStore.cs");
 
         Assert.Contains("_previewViewModel.NavigateToElement", warningVm, StringComparison.Ordinal);
@@ -73,9 +74,14 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         Assert.Contains("targetColumnIndex = affectedColumnIndex", excelVm, StringComparison.Ordinal);
         Assert.Contains("var previewColumnIndex = columnIndex + 1", excelVm, StringComparison.Ordinal);
         Assert.Contains("DiagnosticGridNavigationRequested", excelVm, StringComparison.Ordinal);
+        Assert.Contains("TryApplyGridCell", excelView, StringComparison.Ordinal);
+        Assert.Contains("catch (ArgumentOutOfRangeException)", excelView, StringComparison.Ordinal);
         Assert.Contains("WorkingDataGrid.CurrentCell = cell", excelView, StringComparison.Ordinal);
         Assert.Contains("WorkingDataGrid.ScrollIntoView", excelView, StringComparison.Ordinal);
         Assert.Contains("Keyboard.Focus(WorkingDataGrid)", excelView, StringComparison.Ordinal);
+        Assert.Contains("DispatcherPriority.Background", excelEdit, StringComparison.Ordinal);
+        Assert.Contains("CommitCellEditAfterGridSettlesAsync", excelEdit, StringComparison.Ordinal);
+        Assert.Contains("CancelEdit(DataGridEditingUnit.Cell)", excelEdit, StringComparison.Ordinal);
         Assert.Contains("public int FindingCount", store, StringComparison.Ordinal);
 
         Assert.DoesNotContain("IDocumentLayoutEngine", warningVm, StringComparison.Ordinal);
