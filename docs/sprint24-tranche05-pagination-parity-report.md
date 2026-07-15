@@ -50,7 +50,7 @@
 
 ## Test total
 
-The earlier `652/652` expectation was incorrect. Windows test discovery established these project totals:
+The earlier `652/652` expectation was incorrect. Windows test discovery established these project totals after removing the accidental duplicate contract-test file:
 
 - Domain: `20`
 - Application: `288`
@@ -64,7 +64,7 @@ Current exact-suite target:
 648 / 648
 ```
 
-The obsolete production fallback engine is removed while the baseline test file and method identities are preserved. Those legacy-named tests now execute the authoritative deterministic engine.
+The obsolete production fallback engine is removed while the baseline test file and method identities are preserved. Those legacy-named tests execute the authoritative deterministic engine without adding duplicate test methods.
 
 Coverage includes:
 
@@ -94,7 +94,9 @@ The supplied Windows runs did not include `git rev-parse HEAD`, so they cannot b
 - brittle source-regex architecture checks;
 - a real second `IDocumentLayoutEngine`: the unused Sprint 14 fallback bootstrap;
 - a Sprint 15 baseline test still constructing the removed fallback type;
-- baseline inventory requiring the historical fallback test file and three method identities to remain present.
+- baseline inventory requiring the historical fallback test file and three method identities to remain present;
+- a legacy cell-span test asserting collection reference identity although the deterministic engine preserves equivalent span values;
+- an accidental duplicate deterministic contract-test file increasing Engine discovery from `68` to `71`.
 
 Corrections:
 
@@ -104,10 +106,11 @@ Corrections:
 - Word row pagination adds `CantSplit` without rebuilding row properties, preserving native header and height properties.
 - Architecture verification inspects compiled Engine types.
 - The unused production fallback engine was removed.
-- The Sprint 15 cell-span contract now runs through `DeterministicDocumentLayoutEngine`.
-- The baseline fallback test filename and method names remain intact, but their implementation now validates deterministic-engine compatibility.
+- The Sprint 15 cell-span contract runs through `DeterministicDocumentLayoutEngine` and compares span content by value.
+- The baseline fallback test filename and method names remain intact, but their implementation validates deterministic-engine compatibility.
+- The duplicate `DocumentLayoutEngineContractTests.cs` file was removed so each compatibility test is discovered once.
 
-The latest supplied run failed compilation with one `CS0246` fallback reference, so its subsequent test output is not a valid full-suite result. It also surfaced the baseline inventory identity requirement. Both issues are corrected, but a new exact-head Windows run is still required.
+The latest supplied run built successfully with `0 warnings / 0 errors`. Its test result was `650 passed / 1 failed / 651 total`; the sole failure was the stale `Assert.Same` cell-span assertion, and the three extra tests came from the duplicate contract-test file. Both issues are corrected, but a new exact-head Windows run is still required.
 
 ## Windows gate
 
@@ -148,9 +151,9 @@ Expected:
 ## Gate status
 
 - Source review: complete.
-- Latest supplied Windows build: RED with `0 warnings / 1 error` on an unverified head; the remaining fallback test reference is corrected.
-- Test output following that failed build is not accepted as a gate.
-- Baseline test inventory compatibility is restored without reintroducing a production fallback engine.
+- Latest supplied Windows build: `0 warnings / 0 errors` on an unverified head.
+- Latest supplied Windows tests: `650 passed / 1 failed / 651 total`; the remaining value-vs-reference assertion and duplicate test file are corrected.
+- Baseline test inventory compatibility remains intact without reintroducing a production fallback engine.
 - GitHub CI status: no checks are configured/reported for the current head.
 - Current exact-head Windows build/test/manual smoke: pending user evidence.
 - PR must remain draft and must not be merged until the Windows gate is GREEN.
