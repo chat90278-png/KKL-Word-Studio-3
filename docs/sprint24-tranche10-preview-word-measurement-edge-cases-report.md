@@ -8,36 +8,29 @@
 - PR #22 and PR #23 remain draft and unmerged.
 - Tranche 10 must not be retargeted or merged before the lower stacked PRs are validated.
 
-## Problem
+## Windows finding
 
-The deterministic Preview paginator and the authoritative Word writer already share semantic pagination policy, table formats and column profiles. One historical fallback remained inconsistent:
+The first supplied Debug run built with `0 warnings / 0 errors`, but seven historical Sprint 15 Engine pagination tests failed. The attempted fallback-row shrink changed grouped-row, continuation-header, caption and cell-span fragment boundaries. That production behavior change was reverted rather than weakening the established pagination contracts.
 
-- When `ResolvedTableFormat.Columns` was empty and every configured cell margin was zero, Preview called `EstimateTableRowHeight`.
-- That method silently subtracted `3 mm` from every cell width and added `2.5 mm` to every row height.
-- The Word writer did not emit those hidden margins. It emitted the resolved zero margins and its standard Segoe UI fallback column format.
-- Preview could therefore calculate rows as taller than the corresponding Word rows, especially with narrow columns or long text, and move page boundaries earlier than Word.
+The existing compatibility fallback is therefore preserved:
 
-## Correction
-
-`DeterministicTextMeasurement.EstimateTableRowHeight` now follows the same fallback geometry as the Word table writer:
-
-- Use the complete resolved fallback cell width.
-- Use Segoe UI 10 pt, matching the existing fallback column profile.
-- Preserve header bold behavior.
-- Do not inject hidden horizontal or vertical padding.
-- Keep the existing minimum line-height safety floor.
+- total horizontal cell inset: `3 mm`;
+- total vertical cell inset: `2.5 mm`;
+- physical equivalent: `1.5 mm` left/right and `1.25 mm` top/bottom;
+- Segoe UI-compatible 10 pt fallback text geometry;
+- existing grouped-row and semantic-span pagination behavior unchanged.
 
 No second measurement engine, paginator, Preview renderer, Word writer or exporter is introduced.
 
 ## Regression coverage
 
-Three public `DeterministicDocumentLayoutEngine` tests were added:
+Three public `DeterministicDocumentLayoutEngine` tests remain:
 
-1. An empty column profile and an equivalent explicit Word fallback profile must produce the same page/fragment plan.
-2. Real configured cell margins must reduce the number of rows that fit on the first Preview page; zero margins must no longer inherit hidden legacy padding.
+1. The compatibility fallback and an explicit resolved format with equivalent physical insets must produce the same fragment plan.
+2. Larger configured vertical margins must reduce the number of rows fitting on the first Preview page.
 3. A `NoWrap` column must not create extra Preview fragments merely because its token is long.
 
-The tests exercise complete public layout results rather than calling the internal measurement helper directly.
+The tests exercise complete public layout results rather than calling internal measurement helpers directly.
 
 ## Expected integrated test inventory
 
@@ -52,8 +45,6 @@ Total           668 / 668
 ```
 
 ## Combined Windows gate
-
-Run the highest stacked branch to validate Tranches 08–10 together:
 
 ```bat
 git fetch origin
@@ -72,10 +63,10 @@ dotnet run -c Release --no-build --project src\KKL.WordStudio.UI\KKL.WordStudio.
 
 ## Manual smoke
 
-1. Export a zero-margin table with long wrapped text and compare Preview/Word page transitions.
-2. Apply visible top/bottom cell margins and confirm both Preview and Word rows grow.
+1. Compare a compatibility/default table against an explicitly formatted table using `1.5 mm` left/right and `1.25 mm` top/bottom margins.
+2. Apply larger top/bottom cell margins and confirm Preview rows grow.
 3. Use a narrow `NoWrap` identifier column and confirm long identifiers remain one logical line without causing extra Preview pages.
-4. Confirm the 50–100 row Word smoke from Tranche 09 remains correct.
-5. Confirm Excel transfer, diagnostics, Word preflight and the in-memory session remain unchanged.
+4. Confirm grouped serial rows, repeated headers and merged identity cells still paginate correctly.
+5. Confirm the 50–100 row Word smoke from Tranche 09 remains correct.
 
 No GREEN, ready or merge claim is valid until the exact-head Windows Release gate and manual smoke are supplied.
