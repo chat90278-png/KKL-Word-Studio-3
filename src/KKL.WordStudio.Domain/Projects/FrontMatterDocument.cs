@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.Domain.Projects;
 
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// Word front-matter source (cover/preface) used by the current in-memory
@@ -22,6 +23,7 @@ public sealed class FrontMatterDocument
     /// Runtime readable path. It normally equals the original import path; file
     /// system availability checks deliberately remain outside Domain.
     /// </summary>
+    [JsonIgnore]
     public string? ResolvedFilePath { get; set; }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
