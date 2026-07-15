@@ -131,15 +131,9 @@ The subsequent UI screenshots confirm:
 - editing an affected cell reduces open findings;
 - pressing Enter reproduced the DataGrid index crash described above.
 
-All supplied automated evidence belongs to superseded heads. The current exact-head Windows gate remains pending.
+All supplied automated evidence belongs to superseded heads. The current exact-head Windows gate remains pending. The authoritative current head is the PR head recorded by GitHub, not a self-referential value embedded in this report.
 
 ## Exact-head Windows gate
-
-Current exact head before any further correction:
-
-```text
-f7dbb28bdeb0289ecaba77813bd04ee3ddecec51
-```
 
 ```bat
 git fetch origin
