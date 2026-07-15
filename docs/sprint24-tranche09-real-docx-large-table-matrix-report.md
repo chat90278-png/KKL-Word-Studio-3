@@ -5,8 +5,7 @@
 - Base branch: `sprint24/08-project-lifecycle-cleanup`
 - Current base head: `615441de02cb81941e71ad92c4a26ebe37d47959`
 - Branch: `sprint24/09-real-docx-large-table-matrix`
-- Current verification head: `b8165544ce2c73cea46eb8a391b0c04e2bbc4bcb`
-- The exact head must be confirmed with `git rev-parse HEAD`.
+- The current exact head is recorded in PR #23 and must be confirmed with `git rev-parse HEAD`.
 - This tranche adds the real DOCX regression matrix plus one authoritative Word-writer schema correction exposed by that matrix.
 
 PR #22 must be validated and merged first. This branch can be used for one combined Windows run because it contains both Tranche 08 and Tranche 09.
