@@ -88,7 +88,7 @@ Total           665 / 665
 
 ## Combined Windows gate
 
-Run from `sprint24/09-real-docx-large-table-matrix` to validate both stacked tranches:
+The schema correction is committed, but no post-fix Windows result has been supplied yet. Run from `sprint24/09-real-docx-large-table-matrix` to validate both stacked tranches:
 
 ```bat
 git fetch origin
