@@ -16,11 +16,9 @@ using KKL.WordStudio.Domain.Reports;
 using KKL.WordStudio.Infrastructure.DataProviders;
 using KKL.WordStudio.Infrastructure.Excel;
 using KKL.WordStudio.Infrastructure.Export.Exporters;
-using KKL.WordStudio.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using DomainPage = KKL.WordStudio.Domain.Reports.Page;
-using DomainWorkbook = KKL.WordStudio.Domain.DataSources.Workbook;
 using DomainWorksheet = KKL.WordStudio.Domain.DataSources.Worksheet;
 using DomainDataField = KKL.WordStudio.Domain.DataBinding.DataField;
 using DomainTableColumn = KKL.WordStudio.Domain.Elements.TableColumn;
@@ -74,30 +72,29 @@ public class Sprint9WorkingDataTests
     [Fact]
     public async Task WorkingData_RoundTripsThroughProjectPersistence()
     {
+        // Historical method identity retained. Working data now lives only in
+        // the process-lifetime session aggregate and must remain reachable from
+        // the authoritative Project -> DataSource -> Worksheet graph.
         var workbookPath = CreateWorkbook();
-        var projectPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".kws");
         try
         {
             var (project, service, worksheet) = await CreateWorkingDataAsync(workbookPath);
-            Assert.True(service.SetCell(worksheet, 0, 0, "Persisted-Edit").IsSuccess);
+            Assert.True(service.SetCell(worksheet, 0, 0, "Session-Edit").IsSuccess);
             Assert.True(service.InsertColumn(worksheet, 1).IsSuccess);
-            Assert.True(service.SetCell(worksheet, 0, 1, "Project-Only").IsSuccess);
+            Assert.True(service.SetCell(worksheet, 0, 1, "Session-Only").IsSuccess);
             var insertedField = worksheet.WorkingData!.Columns[1].SourceField;
 
-            var repository = new KwsProjectRepository(NullLogger<KwsProjectRepository>.Instance);
-            Assert.True((await repository.SaveAsync(project, projectPath)).IsSuccess);
-            var opened = await repository.OpenAsync(projectPath);
+            var sessionWorksheet = Assert.IsType<ExcelDataSource>(
+                Assert.Single(project.DataSources)).Workbook.Worksheets.Single();
 
-            Assert.True(opened.IsSuccess, opened.Error);
-            var roundTrippedWorksheet = Assert.IsType<ExcelDataSource>(Assert.Single(opened.Value.DataSources)).Workbook.Worksheets.Single();
-            Assert.Equal("Persisted-Edit", roundTrippedWorksheet.WorkingData!.Rows[0].Values[0]);
-            Assert.Equal("Project-Only", roundTrippedWorksheet.WorkingData.Rows[0].Values[1]);
-            Assert.Equal(insertedField, roundTrippedWorksheet.WorkingData.Columns[1].SourceField);
+            Assert.Same(worksheet, sessionWorksheet);
+            Assert.Equal("Session-Edit", sessionWorksheet.WorkingData!.Rows[0].Values[0]);
+            Assert.Equal("Session-Only", sessionWorksheet.WorkingData.Rows[0].Values[1]);
+            Assert.Equal(insertedField, sessionWorksheet.WorkingData.Columns[1].SourceField);
         }
         finally
         {
             File.Delete(workbookPath);
-            File.Delete(projectPath);
         }
     }
 
