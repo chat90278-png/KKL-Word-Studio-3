@@ -56,18 +56,28 @@ public sealed class Sprint23TocPaginationBrandingArchitectureTests
     }
 
     [Fact]
-    public void Branding_UsesSelectedTransparentMarksAndSevenSizeWindowsIcon()
+    public void Branding_UsesSelectedTransparentMarksAndGeneratedMultiResolutionWindowsIcon()
     {
         var root = SolutionRootLocator.Find();
         var brandDirectory = Path.Combine(root, "src", "KKL.WordStudio.UI", "Assets", "Brand");
         var master = File.ReadAllBytes(Path.Combine(brandDirectory, "BrandMark.png"));
         var small = File.ReadAllBytes(Path.Combine(brandDirectory, "BrandMarkSmall.png"));
-        var icon = File.ReadAllBytes(Path.Combine(brandDirectory, "AppIcon.ico"));
+        var encodedIconSource = File.ReadAllText(Path.Combine(brandDirectory, "AppIcon.base64")).Trim();
+        var iconSource = Convert.FromBase64String(encodedIconSource);
+        var generator = Read(root, "scripts", "generate-app-icon.ps1");
 
         AssertPng(master, expectedWidth: 256, expectedHeight: 256);
         AssertPng(small, expectedWidth: 128, expectedHeight: 128);
-        Assert.Equal(new byte[] { 0, 0, 1, 0 }, icon[..4]);
-        Assert.Equal((ushort)7, BitConverter.ToUInt16(icon, 4));
+        Assert.Equal(new byte[] { 0, 0, 1, 0 }, iconSource[..4]);
+        Assert.Equal((ushort)1, BitConverter.ToUInt16(iconSource, 4));
+
+        var frameLength = checked((int)BitConverter.ToUInt32(iconSource, 14));
+        var frameOffset = checked((int)BitConverter.ToUInt32(iconSource, 18));
+        Assert.InRange(frameOffset, 22, iconSource.Length - 8);
+        Assert.InRange(frameLength, 8, iconSource.Length - frameOffset);
+        AssertPng(iconSource.AsSpan(frameOffset, frameLength).ToArray(), expectedWidth: 256, expectedHeight: 256);
+
+        Assert.Contains("$sizes = @(16, 20, 24, 32, 40, 48, 64, 96, 128, 256)", generator, StringComparison.Ordinal);
 
         var shell = Read(root, "src", "KKL.WordStudio.UI", "MainWindow.xaml");
         var shellCode = Read(root, "src", "KKL.WordStudio.UI", "MainWindow.xaml.cs");

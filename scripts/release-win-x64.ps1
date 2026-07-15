@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.0.1"
+    [string]$Version = "1.0.2"
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +27,21 @@ $releaseExe = Join-Path $artifactRoot "KKL-Word-Studio-v$Version-win-x64.exe"
 $zipPath = Join-Path $artifactRoot "KKL-Word-Studio-v$Version-win-x64.zip"
 $hashPath = "$releaseExe.sha256"
 
-foreach ($path in @($publishDirectory, $releaseExe, $zipPath, $hashPath)) {
+New-Item -ItemType Directory -Path $artifactRoot -Force | Out-Null
+
+# Remove legacy generic-name publish folders so an old KKL.WordStudio.exe cannot
+# be copied to the desktop and resolved through Windows' stale icon cache.
+Get-ChildItem -Path $artifactRoot -Directory -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.Name -like "KKL-Word-Studio-v*-single-exe" -or
+        $_.Name -like "publish-v*-win-x64"
+    } |
+    Remove-Item -Recurse -Force
+
+Get-ChildItem -Path $artifactRoot -File -Filter "KKL.WordStudio.exe" -ErrorAction SilentlyContinue |
+    Remove-Item -Force
+
+foreach ($path in @($releaseExe, $zipPath, $hashPath)) {
     if (Test-Path $path) {
         Remove-Item $path -Recurse -Force
     }
@@ -45,6 +59,8 @@ Invoke-CheckedNative "Windows single-file publish" {
         --self-contained true `
         -p:PublishProfile=win-x64-self-contained `
         -p:Version=$Version `
+        -p:DebugType=None `
+        -p:DebugSymbols=false `
         -o $publishDirectory
 }
 
@@ -60,6 +76,12 @@ if ($unexpectedFiles) {
 }
 
 Copy-Item $publishedExe $releaseExe -Force
+Remove-Item $publishDirectory -Recurse -Force
+
+if (-not (Test-Path $releaseExe -PathType Leaf)) {
+    throw "Versioned release executable was not created."
+}
+
 Compress-Archive -LiteralPath $releaseExe -DestinationPath $zipPath -CompressionLevel Optimal
 
 $hash = (Get-FileHash $releaseExe -Algorithm SHA256).Hash.ToLowerInvariant()
