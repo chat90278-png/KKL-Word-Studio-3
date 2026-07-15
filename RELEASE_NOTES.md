@@ -1,17 +1,19 @@
-# KKL Word Studio v1.0.1
+# KKL Word Studio v1.0.2
 
-Patch release for the Windows application icon and single-file distribution.
+Windows icon consistency and cache-safety patch release.
 
 ## Fixed
 
-- Replaced the malformed icon directory behavior with a deterministic valid ICO source.
-- The executable, Explorer list views, desktop shortcuts and large-icon views now use the same KKL Word Studio artwork.
-- Removed the need to pass `ApplicationIcon` as a global command-line property.
-- Windows publishing now produces one self-contained executable and fails if extra publish files remain.
+- Removed the legacy checked-in `AppIcon.ico` so old artwork cannot be selected by manual publish commands or stale project settings.
+- The approved master artwork is converted at build time into a real multi-resolution Windows ICO with independent 16, 20, 24, 32, 40, 48, 64, 96, 128 and 256px PNG frames.
+- Explorer list views, large-icon views and desktop shortcuts now receive the same artwork at the native size Windows requests.
+- Release packaging deletes legacy `*-single-exe` output folders before publishing.
+- The temporary generic `KKL.WordStudio.exe` publish directory is removed after packaging.
+- The distributable has a unique versioned filename to bypass Windows icon cache collisions.
 
 ## Download
 
-Use `KKL-Word-Studio-v1.0.1-win-x64.exe` for the direct single-file application.
+Use `KKL-Word-Studio-v1.0.2-win-x64.exe` for the direct self-contained single-file application.
 
 The ZIP contains the same executable. The `.sha256` file can be used to verify the download.
 
