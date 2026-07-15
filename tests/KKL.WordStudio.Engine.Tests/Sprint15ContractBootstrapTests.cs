@@ -55,6 +55,9 @@ public sealed class Sprint15ContractBootstrapTests
 
         var block = Assert.Single(Assert.Single(result.Pages).Blocks);
         var payload = Assert.IsType<TablePageBlockPayload>(block.Payload);
-        Assert.Equal(spans, payload.CellSpans);
+        var span = Assert.Single(payload.CellSpans);
+        Assert.Equal(0, span.RowIndex);
+        Assert.Equal(0, span.ColumnIndex);
+        Assert.Equal(2, span.RowSpan);
     }
 }
