@@ -15,7 +15,7 @@ public sealed partial class ExcelWorkspaceViewModel
         string? keyValue) =>
         NavigateToDiagnosticSourceAsync(
             source,
-            string.IsNullOrWhiteSpace(keyValue) ? Array.Empty<string>() : [keyValue],
+            string.IsNullOrWhiteSpace(keyValue) ? Array.Empty<string>() : new[] { keyValue! },
             affectedColumn: null);
 
     public async Task<bool> NavigateToDiagnosticSourceAsync(
@@ -74,6 +74,7 @@ public sealed partial class ExcelWorkspaceViewModel
                 ? affectedColumnIndex
                 : keyMatch.ColumnIndex;
 
+            EnsureDiagnosticColumnVisible(worksheet, targetColumnIndex);
             var displayRowIndex = ResolveDiagnosticDisplayRow(worksheet, keyMatch.RowIndex);
             if (displayRowIndex < 0)
                 continue;
@@ -202,6 +203,23 @@ public sealed partial class ExcelWorkspaceViewModel
         }
 
         return -1;
+    }
+
+    private void EnsureDiagnosticColumnVisible(Worksheet? worksheet, int columnIndex)
+    {
+        if (worksheet?.WorkingData is not { } workingData
+            || columnIndex < 0
+            || columnIndex >= workingData.Columns.Count)
+        {
+            return;
+        }
+
+        var view = ViewStateFor(worksheet);
+        if (!view.IsColumnHidden(workingData.Columns[columnIndex]))
+            return;
+
+        view.SetColumnHidden(workingData.Columns[columnIndex], false);
+        RefreshWorkingDataView(worksheet);
     }
 
     private static bool DiagnosticColumnMatches(string requested, string? candidate)
