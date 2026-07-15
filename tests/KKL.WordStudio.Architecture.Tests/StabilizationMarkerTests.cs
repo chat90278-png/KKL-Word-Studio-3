@@ -25,13 +25,29 @@ public sealed class StabilizationMarkerTests
     [Fact]
     public void Persistence_RetainsPopulateObjectCreationHandling()
     {
+        // Historical test identity retained for the Sprint 15 inventory. Native
+        // .kws persistence has intentionally been removed; the replacement
+        // contract is one Application-owned in-memory session factory.
         var root = SolutionRootLocator.Find();
-        var path = Path.Combine(root, "src", "KKL.WordStudio.Infrastructure", "Persistence", "KwsProjectRepository.cs");
-        var source = SourceScan.ReadWithoutComments(path);
+        var repositoryPath = Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.Infrastructure",
+            "Persistence",
+            "KwsProjectRepository.cs");
+        var factoryPath = Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.Application",
+            "Workspace",
+            "WorkspaceSessionFactory.cs");
 
-        Assert.Matches(
-            new Regex(@"PreferredObjectCreationHandling\s*=\s*(?:System\.Text\.Json\.Serialization\.)?JsonObjectCreationHandling\.Populate", RegexOptions.CultureInvariant),
-            source);
+        Assert.False(File.Exists(repositoryPath));
+        Assert.True(File.Exists(factoryPath));
+        var factory = SourceScan.ReadWithoutComments(factoryPath);
+        Assert.Contains("Project CreateDefault", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("JsonSerializer", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("ZipArchive", factory, StringComparison.Ordinal);
     }
 
     [Fact]
