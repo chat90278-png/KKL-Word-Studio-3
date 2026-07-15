@@ -6,8 +6,9 @@ using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Shared.Results;
 
 /// <summary>
-/// Validates and registers a DOCX as a project reference-format asset. The
-/// package is opened read-only and is never rewritten during import.
+/// Validates and registers a DOCX as the current session's reference-format
+/// source. The package is opened read-only and is never rewritten, embedded,
+/// copied, or persisted by KKL Word Studio.
 /// </summary>
 public sealed class OpenXmlReferenceFormatDocumentService : IReferenceFormatDocumentService
 {
@@ -43,8 +44,7 @@ public sealed class OpenXmlReferenceFormatDocumentService : IReferenceFormatDocu
             {
                 FileName = Path.GetFileName(filePath),
                 OriginalSourcePath = filePath,
-                ResolvedFilePath = filePath,
-                EmbeddedAssetEntryName = ReferenceFormatDocument.DefaultEmbeddedAssetEntryName
+                ResolvedFilePath = filePath
             });
         }
         catch (Exception)
