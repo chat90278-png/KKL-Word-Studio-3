@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>KKL.WordStudio.UI</RootNamespace>
     <AssemblyName>KKL.WordStudio</AssemblyName>
-    <GeneratedApplicationIcon>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)Generated\AppIcon.ico'))</GeneratedApplicationIcon>
+    <GeneratedApplicationIcon>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)Generated\AppIcon.ico</GeneratedApplicationIcon>
     <ApplicationIcon>$(GeneratedApplicationIcon)</ApplicationIcon>
     <Product>KKL Word Studio</Product>
     <Company>KKL</Company>
@@ -31,7 +31,6 @@
   <ItemGroup>
     <Resource Include="Assets\Brand\BrandMark.png" />
     <Resource Include="Assets\Brand\BrandMarkSmall.png" />
-    <None Include="Assets\Brand\AppIcon.base64" />
   </ItemGroup>
 
   <ItemGroup>
