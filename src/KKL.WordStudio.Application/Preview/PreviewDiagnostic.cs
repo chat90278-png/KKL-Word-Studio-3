@@ -1,10 +1,11 @@
 namespace KKL.WordStudio.Application.Preview;
 
 /// <summary>
-/// One non-blocking issue surfaced by Preview. Diagnostics keep their original
+/// One runtime issue surfaced by Preview. Diagnostics keep their original
 /// human-readable message while carrying stable semantic identity and optional
-/// report/source navigation metadata. They are runtime projection data and are
-/// never persisted.
+/// report/source navigation metadata. Export readiness may treat Error severity
+/// as blocking; Warning and Information remain visible, non-blocking findings.
+/// Diagnostics are runtime projection data and are never persisted.
 /// </summary>
 public sealed class PreviewDiagnostic
 {
