@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 public partial class ExcelWorkspaceView
 {
@@ -61,17 +62,45 @@ public partial class ExcelWorkspaceView
         _viewModel.SetColumnDisplayOrder(orderedIdentities);
     }
 
-    private async void WorkingDataGrid_CellEditEndingV23(object sender, DataGridCellEditEndingEventArgs e)
+    private void WorkingDataGrid_CellEditEndingV23(object sender, DataGridCellEditEndingEventArgs e)
     {
         if (e.EditAction != DataGridEditAction.Commit || e.EditingElement is not TextBox editor)
             return;
 
         var columnIdentity = GetColumnIdentity(e.Column);
-        if (columnIdentity is null) return;
-
-        e.Cancel = true;
         var rowIndex = WorkingDataGrid.Items.IndexOf(e.Row.Item);
-        await _viewModel.CommitGridCellEditAsync(rowIndex, columnIdentity, editor.Text);
+        if (columnIdentity is null || rowIndex < 0)
+            return;
+
+        var value = editor.Text;
+        e.Cancel = true;
+        ArmGridKeyboardRestore();
+
+        // Replacing PreviewTable while WPF is still completing CellEditEnding
+        // can leave DataGrid's internal row/cell indexes stale. Let the current
+        // edit transaction unwind first, then cancel the visual edit and mutate
+        // the project-owned working data on the same UI dispatcher.
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Background,
+            new Action(() => _ = CommitCellEditAfterGridSettlesAsync(rowIndex, columnIdentity, value)));
+    }
+
+    private async Task CommitCellEditAfterGridSettlesAsync(
+        int rowIndex,
+        string columnIdentity,
+        string value)
+    {
+        try
+        {
+            WorkingDataGrid.CancelEdit(DataGridEditingUnit.Cell);
+            WorkingDataGrid.CancelEdit(DataGridEditingUnit.Row);
+            await _viewModel.CommitGridCellEditAsync(rowIndex, columnIdentity, value);
+        }
+        catch (Exception exception)
+        {
+            _restoreGridFocusAfterPreviewRefresh = false;
+            _viewModel.StatusText = $"Hücre güncellenemedi: {exception.Message}";
+        }
     }
 
     private async void ClearCellsV23_Click(object sender, RoutedEventArgs e) =>
