@@ -12,7 +12,7 @@ Base: `main@d512c3d6ee2383106f0295fb5ded5babe9cb9ac3`
 - missing and corrupt reference-format DOCX files return controlled failures;
 - missing and corrupt front-matter DOCX files return controlled failures.
 
-## Windows finding and correction
+## Windows findings and corrections
 
 The first Windows run built with `0 warnings / 0 errors`, but two Infrastructure tests failed while deleting corrupt temporary packages. Path-based OpenXML open calls retained a file handle after package-open failure.
 
@@ -22,6 +22,8 @@ The authoritative production readers now own an explicit read-only `FileStream` 
 - `OpenXmlFrontMatterDocumentService` opens the front-matter stream explicitly.
 
 If OpenXML rejects a corrupt package, the outer stream is still disposed deterministically. Failure messages, WorkingData precedence and successful import behavior are unchanged. The reference-format importer already used this safe stream-ownership pattern.
+
+The second Windows run confirmed Infrastructure `159/159`, but one historical Architecture source guard still required the obsolete path-based call text. The guard now validates the actual ownership contract: explicit `FileStream`, `FileAccess.Read`, `WordprocessingDocument.Open(stream, false)` and no edit-mode open.
 
 ## Expected integrated inventory
 
