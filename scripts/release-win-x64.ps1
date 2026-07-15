@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.0.0"
+    [string]$Version = "1.0.1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,14 +22,15 @@ Set-Location $repositoryRoot
 
 $project = "src\KKL.WordStudio.UI\KKL.WordStudio.UI.csproj"
 $artifactRoot = Join-Path $repositoryRoot "artifacts"
-$publishDirectory = Join-Path $artifactRoot "KKL-Word-Studio-v$Version-win-x64"
-$zipPath = "$publishDirectory.zip"
+$publishDirectory = Join-Path $artifactRoot "publish-v$Version-win-x64"
+$releaseExe = Join-Path $artifactRoot "KKL-Word-Studio-v$Version-win-x64.exe"
+$zipPath = Join-Path $artifactRoot "KKL-Word-Studio-v$Version-win-x64.zip"
+$hashPath = "$releaseExe.sha256"
 
-if (Test-Path $publishDirectory) {
-    Remove-Item $publishDirectory -Recurse -Force
-}
-if (Test-Path $zipPath) {
-    Remove-Item $zipPath -Force
+foreach ($path in @($publishDirectory, $releaseExe, $zipPath, $hashPath)) {
+    if (Test-Path $path) {
+        Remove-Item $path -Recurse -Force
+    }
 }
 New-Item -ItemType Directory -Path $publishDirectory -Force | Out-Null
 
@@ -37,7 +38,7 @@ Invoke-CheckedNative "Release clean" { dotnet clean -c Release }
 Invoke-CheckedNative "Package restore" { dotnet restore }
 Invoke-CheckedNative "Release build" { dotnet build -c Release --no-restore }
 Invoke-CheckedNative "Release tests" { dotnet test -c Release --no-build }
-Invoke-CheckedNative "Windows publish" {
+Invoke-CheckedNative "Windows single-file publish" {
     dotnet publish $project `
         -c Release `
         -r win-x64 `
@@ -47,14 +48,23 @@ Invoke-CheckedNative "Windows publish" {
         -o $publishDirectory
 }
 
-$commit = (& git rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to resolve the release commit."
+$publishedExe = Join-Path $publishDirectory "KKL.WordStudio.exe"
+if (-not (Test-Path $publishedExe -PathType Leaf)) {
+    throw "Single-file publish did not produce KKL.WordStudio.exe."
 }
 
-Set-Content -Path (Join-Path $publishDirectory "BUILD-COMMIT.txt") -Value $commit -Encoding utf8
-Copy-Item "RELEASE_NOTES.md" (Join-Path $publishDirectory "RELEASE_NOTES.md") -Force
-Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $zipPath -CompressionLevel Optimal
+$unexpectedFiles = Get-ChildItem $publishDirectory -File | Where-Object { $_.FullName -ne $publishedExe }
+if ($unexpectedFiles) {
+    $names = ($unexpectedFiles.Name -join ", ")
+    throw "Publish output is not single-file. Unexpected files: $names"
+}
 
-Write-Host "Release package created: $zipPath"
-Write-Host "Commit: $commit"
+Copy-Item $publishedExe $releaseExe -Force
+Compress-Archive -LiteralPath $releaseExe -DestinationPath $zipPath -CompressionLevel Optimal
+
+$hash = (Get-FileHash $releaseExe -Algorithm SHA256).Hash.ToLowerInvariant()
+Set-Content -Path $hashPath -Value "$hash  $(Split-Path $releaseExe -Leaf)" -Encoding ascii
+
+Write-Host "Single executable: $releaseExe"
+Write-Host "ZIP package:       $zipPath"
+Write-Host "SHA-256:           $hash"
