@@ -6,7 +6,7 @@
 - Current base head: `615441de02cb81941e71ad92c4a26ebe37d47959`
 - Branch: `sprint24/09-real-docx-large-table-matrix`
 - The current exact head is recorded in PR #23 and must be confirmed with `git rev-parse HEAD`.
-- This tranche contains tests and documentation only until the exact OpenXML schema node exposed by the matrix is identified.
+- This tranche adds the real DOCX regression matrix plus one authoritative Word-writer schema correction exposed by that matrix.
 
 PR #22 must be validated and merged first. This branch can be used for one combined Windows run because it contains both Tranche 08 and Tranche 09.
 
@@ -49,7 +49,30 @@ No fake exporter, second Word writer or duplicated pagination implementation is 
 - Verifies marker and content survival.
 - Runs `OpenXmlValidator` and requires zero validation errors.
 
-The first Windows run after the namespace compile fix passed 149 of 150 Infrastructure tests and exposed one real schema validation error in the generated main document part. The test is intentionally not weakened. Its failure output now includes the validator id, complete description, part URI, path and offending node XML so the authoritative writer can be corrected precisely rather than guessing.
+## OpenXML schema correction
+
+The first Windows run after the namespace compile fix passed 149 of 150 Infrastructure tests and exposed one real schema error in `/word/document.xml`.
+
+The invalid node was:
+
+```xml
+<w:tblBorders>
+  <w:top />
+  <w:bottom />
+  <w:left />
+  <w:right />
+  <w:insideH />
+  <w:insideV />
+</w:tblBorders>
+```
+
+`CT_TblBorders` is sequence-sensitive. The authoritative `WordTableWriter` now emits:
+
+```text
+top, left, bottom, right, insideH, insideV
+```
+
+No table values, widths, pagination rules, row properties or exporter ownership changed. The strict physical-DOCX validator test remains in place to prevent recurrence.
 
 ## Expected integrated test inventory
 
@@ -63,26 +86,9 @@ Infrastructure  150
 Total           665 / 665
 ```
 
-## Focused schema diagnosis
-
-Only the failing test needs to run during diagnosis:
-
-```bat
-git fetch origin
-git checkout sprint24/09-real-docx-large-table-matrix
-git reset --hard origin/sprint24/09-real-docx-large-table-matrix
-
-git rev-parse HEAD
-git status --short
-
-dotnet test tests\KKL.WordStudio.Infrastructure.Tests\KKL.WordStudio.Infrastructure.Tests.csproj --filter "FullyQualifiedName~LongCellText_WritesPhysicalDocxThatReopensAndValidatesWithoutDataLoss" --logger "console;verbosity=detailed"
-```
-
-The detailed output must identify the exact OpenXML node before production writer code is changed.
-
 ## Combined Windows gate
 
-After the schema writer correction, run from `sprint24/09-real-docx-large-table-matrix` to validate both stacked tranches:
+Run from `sprint24/09-real-docx-large-table-matrix` to validate both stacked tranches:
 
 ```bat
 git fetch origin
@@ -109,6 +115,7 @@ dotnet run -c Release --no-build --project src\KKL.WordStudio.UI\KKL.WordStudio.
 6. Confirm caption/header/first data rows do not leave a stranded caption.
 7. Confirm two consecutive tables do not produce a blank page.
 8. Confirm a long text cell remains readable and does not corrupt the DOCX.
-9. Confirm normal Excel transfer, Preview, diagnostics and Word preflight still work after Tranche 08 cleanup.
+9. Confirm table borders render normally on all four outside edges and inside grid lines.
+10. Confirm normal Excel transfer, Preview, diagnostics and Word preflight still work after Tranche 08 cleanup.
 
 No GREEN/ready/merge claim is valid until the exact-head Windows Release gate and manual smoke are supplied.
