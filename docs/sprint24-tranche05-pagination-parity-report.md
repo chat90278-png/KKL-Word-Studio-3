@@ -50,7 +50,7 @@
 
 ## Test total
 
-The earlier `652/652` expectation was incorrect. Windows test discovery established these project totals after removing the accidental duplicate contract-test file:
+Windows test discovery established these project totals after removing the accidental duplicate contract-test file:
 
 - Domain: `20`
 - Application: `288`
@@ -95,7 +95,7 @@ The supplied Windows runs did not include `git rev-parse HEAD`, so they cannot b
 - a real second `IDocumentLayoutEngine`: the unused Sprint 14 fallback bootstrap;
 - a Sprint 15 baseline test still constructing the removed fallback type;
 - baseline inventory requiring the historical fallback test file and three method identities to remain present;
-- a legacy cell-span test asserting collection reference identity although the deterministic engine preserves equivalent span values;
+- a legacy cell-span test first asserting collection identity and then relying on element equality not implemented by `TableCellSpan`;
 - an accidental duplicate deterministic contract-test file increasing Engine discovery from `68` to `71`.
 
 Corrections:
@@ -106,11 +106,11 @@ Corrections:
 - Word row pagination adds `CantSplit` without rebuilding row properties, preserving native header and height properties.
 - Architecture verification inspects compiled Engine types.
 - The unused production fallback engine was removed.
-- The Sprint 15 cell-span contract runs through `DeterministicDocumentLayoutEngine` and compares span content by value.
+- The Sprint 15 cell-span contract runs through `DeterministicDocumentLayoutEngine` and now asserts `RowIndex`, `ColumnIndex` and `RowSpan` explicitly.
 - The baseline fallback test filename and method names remain intact, but their implementation validates deterministic-engine compatibility.
 - The duplicate `DocumentLayoutEngineContractTests.cs` file was removed so each compatibility test is discovered once.
 
-The latest supplied run built successfully with `0 warnings / 0 errors`. Its test result was `650 passed / 1 failed / 651 total`; the sole failure was the stale `Assert.Same` cell-span assertion, and the three extra tests came from the duplicate contract-test file. Both issues are corrected, but a new exact-head Windows run is still required.
+The latest supplied run built successfully with `0 warnings / 0 errors`. Its tests reported `647 passed / 1 failed / 648 total`; the sole failure was the remaining `TableCellSpan` element-equality assumption. The assertion now validates the preserved span fields explicitly. A new exact-head Windows run is still required.
 
 ## Windows gate
 
@@ -151,8 +151,8 @@ Expected:
 ## Gate status
 
 - Source review: complete.
-- Latest supplied Windows build: `0 warnings / 0 errors` on an unverified head.
-- Latest supplied Windows tests: `650 passed / 1 failed / 651 total`; the remaining value-vs-reference assertion and duplicate test file are corrected.
+- Latest supplied Windows build: `0 warnings / 0 errors` on an unverified Debug head.
+- Latest supplied Windows tests: `647 passed / 1 failed / 648 total`; the remaining span-field assertion issue is corrected.
 - Baseline test inventory compatibility remains intact without reintroducing a production fallback engine.
 - GitHub CI status: no checks are configured/reported for the current head.
 - Current exact-head Windows build/test/manual smoke: pending user evidence.
