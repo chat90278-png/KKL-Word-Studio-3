@@ -7,15 +7,9 @@ public sealed class TableRowCompositionResult
     public required IReadOnlyList<TableRowGroup> RowGroups { get; init; }
 
     /// <summary>
-    /// Legacy technical messages retained for frozen contracts and support logs.
-    /// New consumers should use <see cref="Diagnostics"/>.
+    /// Technical composition messages retained as the frozen Sprint 15 contract.
+    /// The report-content boundary projects these messages into structured
+    /// diagnostics without expanding this public result shape.
     /// </summary>
     public required IReadOnlyList<string> Warnings { get; init; }
-
-    /// <summary>
-    /// Structured composition findings. Classification occurs once at the
-    /// composition boundary instead of being repeated by Preview and UI code.
-    /// </summary>
-    public IReadOnlyList<TableCompositionDiagnostic> Diagnostics =>
-        TableCompositionDiagnosticClassifier.Classify(Warnings);
 }
