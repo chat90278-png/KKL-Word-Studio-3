@@ -32,15 +32,14 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
     public int Count => Items.Count;
     public bool HasItems => Count > 0;
     public int TotalCount => _store.Count;
+    public int FindingCount => _store.FindingCount;
     public int ErrorCount => _store.ErrorCount;
     public int WarningCount => _store.WarningCount;
     public int InformationCount => _store.InformationCount;
     public bool HasBlockingErrors => _store.HasBlockingErrors;
     public string HeaderText => TotalCount == 0
         ? "Sorun bulunamadı"
-        : HasBlockingErrors
-            ? $"{ErrorCount} hata · {WarningCount} uyarı · {InformationCount} bilgi"
-            : $"{WarningCount} uyarı · {InformationCount} bilgi";
+        : $"{TotalCount} sorun türü · {FindingCount} açık bulgu";
 
     public WarningCenterViewModel(
         PreviewDiagnosticsStore store,
@@ -88,8 +87,10 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
         var excelNavigated = false;
         foreach (var source in group.Sources)
         {
-            var key = group.KeyValues.FirstOrDefault();
-            if (await _excelWorkspaceViewModel.NavigateToDiagnosticSourceAsync(source, key))
+            if (await _excelWorkspaceViewModel.NavigateToDiagnosticSourceAsync(
+                    source,
+                    group.KeyValues,
+                    group.AffectedColumn))
             {
                 excelNavigated = true;
                 break;
@@ -98,9 +99,9 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
 
         NavigationStatusText = (previewNavigated, excelNavigated) switch
         {
-            (true, true) => "İlgili rapor öğesi ve Excel kaynağı vurgulandı.",
-            (true, false) => "İlgili rapor öğesine gidildi; kaynak hücre bulunamadı.",
-            (false, true) => "Excel kaynağına gidildi.",
+            (true, true) => "İlgili rapor öğesi ve sorunlu Excel hücresi vurgulandı.",
+            (true, false) => "İlgili rapor öğesine gidildi; sorunlu kaynak hücresi bulunamadı.",
+            (false, true) => "Sorunlu Excel hücresine gidildi.",
             _ => "Bu kayıt için doğrudan gidilebilecek bir hedef yok."
         };
     }
@@ -110,6 +111,7 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
     private void Diagnostics_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PreviewDiagnosticsStore.Count)
+            or nameof(PreviewDiagnosticsStore.FindingCount)
             or nameof(PreviewDiagnosticsStore.ErrorCount)
             or nameof(PreviewDiagnosticsStore.WarningCount)
             or nameof(PreviewDiagnosticsStore.InformationCount)
@@ -142,6 +144,7 @@ public sealed partial class WarningCenterViewModel : ViewModelBase
         OnPropertyChanged(nameof(Count));
         OnPropertyChanged(nameof(HasItems));
         OnPropertyChanged(nameof(TotalCount));
+        OnPropertyChanged(nameof(FindingCount));
         OnPropertyChanged(nameof(ErrorCount));
         OnPropertyChanged(nameof(WarningCount));
         OnPropertyChanged(nameof(InformationCount));
@@ -167,9 +170,9 @@ public sealed class WarningDiagnosticItemViewModel
     public string SourceText { get; }
     public int OccurrenceCount => Group.OccurrenceCount;
     public bool HasMultipleOccurrences => OccurrenceCount > 1;
-    public string OccurrenceText => $"{OccurrenceCount} tekrar";
+    public string OccurrenceText => $"{OccurrenceCount} açık bulgu";
     public bool HasElementName => !string.IsNullOrWhiteSpace(ElementName);
-    public bool HasKey => Group.KeyValues.Count > 0;
+    public bool HasKey => Group.DistinctKeyCount > 0;
     public bool HasSource => Group.Sources.Count > 0;
     public bool CanNavigate => Group.ElementId is not null || HasSource;
     public bool IsError => Group.Severity == PreviewDiagnosticSeverity.Error;
@@ -190,11 +193,11 @@ public sealed class WarningDiagnosticItemViewModel
 
     private static string BuildKeyText(PreviewDiagnosticGroup group)
     {
-        if (group.KeyValues.Count == 0)
+        if (group.DistinctKeyCount == 0)
             return string.Empty;
-        if (group.KeyValues.Count == 1)
-            return $"Anahtar: {group.KeyValues[0]}";
-        return $"{group.KeyValues.Count} farklı anahtar";
+        if (group.DistinctKeyCount == 1)
+            return $"Anahtar: {group.KeyValues.FirstOrDefault()}";
+        return $"{group.DistinctKeyCount} farklı anahtar";
     }
 
     private static string BuildSourceText(PreviewDiagnosticGroup group)

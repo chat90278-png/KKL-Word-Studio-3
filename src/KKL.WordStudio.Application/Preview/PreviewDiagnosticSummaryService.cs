@@ -2,8 +2,8 @@ namespace KKL.WordStudio.Application.Preview;
 
 /// <summary>
 /// Produces a stable user-facing projection from raw Preview diagnostics.
-/// Raw diagnostics remain available to rendering/debugging code, while repeated
-/// occurrences of the same actionable problem become one warning-center item.
+/// Production diagnostics group by factory-owned semantic identity; a narrow
+/// compatibility fallback remains for historical tests/callers without one.
 /// </summary>
 public static class PreviewDiagnosticSummaryService
 {
@@ -16,26 +16,35 @@ public static class PreviewDiagnosticSummaryService
 
         return diagnostics
             .GroupBy(CreateKey)
-            .Select(group => new PreviewDiagnosticGroup
+            .Select(group =>
             {
-                Severity = group.Key.Severity,
-                Title = group.Key.Title,
-                Message = group.Key.MessageTemplate,
-                ElementId = group.Key.ElementId,
-                ElementName = group.Select(item => item.ElementName)
-                    .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)),
-                OccurrenceCount = group.Count(),
-                KeyValues = group.Select(item => item.KeyValue)
+                var representative = group.First();
+                var distinctKeys = group.Select(item => item.KeyValue)
                     .Where(value => !string.IsNullOrWhiteSpace(value))
                     .Select(value => value!)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Take(25)
-                    .ToList(),
-                Sources = group.SelectMany(item => item.Sources)
-                    .GroupBy(CreateSourceKey)
-                    .Select(sourceGroup => sourceGroup.First())
-                    .ToList(),
-                Representative = group.First()
+                    .ToList();
+
+                return new PreviewDiagnosticGroup
+                {
+                    Code = representative.Code,
+                    Severity = group.Key.Severity,
+                    Title = representative.Title,
+                    Message = NormalizeMessageTemplate(representative),
+                    ElementId = group.Key.ElementId,
+                    ElementName = group.Select(item => item.ElementName)
+                        .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)),
+                    AffectedColumn = group.Select(item => item.AffectedColumn)
+                        .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)),
+                    OccurrenceCount = group.Count(),
+                    DistinctKeyCount = distinctKeys.Count,
+                    KeyValues = distinctKeys.Take(25).ToList(),
+                    Sources = group.SelectMany(item => item.Sources)
+                        .GroupBy(CreateSourceKey)
+                        .Select(sourceGroup => sourceGroup.First())
+                        .ToList(),
+                    Representative = representative
+                };
             })
             .OrderBy(group => SeverityOrder(group.Severity))
             .ThenBy(group => group.Title, StringComparer.CurrentCultureIgnoreCase)
@@ -46,18 +55,25 @@ public static class PreviewDiagnosticSummaryService
     public static int CountActionableGroups(IEnumerable<PreviewDiagnostic> diagnostics) =>
         Group(diagnostics).Count;
 
-    private static PreviewDiagnosticGroupKey CreateKey(PreviewDiagnostic diagnostic) => new(
-        diagnostic.Severity,
-        Normalize(diagnostic.Title),
-        NormalizeMessageTemplate(diagnostic),
-        diagnostic.ElementId,
-        Normalize(diagnostic.ElementName));
+    private static PreviewDiagnosticGroupKey CreateKey(PreviewDiagnostic diagnostic)
+    {
+        var semanticIdentity = string.IsNullOrWhiteSpace(diagnostic.GroupingKey)
+            ? BuildLegacyIdentity(diagnostic)
+            : Normalize(diagnostic.GroupingKey);
 
-    /// <summary>
-    /// Diagnostics deliberately retain their concrete key in the raw message for
-    /// debugging and direct navigation. The warning-center grouping key must not
-    /// treat that occurrence-specific value as a different root problem.
-    /// </summary>
+        return new PreviewDiagnosticGroupKey(
+            diagnostic.Severity,
+            Normalize(diagnostic.Code),
+            semanticIdentity,
+            diagnostic.ElementId,
+            Normalize(diagnostic.ElementName));
+    }
+
+    private static string BuildLegacyIdentity(PreviewDiagnostic diagnostic) => string.Join(
+        "\u001f",
+        Normalize(diagnostic.Title),
+        NormalizeMessageTemplate(diagnostic));
+
     private static string NormalizeMessageTemplate(PreviewDiagnostic diagnostic)
     {
         var message = Normalize(diagnostic.Message);
@@ -89,20 +105,23 @@ public static class PreviewDiagnosticSummaryService
 
     private readonly record struct PreviewDiagnosticGroupKey(
         PreviewDiagnosticSeverity Severity,
-        string Title,
-        string MessageTemplate,
+        string Code,
+        string SemanticIdentity,
         Guid? ElementId,
         string ElementName);
 }
 
 public sealed class PreviewDiagnosticGroup
 {
+    public string Code { get; init; } = PreviewDiagnosticCodes.Unclassified;
     public required PreviewDiagnosticSeverity Severity { get; init; }
     public required string Title { get; init; }
     public required string Message { get; init; }
     public Guid? ElementId { get; init; }
     public string? ElementName { get; init; }
+    public string? AffectedColumn { get; init; }
     public required int OccurrenceCount { get; init; }
+    public int DistinctKeyCount { get; init; }
     public IReadOnlyList<string> KeyValues { get; init; } = Array.Empty<string>();
     public IReadOnlyList<PreviewDiagnosticSource> Sources { get; init; } = Array.Empty<PreviewDiagnosticSource>();
     public required PreviewDiagnostic Representative { get; init; }

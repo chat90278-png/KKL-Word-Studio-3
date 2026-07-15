@@ -1,18 +1,18 @@
 namespace KKL.WordStudio.Application.Preview;
 
-using System.Text.RegularExpressions;
 using KKL.WordStudio.Application.Content;
+using KKL.WordStudio.Application.Tables;
 using KKL.WordStudio.Domain.DataSources;
 using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
 
 /// <summary>
-/// Projects existing report-content warnings into runtime diagnostics with
-/// stable report/source navigation metadata. It does not change composition or
-/// layout decisions and never repairs data automatically.
+/// Projects report-content findings into runtime diagnostics with stable code,
+/// grouping and report/source navigation metadata. It does not change composition
+/// or layout decisions and never repairs data automatically.
 /// </summary>
-public static partial class PreviewDiagnosticFactory
+public static class PreviewDiagnosticFactory
 {
     public static IReadOnlyList<PreviewDiagnostic> Build(
         Project project,
@@ -39,19 +39,26 @@ public static partial class PreviewDiagnosticFactory
                 ? Array.Empty<PreviewDiagnosticSource>()
                 : BuildSources(project, tableElement);
 
-            foreach (var warning in tableNode.CompositionWarnings.Where(message => !string.IsNullOrWhiteSpace(message)))
+            foreach (var finding in tableNode.CompositionDiagnostics)
             {
-                var message = warning.Trim();
-                tableMessages.Add(message);
+                tableMessages.Add(finding.Message);
+                var definition = PreviewDiagnosticCatalog.Resolve(finding.Code);
                 diagnostics.Add(new PreviewDiagnostic
                 {
                     Id = $"table:{tableNode.ElementId:N}:{ordinal++}",
-                    Severity = PreviewDiagnosticSeverity.Warning,
-                    Title = ResolveTitle(message),
-                    Message = message,
+                    Code = finding.Code,
+                    GroupingKey = BuildGroupingKey(
+                        finding.Code,
+                        tableNode.ElementId,
+                        finding.AffectedColumn,
+                        finding.Message),
+                    Severity = definition.Severity,
+                    Title = definition.Title,
+                    Message = finding.Message,
                     ElementId = tableNode.ElementId,
                     ElementName = tableNode.Name,
-                    KeyValue = TryExtractKey(message),
+                    AffectedColumn = finding.AffectedColumn,
+                    KeyValue = finding.KeyValue,
                     Sources = sources
                 });
             }
@@ -60,11 +67,17 @@ public static partial class PreviewDiagnosticFactory
             {
                 var message = $"'{tableNode.Name}' tablosu kaynak hatası içeriyor: {tableNode.SourceError}";
                 tableMessages.Add(message);
+                var definition = PreviewDiagnosticCatalog.Resolve(PreviewDiagnosticCodes.SourceAccessError);
                 diagnostics.Add(new PreviewDiagnostic
                 {
                     Id = $"source:{tableNode.ElementId:N}:{ordinal++}",
-                    Severity = PreviewDiagnosticSeverity.Error,
-                    Title = "Kaynak veriye erişilemedi",
+                    Code = PreviewDiagnosticCodes.SourceAccessError,
+                    GroupingKey = BuildGroupingKey(
+                        PreviewDiagnosticCodes.SourceAccessError,
+                        tableNode.ElementId,
+                        affectedColumn: null),
+                    Severity = definition.Severity,
+                    Title = definition.Title,
                     Message = message,
                     ElementId = tableNode.ElementId,
                     ElementName = tableNode.Name,
@@ -82,17 +95,42 @@ public static partial class PreviewDiagnosticFactory
                 continue;
             }
 
+            var definition = PreviewDiagnosticCatalog.Resolve(PreviewDiagnosticCodes.LayoutWarning);
             diagnostics.Add(new PreviewDiagnostic
             {
                 Id = $"layout:{ordinal++}",
-                Severity = PreviewDiagnosticSeverity.Warning,
-                Title = "Önizleme yerleşim uyarısı",
+                Code = PreviewDiagnosticCodes.LayoutWarning,
+                GroupingKey = $"{PreviewDiagnosticCodes.LayoutWarning}:{NormalizeIdentity(message)}",
+                Severity = definition.Severity,
+                Title = definition.Title,
                 Message = message
             });
         }
 
         return diagnostics;
     }
+
+    private static string BuildGroupingKey(
+        string code,
+        Guid? elementId,
+        string? affectedColumn,
+        string? message = null)
+    {
+        var semanticKey = string.Join(
+            ':',
+            code,
+            elementId?.ToString("N") ?? "global",
+            NormalizeIdentity(affectedColumn));
+
+        return string.Equals(code, TableCompositionDiagnosticCodes.LegacyWarning, StringComparison.Ordinal)
+            ? $"{semanticKey}:{NormalizeIdentity(message)}"
+            : semanticKey;
+    }
+
+    private static string NormalizeIdentity(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? "none"
+            : value.Trim().ToUpperInvariant();
 
     private static IReadOnlyList<PreviewDiagnosticSource> BuildSources(Project project, TableElement table)
     {
@@ -169,27 +207,4 @@ public static partial class PreviewDiagnosticFactory
             }
         }
     }
-
-    private static string ResolveTitle(string message)
-    {
-        if (message.Contains("geçerli Adet değeri", StringComparison.OrdinalIgnoreCase))
-            return "Adet değeri eksik veya geçersiz";
-        if (message.Contains("çelişkili değerler", StringComparison.OrdinalIgnoreCase))
-            return "Birleştirilecek satırlarda çelişki var";
-        if (message.Contains("yinelenen seri", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("duplicate", StringComparison.OrdinalIgnoreCase))
-            return "Seri numarası tekrarı";
-        if (message.Contains("birleştirilmedi", StringComparison.OrdinalIgnoreCase))
-            return "Satırlar güvenli biçimde birleştirilemedi";
-        return "Tablo verisi uyarısı";
-    }
-
-    private static string? TryExtractKey(string message)
-    {
-        var match = PartNumberKeyRegex().Match(message);
-        return match.Success ? match.Groups["key"].Value : null;
-    }
-
-    [GeneratedRegex("PN/key\\s+'(?<key>[^']+)'", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
-    private static partial Regex PartNumberKeyRegex();
 }

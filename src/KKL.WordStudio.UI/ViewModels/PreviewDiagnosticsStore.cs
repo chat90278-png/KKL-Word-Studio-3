@@ -15,6 +15,7 @@ public sealed class PreviewDiagnosticsStore : ViewModelBase
     public int RawCount => Items.Count;
     public IReadOnlyList<PreviewDiagnosticGroup> Groups => PreviewDiagnosticSummaryService.Group(Items);
     public int Count => Groups.Count;
+    public int FindingCount => Groups.Sum(group => group.OccurrenceCount);
     public int ErrorCount => Groups.Count(group => group.Severity == PreviewDiagnosticSeverity.Error);
     public int WarningCount => Groups.Count(group => group.Severity == PreviewDiagnosticSeverity.Warning);
     public int InformationCount => Groups.Count(group => group.Severity == PreviewDiagnosticSeverity.Information);
@@ -40,6 +41,7 @@ public sealed class PreviewDiagnosticsStore : ViewModelBase
         OnPropertyChanged(nameof(RawCount));
         OnPropertyChanged(nameof(Groups));
         OnPropertyChanged(nameof(Count));
+        OnPropertyChanged(nameof(FindingCount));
         OnPropertyChanged(nameof(ErrorCount));
         OnPropertyChanged(nameof(WarningCount));
         OnPropertyChanged(nameof(InformationCount));

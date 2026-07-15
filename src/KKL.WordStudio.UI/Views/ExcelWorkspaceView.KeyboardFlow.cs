@@ -126,17 +126,8 @@ public partial class ExcelWorkspaceView
         column ??= WorkingDataGrid.Columns
             .OrderBy(candidate => candidate.DisplayIndex)
             .ElementAtOrDefault(request.ColumnIndex);
-        if (column is null)
+        if (column is null || !TryApplyGridCell(request.DisplayRowIndex, column, replaceSelection: true))
             return;
-
-        var item = WorkingDataGrid.Items[request.DisplayRowIndex];
-        var cell = new DataGridCellInfo(item, column);
-        WorkingDataGrid.CurrentCell = cell;
-        WorkingDataGrid.UnselectAllCells();
-        WorkingDataGrid.SelectedCells.Add(cell);
-        WorkingDataGrid.ScrollIntoView(item, column);
-        WorkingDataGrid.Focus();
-        Keyboard.Focus(WorkingDataGrid);
 
         var identity = GetColumnIdentity(column);
         if (!string.IsNullOrWhiteSpace(identity))
@@ -198,19 +189,53 @@ public partial class ExcelWorkspaceView
         if (column is null)
             return;
 
-        var item = WorkingDataGrid.Items[anchor.RowIndex];
-        var cell = new DataGridCellInfo(item, column);
-        WorkingDataGrid.CurrentCell = cell;
+        TryApplyGridCell(anchor.RowIndex, column, replaceSelection);
+    }
 
-        if (replaceSelection || WorkingDataGrid.SelectedCells.Count == 0)
+    private bool TryApplyGridCell(int rowIndex, DataGridColumn column, bool replaceSelection)
+    {
+        if (!IsLoaded
+            || !WorkingDataGrid.IsVisible
+            || rowIndex < 0
+            || rowIndex >= WorkingDataGrid.Items.Count
+            || WorkingDataGrid.Columns.IndexOf(column) < 0)
         {
-            WorkingDataGrid.UnselectAllCells();
-            WorkingDataGrid.SelectedCells.Add(cell);
+            return false;
         }
 
-        WorkingDataGrid.ScrollIntoView(item, column);
-        WorkingDataGrid.Focus();
-        Keyboard.Focus(WorkingDataGrid);
+        try
+        {
+            var item = WorkingDataGrid.Items[rowIndex];
+            var cell = new DataGridCellInfo(item, column);
+            if (!cell.IsValid)
+                return false;
+
+            WorkingDataGrid.CurrentCell = cell;
+            if (replaceSelection || WorkingDataGrid.SelectedCells.Count == 0)
+            {
+                WorkingDataGrid.UnselectAllCells();
+                WorkingDataGrid.SelectedCells.Add(cell);
+            }
+
+            WorkingDataGrid.ScrollIntoView(item, column);
+            WorkingDataGrid.Focus();
+            Keyboard.Focus(WorkingDataGrid);
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // PreviewTable may have rebuilt between a queued navigation request
+            // and dispatcher execution. A stale anchor is ignored rather than
+            // terminating the application through DispatcherUnhandledException.
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            // WPF can temporarily reject selection changes while an edit or
+            // collection refresh is unwinding. The next user action will capture
+            // a fresh anchor from the current grid projection.
+            return false;
+        }
     }
 
     private void ExcelWorkspaceView_KeyboardFlowUnloaded(object sender, RoutedEventArgs e)

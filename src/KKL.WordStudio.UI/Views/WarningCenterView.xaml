@@ -23,7 +23,7 @@
                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
                     <TextBlock Text="{Binding HeaderText}" FontSize="12.5" FontWeight="SemiBold"
                                Foreground="{DynamicResource Brush.Text.Primary}" />
-                    <TextBlock Text="Tekrarlanan kayıtlar tek aksiyon altında gruplanır. Bir kayda tıklayarak rapor öğesine ve kaynağa gidin."
+                    <TextBlock Text="Aynı türdeki bulgular tek kartta gruplanır. Kart ilk sorunlu hücreye gider; hücre düzeltildiğinde açık bulgu sayısı otomatik yenilenir."
                                FontSize="10" Foreground="{DynamicResource Brush.Text.Secondary}"
                                TextWrapping="Wrap" Margin="0,3,0,0" />
                 </StackPanel>

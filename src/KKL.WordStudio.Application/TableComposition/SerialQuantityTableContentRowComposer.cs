@@ -315,12 +315,15 @@ public sealed class SerialQuantityTableContentRowComposer : ITableContentRowComp
         foreach (var row in rows)
         {
             var value = row[columnIndex].Trim();
-            if (value.Length > 0 && seen.Add(value))
+            if (!IsBlankMergePlaceholder(value) && seen.Add(value))
                 values.Add(value);
         }
 
         return values;
     }
+
+    private static bool IsBlankMergePlaceholder(string value) =>
+        value.Length == 0 || value is "-" or "–" or "—" or "‑" or "‒";
 
     private static string FirstNonBlank(IReadOnlyList<string[]> rows, int columnIndex) =>
         rows.Select(row => row[columnIndex].Trim()).FirstOrDefault(value => value.Length > 0) ?? string.Empty;

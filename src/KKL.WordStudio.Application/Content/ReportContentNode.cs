@@ -42,8 +42,18 @@ public sealed class TableContentNode : ReportContentNode
     /// <summary>Complete-table semantic row groups consumed by the layout engine.</summary>
     public IReadOnlyList<TableRowGroup> RowGroups { get; init; } = Array.Empty<TableRowGroup>();
 
-    /// <summary>Non-blocking semantic composition warnings.</summary>
+    /// <summary>
+    /// Legacy technical warning messages retained for renderer/export compatibility.
+    /// New diagnostic consumers should use <see cref="CompositionDiagnostics"/>.
+    /// </summary>
     public IReadOnlyList<string> CompositionWarnings { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Stable structured projection of composition findings. The conversion is
+    /// owned by Application and is shared by Preview, navigation and export guards.
+    /// </summary>
+    public IReadOnlyList<TableCompositionDiagnostic> CompositionDiagnostics =>
+        TableCompositionDiagnosticClassifier.Classify(CompositionWarnings);
 
     public string? DataSourceName { get; init; }
     public int SourceCount { get; init; }
