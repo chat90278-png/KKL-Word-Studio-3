@@ -30,6 +30,12 @@ public sealed partial class DockViewModel : ViewModelBase
     public double CollapsedWidth => 46;
     public double ExpandedWidth => 440;
 
+    /// <summary>
+    /// Raised when a shell action must reveal blocking Error cards. The existing
+    /// Warning Center subscribes; no second warning surface is created.
+    /// </summary>
+    public event Action? BlockingErrorsRequested;
+
     [RelayCommand]
     private void ShowContents() => Show(DockPage.Contents);
 
@@ -56,6 +62,12 @@ public sealed partial class DockViewModel : ViewModelBase
 
     [RelayCommand]
     private void RestoreToWarnings() => Show(DockPage.Warnings);
+
+    public void ShowBlockingErrors()
+    {
+        Show(DockPage.Warnings);
+        BlockingErrorsRequested?.Invoke();
+    }
 
     private void Show(DockPage page)
     {
