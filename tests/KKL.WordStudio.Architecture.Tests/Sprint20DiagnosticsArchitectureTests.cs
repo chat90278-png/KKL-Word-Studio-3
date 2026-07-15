@@ -53,7 +53,7 @@ public sealed class Sprint20DiagnosticsArchitectureTests
     }
 
     [Fact]
-    public void DiagnosticClick_RoutesToPreviewElementAndAffectedExcelCellWithoutChangingLayoutOwnership()
+    public void DiagnosticClick_RoutesToPreviewElementAndExcelCellWithoutChangingLayoutOwnership()
     {
         var root = SolutionRootLocator.Find();
         var warningVm = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "WarningCenterViewModel.cs");
