@@ -12,9 +12,9 @@ using System.IO;
 
 /// <summary>
 /// Shell-level ViewModel for the Excel-first session. It bootstraps one
-/// in-memory Project aggregate because the existing transfer/export pipeline
-/// is project-based, but it no longer exposes native project New/Open/Save
-/// commands to the user. The session lives for the lifetime of the process.
+/// process-lifetime in-memory Project aggregate as the internal report and
+/// transfer container. Native project files and project lifecycle services are
+/// not part of this product flow.
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase
 {
@@ -41,7 +41,6 @@ public sealed partial class MainViewModel : ViewModelBase
     private string? _lastExportedFilePath;
 
     public MainViewModel(
-        IProjectService projectService,
         IReportExporterRegistry exporterRegistry,
         IWorkspace workspace,
         IFileDialogService fileDialogService,
@@ -49,7 +48,6 @@ public sealed partial class MainViewModel : ViewModelBase
         DockViewModel dockViewModel,
         ILogger<MainViewModel> logger)
     {
-        ArgumentNullException.ThrowIfNull(projectService);
         _exporterRegistry = exporterRegistry;
         _workspace = workspace;
         _fileDialogService = fileDialogService;
@@ -57,7 +55,7 @@ public sealed partial class MainViewModel : ViewModelBase
         DockViewModel = dockViewModel;
         _logger = logger;
 
-        _currentProject = projectService.CreateNew();
+        _currentProject = WorkspaceSessionFactory.CreateDefault();
         _workspace.SetActiveProject(_currentProject);
         _workspace.SetActiveReport(_currentProject.Reports.FirstOrDefault());
         _logger.LogInformation(
