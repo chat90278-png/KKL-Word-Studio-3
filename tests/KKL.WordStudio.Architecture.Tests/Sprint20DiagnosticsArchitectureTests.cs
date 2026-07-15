@@ -72,6 +72,8 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         Assert.Contains("NavigateToWorksheetAsync", excelVm, StringComparison.Ordinal);
         Assert.Contains("ResolveDiagnosticColumnIndex(worksheet, affectedColumn)", excelVm, StringComparison.Ordinal);
         Assert.Contains("targetColumnIndex = affectedColumnIndex", excelVm, StringComparison.Ordinal);
+        Assert.Contains("ReadDiagnosticCellText(worksheet, match)?.Trim()", excelVm, StringComparison.Ordinal);
+        Assert.DoesNotContain("exactMatches.Count > 0 ? exactMatches : allMatches", excelVm, StringComparison.Ordinal);
         Assert.Contains("var previewColumnIndex = columnIndex + 1", excelVm, StringComparison.Ordinal);
         Assert.Contains("DiagnosticGridNavigationRequested", excelVm, StringComparison.Ordinal);
         Assert.Contains("TryApplyGridCell", excelView, StringComparison.Ordinal);
