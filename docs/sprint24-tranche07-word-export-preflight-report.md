@@ -28,6 +28,7 @@ The policy counts both semantic problem groups and raw occurrences. It does not 
 - Word export stops before `SaveWordFile`.
 - The report pane is revealed.
 - The existing Context Dock opens its existing `Warnings` page.
+- `DockViewModel` publishes a blocking-error request and the existing `WarningCenterViewModel` switches to its Error filter, so a prior Warning/Information filter cannot hide the blocker.
 - Status text reports blocking group and open-error counts.
 - The exporter is not resolved or invoked.
 - No new popup, Control Center, or duplicate warning surface is introduced.
@@ -47,6 +48,7 @@ The policy counts both semantic problem groups and raw occurrences. It does not 
 - Existing `PreviewDiagnosticsStore` remains the runtime bridge.
 - Existing `PreviewDiagnosticSummaryService` remains the single grouping implementation.
 - Existing `IReportExporterRegistry` and DOCX exporter remain authoritative.
+- `MainViewModel` keeps its existing constructor contract; it depends only on its existing `DockViewModel` for Warning Center reveal routing.
 - No second validator, Excel reader, report-content builder, renderer, paginator, or Word writer.
 - No Domain or persistence change.
 - No rejected PR #18 UI is reintroduced.
@@ -63,6 +65,8 @@ Architecture coverage verifies:
 
 - evaluation happens before the Save dialog and exporter;
 - blocked export reveals the report pane and existing Warnings page;
+- blocking reveal forces the existing Error filter;
+- MainViewModel constructor ownership remains unchanged;
 - policy consumes structured groups/severity without message parsing;
 - MainViewModel does not introduce a MessageBox or reclassify diagnostics.
 
@@ -109,9 +113,10 @@ Expected:
 1. Clean report: click `Word Dosyası Oluştur`; Save dialog opens and DOCX export succeeds with the normal success status.
 2. Warning-only report: use the warning scenario workbook; Save dialog still opens, DOCX exports, and success status includes current non-blocking group/finding counts.
 3. Blocking source error: make an existing Excel source unavailable, let Preview publish `Kaynak veriye erişilemedi`, then click `Word Dosyası Oluştur`.
-4. Confirm no Save dialog opens, no DOCX is created, the report pane opens, and the existing Uyarılar page is visible with Error first.
-5. Restore the source and refresh; confirm the Error disappears and Word export is permitted again.
-6. Confirm warning-card navigation and the accepted Warning Center layout remain unchanged.
+4. Before clicking export, select the Warning or Information filter; confirm blocked export still switches the existing Warning Center to Error.
+5. Confirm no Save dialog opens, no DOCX is created, the report pane opens, and the existing Uyarılar page is visible with Error cards.
+6. Restore the source and refresh; confirm the Error disappears and Word export is permitted again.
+7. Confirm warning-card navigation and the accepted Warning Center layout remain unchanged.
 
 ## Gate status
 
