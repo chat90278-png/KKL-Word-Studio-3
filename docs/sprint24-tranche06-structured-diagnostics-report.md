@@ -37,6 +37,7 @@ Correction:
 - Exact conflict headers such as `Tr İsim` and `NSN` resolve directly.
 - WorkingData matches `SourceField`, original Excel column, display header and stable column ID.
 - Raw Preview navigation compensates for the hidden `#` row-number metadata column, preventing one-column-left drift.
+- A hidden affected WorkingData column is restored before navigation so fallback indexing cannot select an unrelated visible column.
 - If an affected column cannot be resolved, navigation safely falls back to the matched key cell.
 
 ## Resolution feedback
@@ -141,9 +142,10 @@ Expected:
 5. Click again and confirm navigation advances to another still-invalid `Adet` cell.
 6. Click the `Tr İsim` conflict card and confirm the `Tr İsim` cell is selected.
 7. Click the `NSN` conflict card and confirm the `NSN` cell is selected.
-8. Confirm the header distinguishes problem types from total open findings.
-9. Confirm Preview report-element navigation still works.
-10. Export a healthy document and confirm Word generation is unchanged.
+8. Hide `Adet`, click the quantity card, and confirm the column is restored and the correct cell is selected.
+9. Confirm the header distinguishes problem types from total open findings.
+10. Confirm Preview report-element navigation still works.
+11. Export a healthy document and confirm Word generation is unchanged.
 
 ## Gate status
 
