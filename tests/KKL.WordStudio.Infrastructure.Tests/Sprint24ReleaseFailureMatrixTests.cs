@@ -2,6 +2,7 @@ namespace KKL.WordStudio.Infrastructure.Tests;
 
 using KKL.WordStudio.Domain.DataSources;
 using KKL.WordStudio.Infrastructure.ReferenceFormatting;
+using KKL.WordStudio.Infrastructure.Word;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -129,6 +130,36 @@ public sealed class Sprint24ReleaseFailureMatrixTests
         try
         {
             var result = new OpenXmlReferenceFormatDocumentService().Import(path);
+
+            Assert.True(result.IsFailure);
+            Assert.Contains("açılamadı", result.Error, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void MissingFrontMatterDocx_ReturnsFailureWithoutThrowing()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".docx");
+
+        var result = new OpenXmlFrontMatterDocumentService().Import(path);
+
+        Assert.True(result.IsFailure);
+        Assert.Contains("bulunamadı", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CorruptFrontMatterDocx_ReturnsFailureWithoutThrowing()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".docx");
+        File.WriteAllText(path, "not-an-openxml-document");
+
+        try
+        {
+            var result = new OpenXmlFrontMatterDocumentService().Import(path);
 
             Assert.True(result.IsFailure);
             Assert.Contains("açılamadı", result.Error, StringComparison.OrdinalIgnoreCase);
