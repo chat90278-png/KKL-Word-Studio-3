@@ -40,59 +40,70 @@
 - `ReportFlowPaginationPolicy` remains the single Application semantic policy.
 - `LayoutPageFlow` remains the existing Preview page-flow owner.
 - `DeterministicTablePaginator` remains the single Preview table-fragment owner.
+- `DeterministicDocumentLayoutEngine` is the only concrete `IDocumentLayoutEngine` implementation.
+- The obsolete Sprint 14 bootstrap `FallbackDocumentLayoutEngine` was removed; it was not registered in DI and contradicted the one-engine contract.
 - `WordContentWriter` translates the same policy to native OpenXML properties.
 - Existing Word table writer and DOCX exporter remain authoritative.
 - No second paginator, Preview renderer, Word exporter or warning implementation was added.
 - UI contains no pagination calculation.
 - Warning/Control UX is untouched.
 
-## Test delta
+## Test total
 
-Baseline: `629` tests.
+The earlier `652/652` expectation was incorrect. The latest Windows run discovered these project totals:
 
-Added cases:
+- Domain: `20`
+- Application: `288`
+- Engine: `68`
+- Architecture: `126`
+- Infrastructure: `146`
 
-- Application semantic policy: `+9`;
-- Engine pagination: `+6`;
-- Infrastructure OpenXML pagination: `+4`;
-- Architecture: `+4`.
-
-Expected current total:
+Current exact-suite target:
 
 ```text
-652 / 652
+648 / 648
 ```
+
+The test count is preserved while the obsolete fallback-engine tests are retargeted to the authoritative deterministic engine contract.
 
 Coverage includes:
 
 - shared semantic policy and up-to-three-row table start;
 - complete trailing heading-chain carry;
 - no empty page when headings already begin a fresh page;
+- automatic-numbered caption parity with equivalent visible caption;
 - caption `KeepNext`;
 - leading table-start `KeepNext` chain;
 - row `CantSplit`;
-- native repeated header row;
+- native repeated header row and row-height preservation;
 - short and long deterministic table fragment continuity;
 - caption only on the first table fragment;
 - exact row-count/order preservation;
 - stable repeated layout plan;
+- exactly one concrete layout engine;
 - no second paginator/export fragmenter and no UI pagination ownership.
 
 ## Windows stabilization findings
 
-The first supplied Windows run did not include `git rev-parse HEAD`, so it cannot be accepted as an exact-head gate. It exposed the following real failures in the pre-fix branch snapshot:
+The supplied Windows runs did not include `git rev-parse HEAD`, so they cannot be accepted as exact-head gates. Across the runs they exposed:
 
-- `ReportFlowPaginationPolicyTests` constructed `ResolvedTextFormat` without its required fields: `12 × CS9035`.
-- `Sprint24HeadingChainPaginationTests` directly referenced internal `LayoutPageFlow`: `1 × CS0122`.
-- The architecture test used a broad text search that counted non-implementation/generated source matches as a second layout engine.
-- Adding `CantSplit` through OpenXML schema-order normalization removed the existing `TableHeader` marker in the in-memory row properties, breaking the new repeat-header test and the Sprint 18 canonical DOCX regression.
+- incomplete `ResolvedTextFormat` and `ResolvedTableFormat` test fixtures;
+- a test directly referencing internal Preview flow code;
+- OpenXML row-property mutation removing `TableHeader` or `TableRowHeight`;
+- an older caption-boundary assertion conflicting with the Sprint 24 heading-chain rule;
+- brittle source-regex architecture checks;
+- a real second `IDocumentLayoutEngine`: the unused Sprint 14 fallback bootstrap.
 
 Corrections:
 
-- Test format fixtures now initialize the complete resolved text format contract.
-- Heading-chain tests now exercise the public `DeterministicDocumentLayoutEngine` path.
-- Architecture source scans exclude `bin/obj` and match concrete class/record inheritance declarations only.
-- Word row pagination preserves and restores the native `TableHeader` marker while adding `CantSplit`.
+- Test format fixtures initialize their complete required contracts.
+- Heading-chain tests exercise public `DeterministicDocumentLayoutEngine` behavior.
+- Automatic numbered-caption fidelity compares automatic and equivalent visible captions under the current pagination rule.
+- Word row pagination adds `CantSplit` without rebuilding row properties, preserving native header and height properties.
+- Architecture verification inspects compiled Engine types.
+- The unused fallback engine was removed and its tests were converted to deterministic engine contract tests.
+
+The latest supplied run reached build `0 warnings / 0 errors`; all tests passed except the architecture test that identified the real fallback implementation. That root cause is now removed, but a new exact-head Windows run is still required.
 
 ## Windows gate
 
@@ -115,7 +126,7 @@ Expected:
 ```text
 0 warnings
 0 errors
-652 / 652 tests
+648 / 648 tests
 ```
 
 ## Manual smoke
@@ -133,7 +144,8 @@ Expected:
 ## Gate status
 
 - Source review: complete.
-- First supplied Windows run: RED on a pre-fix snapshot; failures diagnosed and corrected.
+- Latest supplied Windows build: `0 warnings / 0 errors` on an unverified head.
+- Latest supplied Windows tests: `647 passed / 1 failed / 648 total`; the sole failure identified the now-removed fallback engine.
 - GitHub CI status: no checks are configured/reported for the current head.
 - Current exact-head Windows build/test/manual smoke: pending user evidence.
 - PR must remain draft and must not be merged until the Windows gate is GREEN.
