@@ -9,6 +9,14 @@
     <RootNamespace>KKL.WordStudio.UI</RootNamespace>
     <AssemblyName>KKL.WordStudio</AssemblyName>
     <ApplicationIcon>Assets\Brand\AppIcon.ico</ApplicationIcon>
+    <Product>KKL Word Studio</Product>
+    <Company>KKL</Company>
+    <Authors>KKL</Authors>
+    <Description>Excel-first Word report composition studio.</Description>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
