@@ -1,5 +1,5 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <FontFamily x:Key="Font.Family.Default">Segoe UI Variable, Segoe UI</FontFamily>
     <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="Font.Size.Default">12</system:Double>
@@ -50,6 +50,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="7" SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect x:Name="BdShadow" Color="#FF2563EB" Opacity="0.28" BlurRadius="14" ShadowDepth="3" Direction="270" />
+                        </Border.Effect>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -58,6 +61,7 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5" />
+                            <Setter TargetName="Bd" Property="Effect" Value="{x:Null}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -145,6 +149,11 @@
                             <Setter TargetName="Bd" Property="Background" Value="White" />
                             <Setter Property="Foreground" Value="#FF243249" />
                             <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter TargetName="Bd" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#FF172033" Opacity="0.10" BlurRadius="6" ShadowDepth="1" Direction="270" />
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

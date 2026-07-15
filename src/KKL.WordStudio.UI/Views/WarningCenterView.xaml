@@ -56,8 +56,27 @@
                                     HorizontalContentAlignment="Stretch"
                                     Background="Transparent" BorderThickness="0" Padding="0"
                                     Margin="0,0,0,8" Cursor="Hand">
-                                <Border Background="White" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
-                                        CornerRadius="10" Padding="11">
+                                <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="10" Padding="11">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="White" />
+                                            <Setter Property="Effect">
+                                                <Setter.Value>
+                                                    <DropShadowEffect Color="#FF172033" Opacity="0.06" BlurRadius="4" ShadowDepth="1" Direction="270" />
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="BorderBrush" Value="#FFC7D2E0" />
+                                                    <Setter Property="Effect">
+                                                        <Setter.Value>
+                                                            <DropShadowEffect Color="#FF172033" Opacity="0.14" BlurRadius="14" ShadowDepth="4" Direction="270" />
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="4" />
