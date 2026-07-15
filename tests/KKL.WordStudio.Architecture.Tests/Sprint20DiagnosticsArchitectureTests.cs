@@ -84,15 +84,23 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         var root = SolutionRootLocator.Find();
         var factory = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnosticFactory.cs");
         var contract = Read(root, "src", "KKL.WordStudio.Application", "Preview", "PreviewDiagnostic.cs");
+        var classifier = Read(root, "src", "KKL.WordStudio.Application", "Tables", "TableCompositionDiagnostic.cs");
 
-        Assert.Contains("tableNode.CompositionWarnings", factory, StringComparison.Ordinal);
-        Assert.Contains("Message = message", factory, StringComparison.Ordinal);
-        Assert.Contains("PN/key", factory, StringComparison.Ordinal);
+        Assert.Contains("tableNode.CompositionDiagnostics", factory, StringComparison.Ordinal);
+        Assert.Contains("Code = finding.Code", factory, StringComparison.Ordinal);
+        Assert.Contains("GroupingKey = BuildGroupingKey", factory, StringComparison.Ordinal);
+        Assert.Contains("Message = finding.Message", factory, StringComparison.Ordinal);
         Assert.Contains("table.Sources", factory, StringComparison.Ordinal);
         Assert.Contains("Workbook.SourcePath", factory, StringComparison.Ordinal);
         Assert.Contains("WorksheetName", factory, StringComparison.Ordinal);
         Assert.Contains("RangeReference", factory, StringComparison.Ordinal);
+        Assert.Contains("PN/key", classifier, StringComparison.Ordinal);
+        Assert.Contains("public string Code", contract, StringComparison.Ordinal);
+        Assert.Contains("public string GroupingKey", contract, StringComparison.Ordinal);
         Assert.Contains("KeyColumnIdentity", contract, StringComparison.Ordinal);
+        Assert.DoesNotContain("ResolveTitle", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryExtractKey", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("GeneratedRegex", factory, StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] parts) =>
