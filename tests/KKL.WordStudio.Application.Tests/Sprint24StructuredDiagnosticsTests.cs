@@ -88,7 +88,29 @@ public sealed class Sprint24StructuredDiagnosticsTests
 
         Assert.Equal(TableCompositionDiagnosticCodes.QuantityMissing, group.Code);
         Assert.Equal(2, group.OccurrenceCount);
+        Assert.Equal(2, group.DistinctKeyCount);
         Assert.Equal(new[] { "A-1", "A-2" }, group.KeyValues);
+    }
+
+    [Fact]
+    public void Summary_PreservesTrueKeyCountBeyondNavigationWindow()
+    {
+        var elementId = Guid.NewGuid();
+        const string groupingKey = "TABLE_QUANTITY_MISSING:table:ADET";
+        var diagnostics = Enumerable.Range(1, 30)
+            .Select(index => StructuredDiagnostic(
+                $"d{index}",
+                elementId,
+                $"K-{index}",
+                groupingKey,
+                $"PN/key 'K-{index}' için geçerli Adet değeri bulunamadı; satırlar birleştirilmedi."))
+            .ToList();
+
+        var group = Assert.Single(PreviewDiagnosticSummaryService.Group(diagnostics));
+
+        Assert.Equal(30, group.OccurrenceCount);
+        Assert.Equal(30, group.DistinctKeyCount);
+        Assert.Equal(25, group.KeyValues.Count);
     }
 
     [Fact]
