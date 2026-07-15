@@ -120,6 +120,38 @@ public sealed class Sprint24StructuredDiagnosticsTests
         Assert.Equal(2, PreviewDiagnosticSummaryService.Group(diagnostics).Count);
     }
 
+    [Fact]
+    public void Factory_DoesNotMergeDifferentUnknownLegacyWarningsOnSameTable()
+    {
+        const string firstWarning = "İlk tanımlanamayan tablo uyarısı.";
+        const string secondWarning = "İkinci tanımlanamayan tablo uyarısı.";
+        var table = new TableElement { Name = "Table 1" };
+        var report = BuildReport(table);
+        var project = new Project { Name = "Legacy warning separation" };
+        project.Reports.Add(report);
+        var document = BuildDocument(new TableContentNode
+        {
+            ElementId = table.Id,
+            Kind = ReportContentKind.Table,
+            Name = table.Name,
+            ColumnHeaders = ["A"],
+            Rows = [],
+            CompositionWarnings = [firstWarning, secondWarning]
+        });
+
+        var diagnostics = PreviewDiagnosticFactory.Build(
+            project,
+            report,
+            document,
+            [firstWarning, secondWarning]);
+
+        Assert.Equal(2, diagnostics.Count);
+        Assert.All(diagnostics, diagnostic =>
+            Assert.Equal(TableCompositionDiagnosticCodes.LegacyWarning, diagnostic.Code));
+        Assert.NotEqual(diagnostics[0].GroupingKey, diagnostics[1].GroupingKey);
+        Assert.Equal(2, PreviewDiagnosticSummaryService.Group(diagnostics).Count);
+    }
+
     private static PreviewDiagnostic StructuredDiagnostic(
         string id,
         Guid elementId,
