@@ -93,7 +93,7 @@ public sealed partial class ExcelWorkspaceViewModel
             return true;
         }
 
-        StatusText = "Uyarının kayıt anahtarı kaynak veride bulunamadı.";
+        StatusText = "Uyarının kayıt anahtarı kaynak veride tam eşleşmeyle bulunamadı.";
         return false;
     }
 
@@ -105,16 +105,16 @@ public sealed partial class ExcelWorkspaceViewModel
             ? _workingDataService.Find(worksheet, keyValue)
             : FindInPreview(keyValue);
 
-        // Existing Find intentionally uses contains semantics. Diagnostic
-        // navigation first prefers exact cell text so key 55 does not jump to
-        // 9555, then falls back to the existing search behavior.
-        var exactMatches = allMatches
+        // Existing user Find intentionally uses contains semantics. Diagnostic
+        // navigation must never fall back to that behavior: key 55 must not jump
+        // to 9555 or another record merely because the text contains the key.
+        var normalizedKey = keyValue.Trim();
+        return allMatches
             .Where(match => string.Equals(
-                ReadDiagnosticCellText(worksheet, match),
-                keyValue,
+                ReadDiagnosticCellText(worksheet, match)?.Trim(),
+                normalizedKey,
                 StringComparison.OrdinalIgnoreCase))
             .ToList();
-        return exactMatches.Count > 0 ? exactMatches : allMatches;
     }
 
     private string? ReadDiagnosticCellText(Worksheet? worksheet, WorkingDataCell cell)
