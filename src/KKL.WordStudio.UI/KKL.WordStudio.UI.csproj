@@ -8,15 +8,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>KKL.WordStudio.UI</RootNamespace>
     <AssemblyName>KKL.WordStudio</AssemblyName>
-    <ApplicationIcon>Assets\Brand\AppIcon.ico</ApplicationIcon>
+    <GeneratedApplicationIcon>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)Generated\AppIcon.ico</GeneratedApplicationIcon>
+    <ApplicationIcon>$(GeneratedApplicationIcon)</ApplicationIcon>
     <Product>KKL Word Studio</Product>
     <Company>KKL</Company>
     <Authors>KKL</Authors>
     <Description>Excel-first Word report composition studio.</Description>
-    <Version>1.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0</InformationalVersion>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <InformationalVersion>1.0.1</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,7 +31,6 @@
   <ItemGroup>
     <Resource Include="Assets\Brand\BrandMark.png" />
     <Resource Include="Assets\Brand\BrandMarkSmall.png" />
-    <Resource Include="Assets\Brand\AppIcon.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,5 +44,12 @@
     <ProjectReference Include="..\KKL.WordStudio.Domain\KKL.WordStudio.Domain.csproj" />
     <ProjectReference Include="..\KKL.WordStudio.Shared\KKL.WordStudio.Shared.csproj" />
   </ItemGroup>
+
+  <Target Name="GenerateApplicationIcon"
+          BeforeTargets="CoreCompile"
+          Inputs="$(MSBuildProjectDirectory)\Assets\Brand\AppIcon.base64;$(MSBuildProjectDirectory)\..\..\scripts\generate-app-icon.ps1"
+          Outputs="$(GeneratedApplicationIcon)">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\generate-app-icon.ps1&quot; -Source &quot;$(MSBuildProjectDirectory)\Assets\Brand\AppIcon.base64&quot; -Destination &quot;$(GeneratedApplicationIcon)&quot;" />
+  </Target>
 
 </Project>
