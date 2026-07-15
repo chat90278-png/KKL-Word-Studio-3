@@ -9,7 +9,7 @@ using Xunit;
 public sealed class Sprint24MeasurementEdgeCaseTests
 {
     [Fact]
-    public async Task EmptyColumnProfile_MatchesEquivalentWordFallbackProfileAtPageBoundaries()
+    public async Task CompatibilityFallback_MatchesEquivalentPhysicalCellInsetsAtPageBoundaries()
     {
         var rows = CreateRows(
             rowCount: 18,
@@ -17,17 +17,19 @@ public sealed class Sprint24MeasurementEdgeCaseTests
                 (IReadOnlyList<string>)[
                     $"ROW-{index:00}",
                     $"Uzun bakım açıklaması {index} periyodik kontrol bağlantı elemanı değişim kaydı"]);
-
         var implicitFallback = await LayoutAsync(
             CreateFormat(columns: []),
             rows,
             pageHeightMillimeters: 86d);
-        var explicitFallback = await LayoutAsync(
-            CreateFormat(columns: CreateFallbackColumns(2)),
+        var explicitEquivalent = await LayoutAsync(
+            CreateFormat(
+                columns: CreateFallbackColumns(2),
+                verticalMarginMillimeters: 1.25d,
+                horizontalMarginMillimeters: 1.5d),
             rows,
             pageHeightMillimeters: 86d);
 
-        Assert.Equal(FragmentSignature(implicitFallback), FragmentSignature(explicitFallback));
+        Assert.Equal(FragmentSignature(implicitFallback), FragmentSignature(explicitEquivalent));
     }
 
     [Fact]
@@ -39,9 +41,8 @@ public sealed class Sprint24MeasurementEdgeCaseTests
                 (IReadOnlyList<string>)[
                     index.ToString(),
                     $"Dar sayfada satır yüksekliği ölçüm senaryosu {index} bakım açıklaması"]);
-
-        var zeroMargins = await LayoutAsync(
-            CreateFormat(columns: [], verticalMarginMillimeters: 0d),
+        var compatibilityInsets = await LayoutAsync(
+            CreateFormat(columns: []),
             rows,
             pageHeightMillimeters: 80d);
         var padded = await LayoutAsync(
@@ -50,8 +51,8 @@ public sealed class Sprint24MeasurementEdgeCaseTests
             pageHeightMillimeters: 80d);
 
         Assert.True(
-            FirstFragmentRowCount(zeroMargins) > FirstFragmentRowCount(padded),
-            $"Zero-margin first fragment: {FirstFragmentRowCount(zeroMargins)}, padded first fragment: {FirstFragmentRowCount(padded)}");
+            FirstFragmentRowCount(compatibilityInsets) > FirstFragmentRowCount(padded),
+            $"Compatibility first fragment: {FirstFragmentRowCount(compatibilityInsets)}, padded first fragment: {FirstFragmentRowCount(padded)}");
     }
 
     [Fact]
@@ -123,15 +124,16 @@ public sealed class Sprint24MeasurementEdgeCaseTests
 
     private static ResolvedTableFormat CreateFormat(
         IReadOnlyList<ResolvedTableColumnFormat> columns,
-        double verticalMarginMillimeters = 0d) => new()
+        double verticalMarginMillimeters = 0d,
+        double horizontalMarginMillimeters = 0d) => new()
     {
         WidthPercent = 100d,
         FixedLayout = true,
         BorderSizePoints = 0.5d,
         CellMarginTopMillimeters = verticalMarginMillimeters,
         CellMarginBottomMillimeters = verticalMarginMillimeters,
-        CellMarginLeftMillimeters = 0d,
-        CellMarginRightMillimeters = 0d,
+        CellMarginLeftMillimeters = horizontalMarginMillimeters,
+        CellMarginRightMillimeters = horizontalMarginMillimeters,
         PreferredRowHeightMillimeters = 0d,
         RepeatHeader = true,
         Columns = columns
