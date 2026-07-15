@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\KKL.WordStudio.Application\KKL.WordStudio.Application.csproj" />
     <ProjectReference Include="..\..\src\KKL.WordStudio.Domain\KKL.WordStudio.Domain.csproj" />
+    <ProjectReference Include="..\..\src\KKL.WordStudio.Engine\KKL.WordStudio.Engine.csproj" />
   </ItemGroup>
 
 </Project>

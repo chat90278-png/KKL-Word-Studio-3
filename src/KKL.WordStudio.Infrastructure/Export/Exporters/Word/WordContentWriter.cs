@@ -46,15 +46,25 @@ internal static class WordContentWriter
                             table.Caption,
                             table.CaptionSequence,
                             captionSequenceCounters);
-                    container.AppendChild(WordParagraphWriter.BuildTableCaptionParagraph(
+                    var captionParagraph = WordParagraphWriter.BuildTableCaptionParagraph(
                         table.Caption,
                         table.CaptionSequence,
                         table.CaptionFormat,
-                        sequenceNumber));
+                        sequenceNumber);
+                    if (ReportFlowPaginationPolicy.KeepTableCaptionWithTable(table.Caption))
+                    {
+                        captionParagraph.ParagraphProperties ??= new ParagraphProperties();
+                        if (captionParagraph.ParagraphProperties.GetFirstChild<KeepNext>() is null)
+                            captionParagraph.ParagraphProperties.AddChild(new KeepNext(), true);
+                    }
+                    container.AppendChild(captionParagraph);
                 }
                 if (table.Rows.Count == 0 && table.ColumnHeaders.Count == 0)
                     break; // caption may still be meaningful even before columns are configured
-                container.AppendChild(WordTableWriter.BuildTable(table));
+
+                var wordTable = WordTableWriter.BuildTable(table);
+                ApplyTablePaginationPolicy(wordTable);
+                container.AppendChild(wordTable);
                 break;
             case ImageContentNode image:
                 // Real image embedding needs the Asset/resource catalog (deliberately
@@ -62,6 +72,48 @@ internal static class WordContentWriter
                 // structure correct without silently dropping the element.
                 container.AppendChild(WordParagraphWriter.BuildPlainParagraph($"[Image: {image.Name}]"));
                 break;
+        }
+    }
+
+    private static void ApplyTablePaginationPolicy(Table table)
+    {
+        var rows = table.Elements<TableRow>().ToList();
+        var hasHeader = rows.Count > 0
+            && rows[0].TableRowProperties?.GetFirstChild<TableHeader>() is not null;
+
+        if (ReportFlowPaginationPolicy.KeepTableRowsIntact)
+        {
+            foreach (var row in rows)
+            {
+                row.TableRowProperties ??= new TableRowProperties();
+                if (row.TableRowProperties.GetFirstChild<CantSplit>() is null)
+                {
+                    // WordTableWriter currently emits row height and repeat-header
+                    // properties. Prepending CantSplit preserves that native property
+                    // tree instead of asking AddChild to normalize/rebuild it.
+                    row.TableRowProperties.PrependChild(new CantSplit());
+                }
+            }
+        }
+
+        if (rows.Count == 0)
+            return;
+
+        var dataRowCount = Math.Max(0, rows.Count - (hasHeader ? 1 : 0));
+        var requiredDataRows = ReportFlowPaginationPolicy.ResolveMinimumTableStartDataRowCount(dataRowCount);
+        var requiredStartRowCount = requiredDataRows + (hasHeader ? 1 : 0);
+
+        // Native Word pagination has no explicit table-fragment object. KeepNext
+        // on the header and leading data-row paragraphs expresses the same shared
+        // start requirement without splitting or rebuilding the semantic table.
+        for (var rowIndex = 0; rowIndex < requiredStartRowCount - 1; rowIndex++)
+        {
+            foreach (var paragraph in rows[rowIndex].Descendants<Paragraph>())
+            {
+                paragraph.ParagraphProperties ??= new ParagraphProperties();
+                if (paragraph.ParagraphProperties.GetFirstChild<KeepNext>() is null)
+                    paragraph.ParagraphProperties.AddChild(new KeepNext(), true);
+            }
         }
     }
 }

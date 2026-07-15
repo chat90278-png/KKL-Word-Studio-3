@@ -53,7 +53,7 @@ internal sealed class LayoutPageFlow
             && ReportFlowPaginationPolicy.StartsNewPageAfterTable(_lastBodyContentKind, currentKind)
             && currentPageAlreadyHasBodyContent)
         {
-            NewPage();
+            NewPage(carryTrailingHeadingChain: false);
             block = RebaseAtCurrentBodyTop(block);
         }
 
@@ -71,17 +71,74 @@ internal sealed class LayoutPageFlow
             _currentPage.BodyYMillimeters += millimeters;
     }
 
-    public void NewPage()
-    {
-        CompleteCurrentPage();
-        _currentPage = CreatePage();
-    }
+    public void NewPage() => NewPage(carryTrailingHeadingChain: true);
 
     public IReadOnlyList<DocumentPageLayout> Complete()
     {
         CompleteCurrentPage();
         return _completedPages;
     }
+
+    private void NewPage(bool carryTrailingHeadingChain)
+    {
+        var carried = carryTrailingHeadingChain
+            ? RemoveTrailingHeadingChainWhenPageHasEarlierBodyContent()
+            : [];
+
+        CompleteCurrentPage();
+        _currentPage = CreatePage();
+
+        foreach (var block in carried)
+        {
+            var rebased = RebaseAtCurrentBodyTop(block);
+            _currentPage.Blocks.Add(rebased);
+            _currentPage.BodyYMillimeters = rebased.YMillimeters
+                + rebased.HeightMillimeters
+                + BlockGapMillimeters;
+        }
+
+        _lastBodyContentKind = carried.Count > 0
+            ? ResolveContentKind(carried[^1])
+            : null;
+    }
+
+    private List<PositionedPageBlock> RemoveTrailingHeadingChainWhenPageHasEarlierBodyContent()
+    {
+        var bodyBlocks = _currentPage.Blocks
+            .Where(block => block.Region == DocumentPageRegion.Body)
+            .ToList();
+        if (bodyBlocks.Count < 2)
+            return [];
+
+        var firstTrailingHeadingIndex = bodyBlocks.Count;
+        while (firstTrailingHeadingIndex > 0
+               && IsFirstHeadingFragment(bodyBlocks[firstTrailingHeadingIndex - 1]))
+        {
+            firstTrailingHeadingIndex--;
+        }
+
+        // Moving every body block would create an empty page. In that case the
+        // heading chain is already at the fresh page top and cannot be improved.
+        if (firstTrailingHeadingIndex <= 0 || firstTrailingHeadingIndex == bodyBlocks.Count)
+            return [];
+
+        var carried = bodyBlocks.Skip(firstTrailingHeadingIndex).ToList();
+        foreach (var block in carried)
+            _currentPage.Blocks.Remove(block);
+
+        var remainingBody = _currentPage.Blocks
+            .Where(block => block.Region == DocumentPageRegion.Body)
+            .ToList();
+        _currentPage.BodyYMillimeters = remainingBody.Count == 0
+            ? BodyTopMillimeters
+            : remainingBody[^1].YMillimeters + remainingBody[^1].HeightMillimeters + BlockGapMillimeters;
+
+        return carried;
+    }
+
+    private static bool IsFirstHeadingFragment(PositionedPageBlock block) =>
+        block.FragmentIndex == 0
+        && ReportFlowPaginationPolicy.IsHeading(ResolveContentKind(block));
 
     private PositionedPageBlock RebaseAtCurrentBodyTop(PositionedPageBlock block) => new()
     {
