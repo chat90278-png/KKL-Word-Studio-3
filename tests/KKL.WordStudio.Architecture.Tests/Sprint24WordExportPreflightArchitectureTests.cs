@@ -14,6 +14,12 @@ public sealed class Sprint24WordExportPreflightArchitectureTests
             "KKL.WordStudio.UI",
             "ViewModels",
             "MainViewModel.cs");
+        var warningFilter = Read(
+            root,
+            "src",
+            "KKL.WordStudio.UI",
+            "ViewModels",
+            "WarningCenterViewModel.ExportPreflight.cs");
         var policy = Read(
             root,
             "src",
@@ -41,9 +47,13 @@ public sealed class Sprint24WordExportPreflightArchitectureTests
 
         Assert.Contains("ReportPaneViewModel.Shared.OpenForAction()", mainViewModel, StringComparison.Ordinal);
         Assert.Contains("DockViewModel.Page = DockPage.Warnings", mainViewModel, StringComparison.Ordinal);
+        Assert.Contains("_warningCenterViewModel.ShowErrorsForExportBlock()", mainViewModel, StringComparison.Ordinal);
         Assert.Contains("preflight.NonBlockingFindingCount", mainViewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("MessageBox", mainViewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("PreviewDiagnosticCatalog.Resolve", mainViewModel, StringComparison.Ordinal);
+
+        Assert.Contains("Filter = WarningCenterFilter.Error", warningFilter, StringComparison.Ordinal);
+        Assert.DoesNotContain("new WarningCenter", warningFilter, StringComparison.Ordinal);
 
         Assert.Contains("IEnumerable<PreviewDiagnosticGroup>", policy, StringComparison.Ordinal);
         Assert.Contains("PreviewDiagnosticSeverity.Error", policy, StringComparison.Ordinal);
