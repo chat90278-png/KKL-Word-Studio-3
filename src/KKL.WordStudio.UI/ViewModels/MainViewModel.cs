@@ -22,6 +22,7 @@ public sealed partial class MainViewModel : ViewModelBase
     private readonly IWorkspace _workspace;
     private readonly IFileDialogService _fileDialogService;
     private readonly IShellLauncher _shellLauncher;
+    private readonly WarningCenterViewModel _warningCenterViewModel;
     private readonly ILogger<MainViewModel> _logger;
 
     /// <summary>Shared with ContextDockView/ContentsViewModel/PropertiesViewModel via DI (registered as a singleton) — the shell's Grid column width binds to its State.</summary>
@@ -47,6 +48,7 @@ public sealed partial class MainViewModel : ViewModelBase
         IFileDialogService fileDialogService,
         IShellLauncher shellLauncher,
         DockViewModel dockViewModel,
+        WarningCenterViewModel warningCenterViewModel,
         ILogger<MainViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(projectService);
@@ -55,6 +57,7 @@ public sealed partial class MainViewModel : ViewModelBase
         _fileDialogService = fileDialogService;
         _shellLauncher = shellLauncher;
         DockViewModel = dockViewModel;
+        _warningCenterViewModel = warningCenterViewModel;
         _logger = logger;
 
         _currentProject = projectService.CreateNew();
@@ -81,6 +84,7 @@ public sealed partial class MainViewModel : ViewModelBase
             ReportPaneViewModel.Shared.OpenForAction();
             DockViewModel.State = DockState.Normal;
             DockViewModel.Page = DockPage.Warnings;
+            _warningCenterViewModel.ShowErrorsForExportBlock();
             StatusText = $"Word dosyası oluşturulmadı — {preflight.ErrorGroupCount} engelleyici sorun türü · {preflight.ErrorFindingCount} açık hata var. Uyarılar sekmesinden düzeltin.";
             _logger.LogWarning(
                 "Word export blocked by diagnostics: {ErrorGroups} groups, {ErrorFindings} findings",
