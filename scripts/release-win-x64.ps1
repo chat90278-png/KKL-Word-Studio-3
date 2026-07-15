@@ -59,6 +59,8 @@ Invoke-CheckedNative "Windows single-file publish" {
         --self-contained true `
         -p:PublishProfile=win-x64-self-contained `
         -p:Version=$Version `
+        -p:DebugType=None `
+        -p:DebugSymbols=false `
         -o $publishDirectory
 }
 
