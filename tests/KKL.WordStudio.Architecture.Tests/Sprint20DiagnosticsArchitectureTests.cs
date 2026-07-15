@@ -46,13 +46,14 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         Assert.Contains("ItemsSource=\"{Binding Items}\"", warningCenter, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding Message}\"", warningCenter, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding SourceText}\"", warningCenter, StringComparison.Ordinal);
+        Assert.Contains("açık bulgu sayısı otomatik yenilenir", warningCenter, StringComparison.Ordinal);
         Assert.Contains("PreviewDiagnosticFactory.Build", renderer, StringComparison.Ordinal);
         Assert.Contains("_diagnosticsStore.Replace", renderer, StringComparison.Ordinal);
         Assert.DoesNotContain("Diagnostics =", renderer, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void DiagnosticClick_RoutesToPreviewElementAndExcelCellWithoutChangingLayoutOwnership()
+    public void DiagnosticClick_RoutesToPreviewElementAndAffectedExcelCellWithoutChangingLayoutOwnership()
     {
         var root = SolutionRootLocator.Find();
         var warningVm = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "WarningCenterViewModel.cs");
@@ -60,17 +61,22 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         var previewView = Read(root, "src", "KKL.WordStudio.UI", "Views", "PreviewView.Diagnostics.cs");
         var excelVm = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "ExcelWorkspaceViewModel.Diagnostics.cs");
         var excelView = Read(root, "src", "KKL.WordStudio.UI", "Views", "ExcelWorkspaceView.KeyboardFlow.cs");
+        var store = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "PreviewDiagnosticsStore.cs");
 
         Assert.Contains("_previewViewModel.NavigateToElement", warningVm, StringComparison.Ordinal);
-        Assert.Contains("NavigateToDiagnosticSourceAsync", warningVm, StringComparison.Ordinal);
+        Assert.Contains("group.KeyValues", warningVm, StringComparison.Ordinal);
+        Assert.Contains("group.AffectedColumn", warningVm, StringComparison.Ordinal);
         Assert.Contains("_workspace.SetSelectedReportElement", previewVm, StringComparison.Ordinal);
         Assert.Contains("BringIntoView", previewView, StringComparison.Ordinal);
         Assert.Contains("NavigateToWorksheetAsync", excelVm, StringComparison.Ordinal);
-        Assert.Contains("FindDiagnosticMatches", excelVm, StringComparison.Ordinal);
+        Assert.Contains("ResolveDiagnosticColumnIndex(worksheet, affectedColumn)", excelVm, StringComparison.Ordinal);
+        Assert.Contains("targetColumnIndex = affectedColumnIndex", excelVm, StringComparison.Ordinal);
+        Assert.Contains("var previewColumnIndex = columnIndex + 1", excelVm, StringComparison.Ordinal);
         Assert.Contains("DiagnosticGridNavigationRequested", excelVm, StringComparison.Ordinal);
         Assert.Contains("WorkingDataGrid.CurrentCell = cell", excelView, StringComparison.Ordinal);
         Assert.Contains("WorkingDataGrid.ScrollIntoView", excelView, StringComparison.Ordinal);
         Assert.Contains("Keyboard.Focus(WorkingDataGrid)", excelView, StringComparison.Ordinal);
+        Assert.Contains("public int FindingCount", store, StringComparison.Ordinal);
 
         Assert.DoesNotContain("IDocumentLayoutEngine", warningVm, StringComparison.Ordinal);
         Assert.DoesNotContain("IDocumentLayoutEngine", excelVm, StringComparison.Ordinal);
