@@ -4,7 +4,6 @@
 
 - Base: `main@c2fb360b1071c099aaeceab8993b4e480cb01020`
 - Branch: `sprint24/06-structured-diagnostics-contract`
-- Current validation head: `295868e6d1ffc2dab1b6b665dc85b3bf9479e578`
 - Closed/unmerged PR #18 is not reused or cherry-picked.
 - Previous merged-main Windows gate: build `0/0`, tests `648/648`, pagination smoke GREEN.
 
@@ -138,7 +137,7 @@ The subsequent UI screenshots confirm:
 - editing an affected cell reduces open findings;
 - pressing Enter reproduced the DataGrid index crash described above.
 
-All supplied automated evidence belongs to superseded heads. The current exact-head Windows gate remains pending.
+All supplied automated evidence belongs to superseded heads. The current exact-head Windows gate remains pending. The authoritative head is the PR head reported by GitHub at verification time.
 
 ## Exact-head Windows gate
 
@@ -160,7 +159,6 @@ dotnet run -c Release --no-build --project src\KKL.WordStudio.UI\KKL.WordStudio.
 Expected:
 
 ```text
-HEAD: 295868e6d1ffc2dab1b6b665dc85b3bf9479e578
 git status --short: empty
 0 warnings
 0 errors
