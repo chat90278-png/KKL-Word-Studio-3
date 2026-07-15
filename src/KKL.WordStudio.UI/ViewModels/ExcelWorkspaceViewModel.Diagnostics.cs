@@ -1,13 +1,14 @@
 namespace KKL.WordStudio.UI.ViewModels;
 
-using System.Globalization;
-using System.Text;
+using KKL.WordStudio.Application.Excel;
 using KKL.WordStudio.Application.Preview;
 using KKL.WordStudio.Application.WorkingData;
 using KKL.WordStudio.Domain.DataSources;
 
 public sealed partial class ExcelWorkspaceViewModel
 {
+    private static readonly IExcelSemanticFieldMatcher DiagnosticFieldMatcher = new ExcelSemanticFieldMatcher();
+
     public event Action<ExcelGridNavigationRequest>? DiagnosticGridNavigationRequested;
 
     public Task<bool> NavigateToDiagnosticSourceAsync(
@@ -191,7 +192,7 @@ public sealed partial class ExcelWorkspaceViewModel
         if (_currentPreview is null || HeaderRowNumber is not { } headerRowNumber)
             return -1;
 
-        var headerPreviewIndex = _currentPreview.RowNumbers.IndexOf(headerRowNumber);
+        var headerPreviewIndex = IndexOfValue(_currentPreview.RowNumbers, headerRowNumber);
         if (headerPreviewIndex < 0 || headerPreviewIndex >= _currentPreview.Rows.Count)
             return -1;
 
@@ -224,56 +225,28 @@ public sealed partial class ExcelWorkspaceViewModel
 
     private static bool DiagnosticColumnMatches(string requested, string? candidate)
     {
-        var requestedIdentity = NormalizeDiagnosticColumn(requested);
-        var candidateIdentity = NormalizeDiagnosticColumn(candidate);
-        if (requestedIdentity.Length == 0 || candidateIdentity.Length == 0)
+        if (string.IsNullOrWhiteSpace(candidate))
             return false;
-        if (string.Equals(requestedIdentity, candidateIdentity, StringComparison.Ordinal))
+
+        if (string.Equals(requested.Trim(), candidate.Trim(), StringComparison.OrdinalIgnoreCase))
             return true;
 
-        return IsSameAliasGroup(requestedIdentity, candidateIdentity, QuantityAliases)
-            || IsSameAliasGroup(requestedIdentity, candidateIdentity, SerialAliases)
-            || IsSameAliasGroup(requestedIdentity, candidateIdentity, MatchKeyAliases);
+        var requestedRole = DiagnosticFieldMatcher.Match(requested);
+        return requestedRole != ExcelSemanticFieldRole.Unknown
+            && requestedRole == DiagnosticFieldMatcher.Match(candidate);
     }
 
-    private static bool IsSameAliasGroup(string requested, string candidate, IReadOnlySet<string> aliases) =>
-        aliases.Contains(requested) && aliases.Contains(candidate);
-
-    private static string NormalizeDiagnosticColumn(string? value)
+    private static int IndexOfValue<T>(IReadOnlyList<T> items, T value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return string.Empty;
-
-        var decomposed = value.Trim().Normalize(NormalizationForm.FormD);
-        var builder = new StringBuilder(decomposed.Length);
-        foreach (var character in decomposed)
+        var comparer = EqualityComparer<T>.Default;
+        for (var index = 0; index < items.Count; index++)
         {
-            if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
-                continue;
-
-            var lower = char.ToLowerInvariant(character);
-            if (lower == 'ı') lower = 'i';
-            if (char.IsLetterOrDigit(lower))
-                builder.Append(lower);
+            if (comparer.Equals(items[index], value))
+                return index;
         }
 
-        return builder.ToString();
+        return -1;
     }
-
-    private static readonly IReadOnlySet<string> QuantityAliases = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "adet", "miktar", "quantity", "qty"
-    };
-
-    private static readonly IReadOnlySet<string> SerialAliases = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "serino", "serinumarasi", "serialno", "serialnumber", "sn"
-    };
-
-    private static readonly IReadOnlySet<string> MatchKeyAliases = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "pn", "partno", "partnumber", "productno", "productnumber", "parcanumarasi", "urunno"
-    };
 
     private string? ResolveDiagnosticColumnIdentity(
         Worksheet? worksheet,
