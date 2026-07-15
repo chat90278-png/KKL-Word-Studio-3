@@ -88,10 +88,15 @@ internal sealed class DeterministicTextMeasurement
             var text = columnIndex < cells.Count ? cells[columnIndex] : string.Empty;
             maxTextHeight = Math.Max(
                 maxTextHeight,
-                EstimatePlainTextHeight(text, 10d, Math.Max(1d, cellWidth - 3d), bold));
+                EstimatePlainTextHeight(
+                    text,
+                    10d,
+                    cellWidth,
+                    bold,
+                    fontFamilyName: "Segoe UI"));
         }
 
-        return maxTextHeight + 2.5d;
+        return maxTextHeight;
     }
 
     public static double PointsToMillimeters(double points) =>
