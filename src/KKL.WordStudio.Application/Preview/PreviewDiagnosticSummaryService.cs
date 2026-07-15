@@ -19,6 +19,12 @@ public static class PreviewDiagnosticSummaryService
             .Select(group =>
             {
                 var representative = group.First();
+                var distinctKeys = group.Select(item => item.KeyValue)
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value!)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
                 return new PreviewDiagnosticGroup
                 {
                     Code = representative.Code,
@@ -31,12 +37,8 @@ public static class PreviewDiagnosticSummaryService
                     AffectedColumn = group.Select(item => item.AffectedColumn)
                         .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)),
                     OccurrenceCount = group.Count(),
-                    KeyValues = group.Select(item => item.KeyValue)
-                        .Where(value => !string.IsNullOrWhiteSpace(value))
-                        .Select(value => value!)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .Take(25)
-                        .ToList(),
+                    DistinctKeyCount = distinctKeys.Count,
+                    KeyValues = distinctKeys.Take(25).ToList(),
                     Sources = group.SelectMany(item => item.Sources)
                         .GroupBy(CreateSourceKey)
                         .Select(sourceGroup => sourceGroup.First())
@@ -119,6 +121,7 @@ public sealed class PreviewDiagnosticGroup
     public string? ElementName { get; init; }
     public string? AffectedColumn { get; init; }
     public required int OccurrenceCount { get; init; }
+    public int DistinctKeyCount { get; init; }
     public IReadOnlyList<string> KeyValues { get; init; } = Array.Empty<string>();
     public IReadOnlyList<PreviewDiagnosticSource> Sources { get; init; } = Array.Empty<PreviewDiagnosticSource>();
     public required PreviewDiagnostic Representative { get; init; }
