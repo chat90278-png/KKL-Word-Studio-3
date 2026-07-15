@@ -9,73 +9,78 @@
 
 ## Goal
 
-Remove message-text classification and grouping from Preview/UI consumers without changing the accepted Warning Center appearance or introducing a second validator.
+Replace message-text-owned diagnostics with stable semantic identity and make every warning card navigate to the actual affected Excel cell without changing the accepted Warning Center layout or creating a second validator.
 
-## Scope
-
-### Composition boundary
+## Structured diagnostics
 
 - Added stable table-composition diagnostic codes for configuration, quantity, merge-conflict and serial findings.
-- Added `TableCompositionDiagnostic` with original technical message, record key and affected-column metadata.
-- Existing `Warnings` / `CompositionWarnings` string collections remain available for frozen compatibility and support logs.
-- The frozen Sprint 15 `TableRowCompositionResult` public shape remains exactly `Rows`, `CellSpans`, `RowGroups`, `Warnings`.
-- `TableContentNode.CompositionDiagnostics` exposes the structured Application projection without expanding the frozen composer result.
-- Legacy text interpretation is isolated in one compatibility classifier rather than repeated by Preview or UI code.
+- Added original message, record key and affected-column metadata.
+- Existing `Warnings` / `CompositionWarnings` strings remain available for compatibility and support logs.
+- Frozen Sprint 15 `TableRowCompositionResult` remains exactly `Rows`, `CellSpans`, `RowGroups`, `Warnings`.
+- Structured projection is exposed at `TableContentNode.CompositionDiagnostics`.
+- `PreviewDiagnosticFactory` consumes structured findings directly and no longer derives title/key from warning text.
+- Production grouping uses `Code + GroupingKey`, not localized message templates.
+- Different problem codes on the same table remain separate cards.
+- Unrelated unknown legacy messages remain separate.
 
-### Preview diagnostic factory
+## Precise source navigation
 
-- Added a single Application-owned diagnostic catalog for code → severity/title mapping.
-- `PreviewDiagnostic` now carries stable `Code`, factory-owned `GroupingKey` and optional `AffectedColumn`.
-- `PreviewDiagnosticFactory` consumes structured composition findings directly.
-- The factory no longer contains title-resolution or key-extraction regex logic.
-- Raw technical messages remain intact for existing cards and support/debugging.
-- Report element, Excel source, worksheet, range and key-column metadata remain unchanged.
+The first UI smoke exposed that grouped cards navigated only by record key. For an `Adet` diagnostic this selected the `Parça Numarası` key cell rather than the actual invalid `Adet` cell. Editing the highlighted key could reduce the warning count indirectly while corrupting source identity.
 
-### Grouping
+Correction:
 
-- Production diagnostics group by factory-owned semantic identity instead of normalized localized messages.
-- Different localized/raw messages can represent one actionable semantic problem.
-- Different problem codes on the same table remain separate actions.
-- Unrelated unknown legacy messages remain separate rather than collapsing into one card.
-- A narrow legacy fallback preserves historical manually-created diagnostic tests/callers that do not yet provide a grouping key.
-- Error → Warning → Information ordering, source deduplication, distinct key collection and occurrence counts remain intact.
+- Warning Center passes all available group keys and `AffectedColumn` to the Excel workspace.
+- Excel navigation locates an exact key in the configured key column.
+- It then remains on that row and selects the affected column.
+- Quantity aliases resolve to `Adet` / `Miktar` / `Quantity` / `Qty`.
+- Serial aliases resolve to `Seri No` / `Seri Numarası` / English equivalents.
+- Exact conflict headers such as `Tr İsim` and `NSN` resolve directly.
+- WorkingData matches `SourceField`, original Excel column, display header and stable column ID.
+- Raw Preview navigation compensates for the hidden `#` row-number metadata column, preventing one-column-left drift.
+- If an affected column cannot be resolved, navigation safely falls back to the matched key cell.
 
-### UX and export boundaries
+## Resolution feedback
 
-- Existing Warning Center visuals, filters, badge and navigation are unchanged.
-- Existing Preview element navigation and Excel source/key navigation remain authoritative.
-- No automatic repair, warning suppression, persisted warning history or replacement validation engine is added.
-- No export confirmation dialog or rejected PR #18 control-center direction is reintroduced.
-- Word generation and current exporter failure contracts remain unchanged.
+- Group count and finding count are now distinct concepts.
+- Header displays `<problem type count> sorun türü · <occurrence count> açık bulgu`.
+- Cards display `<n> açık bulgu`, not `<n> tekrar`.
+- The true distinct-key count is retained even though only the first 25 keys are kept as the navigation window.
+- Existing `NotifyReportContentChanged` remains the authoritative refresh path after WorkingData mutations.
+- Fixing one affected cell must reduce the open-finding count after Preview diagnostics rebuild.
+- A card disappears only after every finding of that semantic type is resolved.
 
-## Architecture
+## Boundaries
 
-- Structured diagnostic contracts live in Application.
-- Domain and persistence remain untouched.
-- `PreviewDiagnosticsStore` remains the only runtime diagnostic store.
-- `PreviewDiagnosticFactory` remains the single report-content → runtime diagnostic projection.
-- `PreviewDiagnosticSummaryService` remains the single actionable grouping projection.
-- UI does not classify warning text or own diagnostic business rules.
-- Preview renderer, deterministic layout engine and Word exporter remain unchanged.
-- Frozen Sprint 15 table-composition contracts remain unchanged.
+- No Domain or persistence changes.
+- No automatic data repair.
+- No warning suppression or persisted history.
+- No second validator, renderer, paginator or exporter.
+- Preview renderer, deterministic layout engine and Word writer remain unchanged.
+- No rejected PR #18 export/control redesign is reintroduced.
 
 ## Regression coverage
 
-New Application tests cover:
+Application coverage now includes:
 
-1. stable composition code/key/affected-column extraction;
-2. structured projection while retaining the frozen result and legacy messages;
-3. factory code and grouping identity propagation;
-4. semantic grouping across different localized messages;
-5. separation of different diagnostic codes on the same table;
-6. separation of unrelated unknown legacy messages on the same table.
+1. stable code/key/affected-column classification;
+2. frozen composition-result compatibility;
+3. factory semantic identity propagation;
+4. grouping across localized messages;
+5. separation of different codes on one table;
+6. separation of unrelated unknown legacy warnings;
+7. true distinct-key count beyond the 25-key navigation window.
 
-The existing Sprint 20 architecture guard requires structured factory ownership and forbids title/key regex classification inside `PreviewDiagnosticFactory`.
+The existing Sprint 20 architecture test identity is preserved and now additionally requires:
+
+- Warning Center to pass `KeyValues` and `AffectedColumn`;
+- navigation to use the affected-column target;
+- raw Preview column identity to compensate for hidden `#` metadata;
+- runtime store to expose open-finding count.
 
 ## Expected test inventory
 
 - Domain: `20`
-- Application: `294` (`288 + 6`)
+- Application: `295`
 - Engine: `68`
 - Architecture: `126`
 - Infrastructure: `146`
@@ -83,48 +88,24 @@ The existing Sprint 20 architecture guard requires structured factory ownership 
 Expected total:
 
 ```text
-654 / 654
+655 / 655
 ```
 
-## Supplied Windows evidence
+## Supplied Windows evidence before precise-cell correction
 
-The supplied Windows run used Debug commands and did not include `git rev-parse HEAD` or `git status --short`.
-
-Results before the frozen-contract correction:
+The latest supplied Debug run reported:
 
 - Build: `0 warnings / 0 errors`
 - Domain: `20/20`
 - Application: `294/294`
 - Engine: `68/68`
-- Architecture: `125/126`
+- Architecture: `126/126`
 - Infrastructure: `146/146`
-- Total: `653 passed / 1 failed / 654 total`
+- Total: `654/654`
 
-The sole failure was:
+That automated result belongs to the earlier head. The subsequent UI evidence invalidated the product gate because warning cards selected key cells rather than affected cells.
 
-```text
-Sprint15FrozenContractGuardTests.ApplicationTableContracts_MatchFrozenSprint15Shape
-```
-
-Root cause: a public `Diagnostics` property had been added to frozen `TableRowCompositionResult`.
-
-Correction:
-
-- Removed `Diagnostics` from `TableRowCompositionResult`.
-- Restored its exact Sprint 15 public property set.
-- Kept structured projection at `TableContentNode.CompositionDiagnostics`.
-- Updated the new regression test to require that the frozen result exposes no `Diagnostics` property.
-
-## Manual smoke evidence
-
-The supplied UI screenshot confirms:
-
-1. missing-quantity findings are grouped into one card with repeat/key counts;
-2. `Tr İsim` and `NSN` merge conflicts remain separate cards on the same table;
-3. warning-card navigation reaches the report element and Excel source;
-4. the accepted Warning Center visual layout remains unchanged.
-
-Manual structured grouping/navigation smoke: GREEN.
+The screenshots showed `245 → 244` after editing the selected `Parça Numarası` cell. This was not a valid warning resolution; it demonstrated the wrong-cell navigation defect.
 
 ## Exact-head Windows gate
 
@@ -148,22 +129,28 @@ Expected:
 ```text
 0 warnings
 0 errors
-654 / 654 tests
+655 / 655 tests
 ```
 
-## Remaining manual smoke
+## Required manual smoke
 
-1. Confirm Error/Warning/Information filters and badge counts remain correct.
-2. Export a healthy document and confirm Word generation is unchanged.
-3. Confirm an unusable source still fails through the existing exporter contract.
+1. Click the missing-quantity card.
+2. Confirm the selected row belongs to the shown PN/key and the selected column is `Adet`, not `Parça Numarası`.
+3. Enter a valid quantity in that selected `Adet` cell.
+4. Confirm the card's `açık bulgu` count decreases after Preview refresh.
+5. Click again and confirm navigation advances to another still-invalid `Adet` cell.
+6. Click the `Tr İsim` conflict card and confirm the `Tr İsim` cell is selected.
+7. Click the `NSN` conflict card and confirm the `NSN` cell is selected.
+8. Confirm the header distinguishes problem types from total open findings.
+9. Confirm Preview report-element navigation still works.
+10. Export a healthy document and confirm Word generation is unchanged.
 
 ## Gate status
 
-- Source review: complete.
-- Supplied Debug build: GREEN `0/0`.
-- Supplied automated test run: blocked only by the now-corrected frozen-contract drift.
-- Manual structured grouping/navigation smoke: GREEN.
-- Container build/test: unavailable in this environment.
-- Exact-head Windows Release build/test: pending.
+- Previous Debug build/test: `0/0`, `654/654` on superseded head.
+- Wrong-cell navigation: reproduced and corrected in source.
+- Current exact-head Release build/test: pending.
+- Correct affected-cell navigation smoke: pending.
+- Warning resolution smoke: pending.
 - Final export smoke: pending.
-- PR must remain draft until exact-head Windows evidence is GREEN.
+- PR remains draft.
