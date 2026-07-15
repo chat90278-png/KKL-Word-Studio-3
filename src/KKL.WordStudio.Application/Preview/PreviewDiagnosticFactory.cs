@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.Application.Preview;
 
 using KKL.WordStudio.Application.Content;
+using KKL.WordStudio.Application.Tables;
 using KKL.WordStudio.Domain.DataSources;
 using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Projects;
@@ -46,7 +47,11 @@ public static class PreviewDiagnosticFactory
                 {
                     Id = $"table:{tableNode.ElementId:N}:{ordinal++}",
                     Code = finding.Code,
-                    GroupingKey = BuildGroupingKey(finding.Code, tableNode.ElementId, finding.AffectedColumn),
+                    GroupingKey = BuildGroupingKey(
+                        finding.Code,
+                        tableNode.ElementId,
+                        finding.AffectedColumn,
+                        finding.Message),
                     Severity = definition.Severity,
                     Title = definition.Title,
                     Message = finding.Message,
@@ -105,12 +110,22 @@ public static class PreviewDiagnosticFactory
         return diagnostics;
     }
 
-    private static string BuildGroupingKey(string code, Guid? elementId, string? affectedColumn) =>
-        string.Join(
+    private static string BuildGroupingKey(
+        string code,
+        Guid? elementId,
+        string? affectedColumn,
+        string? message = null)
+    {
+        var semanticKey = string.Join(
             ':',
             code,
             elementId?.ToString("N") ?? "global",
             NormalizeIdentity(affectedColumn));
+
+        return string.Equals(code, TableCompositionDiagnosticCodes.LegacyWarning, StringComparison.Ordinal)
+            ? $"{semanticKey}:{NormalizeIdentity(message)}"
+            : semanticKey;
+    }
 
     private static string NormalizeIdentity(string? value) =>
         string.IsNullOrWhiteSpace(value)
