@@ -30,14 +30,17 @@ The first UI smoke exposed that grouped cards navigated only by record key. For 
 Correction:
 
 - Warning Center passes all available group keys and `AffectedColumn` to the Excel workspace.
-- Excel navigation locates an exact key in the configured key column.
-- It then remains on that row and selects the affected column.
+- Excel navigation locates a trimmed exact key in the configured key column.
+- Contains-search fallback is forbidden for diagnostics, so key `55` cannot navigate to `9555`.
+- When a configured key column is available, the match must be in that column; an exact occurrence in another field is not accepted.
+- Missing preferred matches are checked by collection count; a default `WorkingDataCell(0,0)` can never be mistaken for a real match.
+- Navigation remains on the matched row and selects the affected column.
 - Semantic alias resolution is delegated to the existing canonical `ExcelSemanticFieldMatcher`; UI does not own Product/Serial/Quantity alias sets.
 - Exact conflict headers such as `Tr İsim` and `NSN` resolve directly.
 - WorkingData matches `SourceField`, original Excel column, display header and stable column ID.
 - Raw Preview navigation compensates for the hidden `#` row-number metadata column, preventing one-column-left drift.
 - A hidden affected WorkingData column is restored before navigation so fallback indexing cannot select an unrelated visible column.
-- If an affected column cannot be resolved, navigation safely falls back to the matched key cell.
+- If an affected column cannot be resolved, navigation safely falls back to the already validated key cell.
 
 ## Resolution feedback
 
@@ -55,11 +58,11 @@ The full-scenario workbook produced the expected `7 sorun türü · 8 açık bul
 
 Root cause and correction:
 
-- `CellEditEnding` cancelled the visual edit and awaited a working-data mutation immediately.
-- That mutation rebuilt `PreviewTable` while WPF DataGrid was still unwinding its edit transaction, leaving internal row/cell indexes stale.
-- The handler now captures row, column and text, returns from `CellEditEnding`, then commits at `DispatcherPriority.Background`.
-- The visual cell/row edit is cancelled only after the original edit event has completed.
-- Cell commit errors are surfaced in the workspace status instead of escaping from an `async void` event path.
+- `CellEditEnding` previously rebuilt `PreviewTable` while WPF DataGrid was still unwinding its edit transaction, leaving internal row/cell indexes stale.
+- The handler now captures the row object, column identity and text, returns from `CellEditEnding`, then commits at `DispatcherPriority.Background`.
+- The current display row index is resolved from the captured row object immediately before the mutation; an index captured before dispatcher deferral is never reused.
+- Visual cell/row cancellation is best-effort cleanup and cannot prevent the authoritative working-data mutation from being attempted.
+- Cell commit errors are surfaced in workspace status instead of escaping from an `async void` event path.
 - Queued diagnostic/focus restoration validates the current item/column projection through `TryApplyGridCell`.
 - A stale restore that reaches a rebuilt grid catches `ArgumentOutOfRangeException` / transient `InvalidOperationException` and is ignored rather than terminating the application.
 
@@ -88,9 +91,12 @@ The existing Sprint 20 architecture test identity is preserved and additionally 
 
 - Warning Center to pass `KeyValues` and `AffectedColumn`;
 - navigation to use the affected-column target;
+- diagnostic keys to use trimmed exact matching without contains fallback;
+- configured key-column matching to reject missing/default struct results;
 - raw Preview column identity to compensate for hidden `#` metadata;
 - runtime store to expose open-finding count;
 - Enter commits to be deferred until after `CellEditEnding` through the dispatcher;
+- deferred edits to resolve the current row index from stable row-object identity;
 - DataGrid stale-selection restore to be bounds-safe.
 
 ## Expected test inventory
@@ -170,6 +176,7 @@ Expected:
 8. Hide `Adet`, click a quantity card, and confirm the column is restored and the correct cell is selected.
 9. Resolve all seven problem types and confirm the Warning Center reaches zero.
 10. Export the healthy-control sheet and confirm Word generation is unchanged.
+11. For a key-collision check, ensure a card for key `55` never navigates to a row containing only `9555`.
 
 ## Gate status
 
