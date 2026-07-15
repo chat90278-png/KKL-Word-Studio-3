@@ -24,7 +24,7 @@ public sealed class Sprint24StructuredDiagnosticsTests
     }
 
     [Fact]
-    public void CompositionResult_ExposesStructuredDiagnosticsAndKeepsLegacyMessages()
+    public void CompositionProjection_PreservesFrozenResultAndKeepsLegacyMessages()
     {
         const string warning = "PN/key '55' için geçerli Adet değeri bulunamadı; satırlar birleştirilmedi.";
         var result = new TableRowCompositionResult
@@ -36,10 +36,11 @@ public sealed class Sprint24StructuredDiagnosticsTests
         };
 
         Assert.Equal(warning, Assert.Single(result.Warnings));
-        var diagnostic = Assert.Single(result.Diagnostics);
+        var diagnostic = Assert.Single(TableCompositionDiagnosticClassifier.Classify(result.Warnings));
         Assert.Equal(TableCompositionDiagnosticCodes.QuantityMissing, diagnostic.Code);
         Assert.Equal("55", diagnostic.KeyValue);
         Assert.Equal("Adet", diagnostic.AffectedColumn);
+        Assert.Null(typeof(TableRowCompositionResult).GetProperty("Diagnostics"));
     }
 
     [Fact]
