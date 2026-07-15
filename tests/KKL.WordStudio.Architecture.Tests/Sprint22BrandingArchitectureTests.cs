@@ -49,6 +49,9 @@ public sealed class Sprint22BrandingArchitectureTests
         Assert.Contains("KKL-Word-Studio-v$Version-win-x64.exe", packager, StringComparison.Ordinal);
         Assert.Contains("KKL-Word-Studio-v*-single-exe", packager, StringComparison.Ordinal);
         Assert.Contains("Remove-Item $publishDirectory -Recurse -Force", packager, StringComparison.Ordinal);
+        Assert.Contains("-p:DebugType=None", packager, StringComparison.Ordinal);
+        Assert.Contains("-p:DebugSymbols=false", packager, StringComparison.Ordinal);
+        Assert.Contains("Publish output is not single-file", packager, StringComparison.Ordinal);
 
         // Loading an ICO through Window.Icon invokes WPF's runtime TypeConverter.
         // The application icon is generated only for the native executable at compile time.
