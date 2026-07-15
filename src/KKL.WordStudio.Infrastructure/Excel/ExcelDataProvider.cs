@@ -55,7 +55,12 @@ public sealed class ExcelDataProvider : IDataProvider
 
         try
         {
-            using var document = SpreadsheetDocument.Open(sourcePath, false);
+            using var stream = new FileStream(
+                sourcePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read);
+            using var document = SpreadsheetDocument.Open(stream, false);
             var workbookPart = document.WorkbookPart ?? throw new InvalidDataException("The workbook has no WorkbookPart.");
             var sheet = workbookPart.Workbook.Sheets?.Elements<Sheet>().FirstOrDefault(s => s.Name == worksheetName)
                 ?? throw new InvalidDataException($"Worksheet '{worksheetName}' was not found.");
