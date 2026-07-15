@@ -35,6 +35,7 @@ Remove message-text classification and grouping from Preview/UI consumers withou
 - Production diagnostics group by factory-owned semantic identity instead of normalized localized messages.
 - Different localized/raw messages can represent one actionable semantic problem.
 - Different problem codes on the same table remain separate actions.
+- Unknown legacy messages retain message-specific identity so unrelated findings cannot collapse into one card.
 - A narrow legacy fallback preserves historical manually-created diagnostic tests/callers that do not yet provide a grouping key.
 - Error → Warning → Information ordering, source deduplication, distinct key collection and occurrence counts remain intact.
 
@@ -64,14 +65,15 @@ New Application tests cover:
 2. structured composition result while retaining legacy messages;
 3. factory code and grouping identity propagation;
 4. semantic grouping across different localized messages;
-5. separation of different diagnostic codes on the same table.
+5. separation of different diagnostic codes on the same table;
+6. separation of unrelated unknown legacy messages on the same table.
 
 The existing Sprint 20 architecture guard now requires structured factory ownership and forbids title/key regex classification inside `PreviewDiagnosticFactory`.
 
 ## Expected test inventory
 
 - Domain: `20`
-- Application: `293` (`288 + 5`)
+- Application: `294` (`288 + 6`)
 - Engine: `68`
 - Architecture: `126`
 - Infrastructure: `146`
@@ -79,7 +81,7 @@ The existing Sprint 20 architecture guard now requires structured factory owners
 Expected total:
 
 ```text
-653 / 653
+654 / 654
 ```
 
 ## Windows gate
@@ -104,19 +106,20 @@ Expected:
 ```text
 0 warnings
 0 errors
-653 / 653 tests
+654 / 654 tests
 ```
 
 ## Manual smoke
 
 1. Produce two missing-quantity warnings for different PN/key values on the same table; confirm one grouped card with two keys.
 2. Produce a quantity warning and a conflicting-column warning on the same table; confirm two separate cards.
-3. Click each card and confirm Preview navigation still reaches the stable report element.
-4. Confirm Excel source/sheet/range/key navigation remains available.
-5. Confirm Error/Warning/Information filters and badge counts remain correct.
-6. Confirm the accepted Warning Center layout has not changed.
-7. Export a healthy document and confirm Word generation is unchanged.
-8. Confirm an unusable source still fails through the existing exporter contract.
+3. Produce two unrelated, unclassified table warnings; confirm they remain two separate cards.
+4. Click each card and confirm Preview navigation still reaches the stable report element.
+5. Confirm Excel source/sheet/range/key navigation remains available.
+6. Confirm Error/Warning/Information filters and badge counts remain correct.
+7. Confirm the accepted Warning Center layout has not changed.
+8. Export a healthy document and confirm Word generation is unchanged.
+9. Confirm an unusable source still fails through the existing exporter contract.
 
 ## Gate status
 
