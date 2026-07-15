@@ -81,7 +81,9 @@ public sealed class Sprint20DiagnosticsArchitectureTests
         Assert.Contains("Keyboard.Focus(WorkingDataGrid)", excelView, StringComparison.Ordinal);
         Assert.Contains("DispatcherPriority.Background", excelEdit, StringComparison.Ordinal);
         Assert.Contains("CommitCellEditAfterGridSettlesAsync", excelEdit, StringComparison.Ordinal);
-        Assert.Contains("CancelEdit(DataGridEditingUnit.Cell)", excelEdit, StringComparison.Ordinal);
+        Assert.Contains("WorkingDataGrid.Items.IndexOf(rowItem)", excelEdit, StringComparison.Ordinal);
+        Assert.Contains("TryCancelPendingGridEdit", excelEdit, StringComparison.Ordinal);
+        Assert.Contains("CancelEdit(editingUnit)", excelEdit, StringComparison.Ordinal);
         Assert.Contains("public int FindingCount", store, StringComparison.Ordinal);
 
         Assert.DoesNotContain("IDocumentLayoutEngine", warningVm, StringComparison.Ordinal);
