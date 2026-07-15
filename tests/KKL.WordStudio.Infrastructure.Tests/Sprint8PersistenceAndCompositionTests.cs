@@ -1,6 +1,5 @@
 namespace KKL.WordStudio.Infrastructure.Tests;
 
-using System.IO.Compression;
 using System.Security.Cryptography;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -13,79 +12,55 @@ using KKL.WordStudio.Domain.Expressions;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
 using KKL.WordStudio.Infrastructure.Export.Exporters;
-using KKL.WordStudio.Infrastructure.Persistence;
+using KKL.WordStudio.Infrastructure.Word;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+/// <summary>
+/// Historical Sprint 15 method identities are retained. The product no longer
+/// persists a native project package; these tests now protect the equivalent
+/// process-lifetime session behavior and read-only source handling.
+/// </summary>
 public class Sprint8PersistenceTests
 {
     [Fact]
-    public async Task TableCaption_RoundTripsThroughProjectPersistence()
+    public void TableCaption_RoundTripsThroughProjectPersistence()
     {
-        var repository = new KwsProjectRepository(NullLogger<KwsProjectRepository>.Instance);
         var (project, _, section) = CreateProjectAndReport();
-        section.Root.Children.Add(new TableElement
+        var table = new TableElement
         {
             Name = "EngineTable",
             Caption = "Motor Tipleri"
-        });
+        };
+        section.Root.Children.Add(table);
 
-        var basePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var savedPath = basePath + ".kws";
-        try
-        {
-            Assert.True((await repository.SaveAsync(project, basePath)).IsSuccess);
-
-            var opened = await repository.OpenAsync(savedPath);
-
-            Assert.True(opened.IsSuccess);
-            var openedTable = Assert.IsType<TableElement>(
-                opened.Value.Reports.Single().Pages.Single().Sections.Single().Root.Children.Single());
-            Assert.Equal("Motor Tipleri", openedTable.Caption);
-        }
-        finally
-        {
-            File.Delete(savedPath);
-        }
+        var sessionTable = Assert.IsType<TableElement>(
+            project.Reports.Single().Pages.Single().Sections.Single().Root.Children.Single());
+        Assert.Same(table, sessionTable);
+        Assert.Equal("Motor Tipleri", sessionTable.Caption);
     }
 
     [Fact]
-    public async Task FrontMatterState_RoundTripsThroughProjectPersistence()
+    public void FrontMatterState_RoundTripsThroughProjectPersistence()
     {
-        var repository = new KwsProjectRepository(NullLogger<KwsProjectRepository>.Instance);
         var sourceDocx = CreateFrontMatterDocx();
-        var basePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var savedPath = basePath + ".kws";
         try
         {
-            var project = new Project { Name = "Portable Project" };
-            project.FrontMatter = new FrontMatterDocument
-            {
-                FileName = "Kapak.docx",
-                OriginalSourcePath = sourceDocx,
-                ResolvedFilePath = sourceDocx
-            };
+            var service = new OpenXmlFrontMatterDocumentService();
+            var imported = service.Import(sourceDocx);
+            Assert.True(imported.IsSuccess, imported.Error);
 
-            Assert.True((await repository.SaveAsync(project, basePath)).IsSuccess);
-            File.Delete(sourceDocx); // project-owned asset must now be sufficient
+            var project = new Project { Name = "Session Project" };
+            project.FrontMatter = imported.Value;
 
-            using (var package = ZipFile.OpenRead(savedPath))
-            {
-                Assert.NotNull(package.GetEntry(FrontMatterDocument.DefaultEmbeddedAssetEntryName));
-            }
-
-            var opened = await repository.OpenAsync(savedPath);
-
-            Assert.True(opened.IsSuccess);
-            Assert.NotNull(opened.Value.FrontMatter);
-            Assert.Equal("Kapak.docx", opened.Value.FrontMatter!.FileName);
-            Assert.NotNull(opened.Value.FrontMatter.ResolvedFilePath);
-            Assert.True(File.Exists(opened.Value.FrontMatter.ResolvedFilePath));
+            Assert.Same(imported.Value, project.FrontMatter);
+            Assert.Equal("Kapak İçeriği", ReadBodyText(project.FrontMatter!.ResolvedFilePath!));
+            Assert.True(service.IsAvailable(project.FrontMatter));
+            Assert.Null(typeof(FrontMatterDocument).GetProperty("EmbeddedAssetEntryName"));
         }
         finally
         {
             File.Delete(sourceDocx);
-            File.Delete(savedPath);
         }
     }
 
@@ -96,7 +71,7 @@ public class Sprint8PersistenceTests
         try
         {
             var beforeHash = SHA256.HashData(File.ReadAllBytes(sourceDocx));
-            var service = new KKL.WordStudio.Infrastructure.Word.OpenXmlFrontMatterDocumentService();
+            var service = new OpenXmlFrontMatterDocumentService();
 
             var result = service.Import(sourceDocx);
 
@@ -112,45 +87,32 @@ public class Sprint8PersistenceTests
     }
 
     [Fact]
-    public async Task MissingFrontMatterSource_DoesNotPreventProjectOpen()
+    public void MissingFrontMatterSource_DoesNotPreventProjectOpen()
     {
-        var repository = new KwsProjectRepository(NullLogger<KwsProjectRepository>.Instance);
-        var basePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var savedPath = basePath + ".kws";
-        try
+        var missingPath = Path.Combine(
+            Path.GetTempPath(),
+            Guid.NewGuid().ToString("N"),
+            "KayipKapak.docx");
+        var project = new Project { Name = "Missing Front Matter" };
+        project.FrontMatter = new FrontMatterDocument
         {
-            var project = new Project { Name = "Missing Front Matter" };
-            project.FrontMatter = new FrontMatterDocument
-            {
-                FileName = "KayipKapak.docx",
-                OriginalSourcePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "KayipKapak.docx")
-            };
+            FileName = "KayipKapak.docx",
+            OriginalSourcePath = missingPath,
+            ResolvedFilePath = missingPath
+        };
 
-            Assert.True((await repository.SaveAsync(project, basePath)).IsSuccess);
-
-            var opened = await repository.OpenAsync(savedPath);
-
-            Assert.True(opened.IsSuccess);
-            Assert.NotNull(opened.Value.FrontMatter);
-            Assert.Equal("KayipKapak.docx", opened.Value.FrontMatter!.FileName);
-            Assert.True(string.IsNullOrWhiteSpace(opened.Value.FrontMatter.ResolvedFilePath)
-                || !File.Exists(opened.Value.FrontMatter.ResolvedFilePath));
-        }
-        finally
-        {
-            File.Delete(savedPath);
-        }
+        var service = new OpenXmlFrontMatterDocumentService();
+        Assert.NotNull(project.FrontMatter);
+        Assert.Equal("KayipKapak.docx", project.FrontMatter!.FileName);
+        Assert.False(service.IsAvailable(project.FrontMatter));
+        Assert.NotEmpty(project.Reports); // session remains usable even when the optional source is unavailable
     }
 
     private static (Project Project, Report Report, Section Section) CreateProjectAndReport()
     {
-        var project = new Project { Name = "Sprint 8 Persistence" };
-        var report = new Report { Name = "Report" };
-        var page = new Page();
-        var section = new Section { Kind = SectionKind.Body };
-        page.Sections.Add(section);
-        report.Pages.Add(page);
-        project.Reports.Add(report);
+        var project = KKL.WordStudio.Application.Workspace.WorkspaceSessionFactory.CreateDefault();
+        var report = Assert.Single(project.Reports);
+        var section = Assert.Single(Assert.Single(report.Pages).Sections);
         return (project, report, section);
     }
 
@@ -162,6 +124,12 @@ public class Sprint8PersistenceTests
         mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Kapak İçeriği")))));
         mainPart.Document.Save();
         return path;
+    }
+
+    private static string ReadBodyText(string path)
+    {
+        using var document = WordprocessingDocument.Open(path, false);
+        return document.MainDocumentPart!.Document.Body!.InnerText;
     }
 }
 
@@ -299,9 +267,6 @@ public class Sprint8WordCompositionTests
             StyleName = new StyleName { Val = "Cover Distinct" }
         });
 
-        // A deterministic one-pixel PNG keeps the fixture independent of
-        // System.Drawing/Windows while still proving the imported package's
-        // media part survives composition as part of the nested DOCX package.
         var imagePart = mainPart.AddImagePart(ImagePartType.Png);
         var pngBytes = Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
