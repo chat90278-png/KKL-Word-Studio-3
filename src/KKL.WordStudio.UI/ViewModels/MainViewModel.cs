@@ -3,6 +3,7 @@ namespace KKL.WordStudio.UI.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KKL.WordStudio.Application.Abstractions;
+using KKL.WordStudio.Application.Preview;
 using KKL.WordStudio.Application.Workspace;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.UI.Services;
@@ -74,6 +75,22 @@ public sealed partial class MainViewModel : ViewModelBase
             return;
         }
 
+        var preflight = WordExportPreflightPolicy.Evaluate(DockViewModel.Diagnostics.Groups);
+        if (!preflight.CanExport)
+        {
+            ReportPaneViewModel.Shared.OpenForAction();
+            DockViewModel.State = DockState.Normal;
+            DockViewModel.Page = DockPage.Warnings;
+            StatusText = $"Word dosyası oluşturulmadı — {preflight.ErrorGroupCount} engelleyici sorun türü · {preflight.ErrorFindingCount} açık hata var. Uyarılar sekmesinden düzeltin.";
+            _logger.LogWarning(
+                "Word export blocked by diagnostics: {ErrorGroups} groups, {ErrorFindings} findings",
+                preflight.ErrorGroupCount,
+                preflight.ErrorFindingCount);
+            return;
+        }
+
+        // File selection happens only after readiness has been decided. A blocked
+        // export never opens a Save dialog or invokes the exporter.
         var path = _fileDialogService.SaveWordFile(report.Name);
         if (path is null) return;
 
@@ -92,8 +109,24 @@ public sealed partial class MainViewModel : ViewModelBase
         await result.Value.CopyToAsync(fileStream);
 
         LastExportedFilePath = path;
-        StatusText = $"'{report.Name}' raporu '{path}' konumuna aktarıldı";
-        _logger.LogInformation("Exported report {ReportId} to {Path}", report.Id, path);
+        StatusText = BuildExportSuccessStatus(report.Name, path, preflight);
+        _logger.LogInformation(
+            "Exported report {ReportId} to {Path} with {DiagnosticGroups} non-blocking groups and {DiagnosticFindings} findings",
+            report.Id,
+            path,
+            preflight.NonBlockingGroupCount,
+            preflight.NonBlockingFindingCount);
+    }
+
+    private static string BuildExportSuccessStatus(
+        string reportName,
+        string path,
+        WordExportPreflightResult preflight)
+    {
+        var baseText = $"'{reportName}' raporu '{path}' konumuna aktarıldı";
+        return preflight.Status == WordExportPreflightStatus.ReadyWithFindings
+            ? $"{baseText} · {preflight.NonBlockingGroupCount} sorun türü / {preflight.NonBlockingFindingCount} açık bulgu ile"
+            : baseText;
     }
 
     [RelayCommand(CanExecute = nameof(HasLastExportedFile))]
