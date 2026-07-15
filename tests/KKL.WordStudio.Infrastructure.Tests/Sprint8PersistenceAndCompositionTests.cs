@@ -1,5 +1,6 @@
 namespace KKL.WordStudio.Infrastructure.Tests;
 
+using System.ComponentModel;
 using System.Security.Cryptography;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -53,7 +54,14 @@ public class Sprint8PersistenceTests
             Assert.Same(imported.Value, project.FrontMatter);
             Assert.True(service.IsAvailable(project.FrontMatter!));
             Assert.Equal(sourceDocx, project.FrontMatter!.ResolvedFilePath);
-            Assert.Null(typeof(FrontMatterDocument).GetProperty("EmbeddedAssetEntryName"));
+            var compatibilityProperty = typeof(FrontMatterDocument).GetProperty("EmbeddedAssetEntryName");
+            Assert.NotNull(compatibilityProperty);
+            Assert.Equal(
+                EditorBrowsableState.Never,
+                compatibilityProperty!.GetCustomAttributes(typeof(EditorBrowsableAttribute), inherit: false)
+                    .Cast<EditorBrowsableAttribute>()
+                    .Single()
+                    .State);
         }
         finally
         {
@@ -97,7 +105,7 @@ public class Sprint8PersistenceTests
         };
 
         var service = new OpenXmlFrontMatterDocumentService();
-        Assert.False(service.IsAvailable(project.FrontMatter));
+        Assert.False(service.IsAvailable(project.FrontMatter!));
         Assert.Single(project.Reports);
         Assert.Single(Assert.Single(project.Reports).Pages);
     }
@@ -143,7 +151,8 @@ public class Sprint8WordCompositionTests
 
             Assert.Equal(0, altChunkIndex);
             Assert.True(generatedIndex > altChunkIndex);
-            Assert.Contains(children.OfType<Paragraph>().SelectMany(p => p.Descendants<Break>()),
+            Assert.Contains(
+                children.OfType<Paragraph>().SelectMany(paragraph => paragraph.Descendants<Break>()),
                 item => item.Type?.Value == BreakValues.Page);
         }
         finally
