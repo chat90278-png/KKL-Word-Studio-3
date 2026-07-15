@@ -6,10 +6,10 @@ using KKL.WordStudio.Application.Layout;
 using KKL.WordStudio.Application.Preview;
 using KKL.WordStudio.Engine.Layout;
 
-public sealed class FallbackDocumentLayoutEngineTests
+public sealed class DocumentLayoutEngineContractTests
 {
     [Fact]
-    public async Task FallbackLayout_ReturnsContractCompliantGeneratedPage()
+    public async Task DeterministicLayout_ReturnsContractCompliantGeneratedPage()
     {
         var document = CreateDocument(
             bodyNodes:
@@ -18,12 +18,12 @@ public sealed class FallbackDocumentLayoutEngineTests
                 {
                     ElementId = Guid.NewGuid(),
                     Kind = ReportContentKind.Paragraph,
-                    Text = "Fallback content",
+                    Text = "Deterministic content",
                     FontSize = 11
                 }
             ]);
 
-        var engine = new FallbackDocumentLayoutEngine();
+        var engine = new DeterministicDocumentLayoutEngine();
         var result = await engine.LayoutAsync(new DocumentLayoutRequest
         {
             ReportContent = document,
@@ -34,7 +34,8 @@ public sealed class FallbackDocumentLayoutEngineTests
         Assert.Equal(1, page.PageNumber);
         Assert.Equal(DocumentPageOrigin.GeneratedReport, page.Origin);
         Assert.Same(document.PageLayout, page.PageLayout);
-        Assert.Contains(FallbackDocumentLayoutEngine.FallbackWarning, result.Warnings);
+        Assert.DoesNotContain(result.Warnings, warning =>
+            warning.Contains("fallback", StringComparison.OrdinalIgnoreCase));
 
         var block = Assert.Single(page.Blocks);
         Assert.Equal(DocumentPageRegion.Body, block.Region);
@@ -47,7 +48,7 @@ public sealed class FallbackDocumentLayoutEngineTests
     }
 
     [Fact]
-    public async Task GeneratedFallbackBlocks_PreserveElementIdAndEditableIdentity()
+    public async Task GeneratedDeterministicBlocks_PreserveElementIdAndEditableIdentity()
     {
         var textId = Guid.NewGuid();
         var tableId = Guid.NewGuid();
@@ -72,14 +73,15 @@ public sealed class FallbackDocumentLayoutEngineTests
                 }
             ]);
 
-        var engine = new FallbackDocumentLayoutEngine();
+        var engine = new DeterministicDocumentLayoutEngine();
         var result = await engine.LayoutAsync(new DocumentLayoutRequest
         {
             ReportContent = document,
             FrontMatter = null
         });
 
-        var generatedBlocks = Assert.Single(result.Pages).Blocks
+        var generatedBlocks = result.Pages
+            .SelectMany(page => page.Blocks)
             .Where(block => block.ElementId is not null)
             .ToList();
 
