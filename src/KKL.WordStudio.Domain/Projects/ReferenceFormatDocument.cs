@@ -1,6 +1,7 @@
 namespace KKL.WordStudio.Domain.Projects;
 
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// Reference DOCX used during the current in-memory workspace to resolve
@@ -19,6 +20,7 @@ public sealed class ReferenceFormatDocument
     public string? OriginalSourcePath { get; set; }
 
     /// <summary>Runtime readable path for the selected reference DOCX.</summary>
+    [JsonIgnore]
     public string? ResolvedFilePath { get; set; }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
