@@ -67,10 +67,20 @@ public sealed partial class ExcelWorkspaceViewModel
             if (matches.Count == 0)
                 continue;
 
-            var preferredMatches = expectedKeyColumnIndex >= 0
-                ? matches.Where(candidate => candidate.ColumnIndex == expectedKeyColumnIndex).ToList()
-                : [];
-            var keyMatch = preferredMatches.Count > 0 ? preferredMatches[0] : matches[0];
+            WorkingDataCell keyMatch;
+            if (expectedKeyColumnIndex >= 0)
+            {
+                var preferredMatch = matches.FirstOrDefault(candidate =>
+                    candidate.ColumnIndex == expectedKeyColumnIndex);
+                if (preferredMatch.ColumnIndex != expectedKeyColumnIndex)
+                    continue;
+                keyMatch = preferredMatch;
+            }
+            else
+            {
+                keyMatch = matches[0];
+            }
+
             var targetColumnIndex = affectedColumnIndex >= 0
                 ? affectedColumnIndex
                 : keyMatch.ColumnIndex;
@@ -93,7 +103,7 @@ public sealed partial class ExcelWorkspaceViewModel
             return true;
         }
 
-        StatusText = "Uyarının kayıt anahtarı kaynak veride tam eşleşmeyle bulunamadı.";
+        StatusText = "Uyarının kayıt anahtarı yapılandırılmış anahtar sütununda tam eşleşmeyle bulunamadı.";
         return false;
     }
 
