@@ -72,13 +72,27 @@ public sealed class Sprint24SessionLifecycleArchitectureTests
     public void NativeProjectPersistence_IsAbsentFromProductionComposition()
     {
         var root = SolutionRootLocator.Find();
-        var infrastructureDi = Read(
-            root,
-            "src",
-            "KKL.WordStudio.Infrastructure",
-            "DependencyInjection",
-            "InfrastructureServiceCollectionExtensions.cs");
-        var constants = Read(root, "src", "KKL.WordStudio.Shared", "Constants", "AppConstants.cs");
+        var productionFiles = SourceScan.ReadCodeFiles(root, "src", ".cs");
+        var forbiddenTokens = new[]
+        {
+            "IProjectService",
+            "KwsProjectRepository",
+            "KwsProjectManifest",
+            "ProjectFileExtension",
+            "ProjectFileFormatVersion",
+            "\".kws\""
+        };
+
+        foreach (var token in forbiddenTokens)
+        {
+            var offenders = productionFiles
+                .Where(file => file.Text.Contains(token, StringComparison.Ordinal))
+                .Select(file => file.RelativePath)
+                .ToList();
+            Assert.True(
+                offenders.Count == 0,
+                $"Native project lifecycle token '{token}' remains in production: {string.Join(", ", offenders)}");
+        }
 
         Assert.False(File.Exists(Path.Combine(
             root,
@@ -98,10 +112,6 @@ public sealed class Sprint24SessionLifecycleArchitectureTests
             "KKL.WordStudio.Infrastructure",
             "Persistence",
             "KwsProjectManifest.cs")));
-        Assert.DoesNotContain("IProjectService", infrastructureDi, StringComparison.Ordinal);
-        Assert.DoesNotContain("KwsProjectRepository", infrastructureDi, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProjectFileExtension", constants, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProjectFileFormatVersion", constants, StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] parts) =>
