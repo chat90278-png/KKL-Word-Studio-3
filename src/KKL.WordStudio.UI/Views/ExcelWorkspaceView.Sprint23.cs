@@ -68,8 +68,8 @@ public partial class ExcelWorkspaceView
             return;
 
         var columnIdentity = GetColumnIdentity(e.Column);
-        var rowIndex = WorkingDataGrid.Items.IndexOf(e.Row.Item);
-        if (columnIdentity is null || rowIndex < 0)
+        var rowItem = e.Row.Item;
+        if (columnIdentity is null || rowItem is null)
             return;
 
         var value = editor.Text;
@@ -77,29 +77,58 @@ public partial class ExcelWorkspaceView
         ArmGridKeyboardRestore();
 
         // Replacing PreviewTable while WPF is still completing CellEditEnding
-        // can leave DataGrid's internal row/cell indexes stale. Let the current
-        // edit transaction unwind first, then cancel the visual edit and mutate
-        // the project-owned working data on the same UI dispatcher.
+        // can leave DataGrid's internal row/cell indexes stale. Keep the row
+        // object as identity, let the current edit transaction unwind, then
+        // resolve its current display index immediately before the mutation.
         Dispatcher.BeginInvoke(
             DispatcherPriority.Background,
-            new Action(() => _ = CommitCellEditAfterGridSettlesAsync(rowIndex, columnIdentity, value)));
+            new Action(() => _ = CommitCellEditAfterGridSettlesAsync(rowItem, columnIdentity, value)));
     }
 
     private async Task CommitCellEditAfterGridSettlesAsync(
-        int rowIndex,
+        object rowItem,
         string columnIdentity,
         string value)
     {
+        // CancelEdit is visual cleanup only. A transient WPF rejection must not
+        // prevent the authoritative working-data mutation from being attempted.
+        TryCancelPendingGridEdit(DataGridEditingUnit.Cell);
+        TryCancelPendingGridEdit(DataGridEditingUnit.Row);
+
+        var rowIndex = WorkingDataGrid.Items.IndexOf(rowItem);
+        if (rowIndex < 0)
+        {
+            _restoreGridFocusAfterPreviewRefresh = false;
+            _viewModel.StatusText = "Hücre güncellenemedi: düzenlenen satır artık görünür değil.";
+            return;
+        }
+
         try
         {
-            WorkingDataGrid.CancelEdit(DataGridEditingUnit.Cell);
-            WorkingDataGrid.CancelEdit(DataGridEditingUnit.Row);
             await _viewModel.CommitGridCellEditAsync(rowIndex, columnIdentity, value);
         }
         catch (Exception exception)
         {
             _restoreGridFocusAfterPreviewRefresh = false;
             _viewModel.StatusText = $"Hücre güncellenemedi: {exception.Message}";
+        }
+    }
+
+    private void TryCancelPendingGridEdit(DataGridEditingUnit editingUnit)
+    {
+        try
+        {
+            WorkingDataGrid.CancelEdit(editingUnit);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // A queued PreviewTable refresh can invalidate WPF's internal edit
+            // index. The working-data commit still uses the resolved row object.
+        }
+        catch (InvalidOperationException)
+        {
+            // WPF may already have completed this edit unit before the deferred
+            // callback runs. Nothing remains to cancel in that case.
         }
     }
 
