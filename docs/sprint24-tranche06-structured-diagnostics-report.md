@@ -32,8 +32,7 @@ Correction:
 - Warning Center passes all available group keys and `AffectedColumn` to the Excel workspace.
 - Excel navigation locates an exact key in the configured key column.
 - It then remains on that row and selects the affected column.
-- Quantity aliases resolve to `Adet` / `Miktar` / `Quantity` / `Qty`.
-- Serial aliases resolve to `Seri No` / `Seri Numarası` / English equivalents.
+- Semantic alias resolution is delegated to the existing canonical `ExcelSemanticFieldMatcher`; UI does not own Product/Serial/Quantity alias sets.
 - Exact conflict headers such as `Tr İsim` and `NSN` resolve directly.
 - WorkingData matches `SourceField`, original Excel column, display header and stable column ID.
 - Raw Preview navigation compensates for the hidden `#` row-number metadata column, preventing one-column-left drift.
@@ -42,13 +41,27 @@ Correction:
 
 ## Resolution feedback
 
-- Group count and finding count are now distinct concepts.
+- Group count and finding count are distinct concepts.
 - Header displays `<problem type count> sorun türü · <occurrence count> açık bulgu`.
 - Cards display `<n> açık bulgu`, not `<n> tekrar`.
 - The true distinct-key count is retained even though only the first 25 keys are kept as the navigation window.
 - Existing `NotifyReportContentChanged` remains the authoritative refresh path after WorkingData mutations.
-- Fixing one affected cell must reduce the open-finding count after Preview diagnostics rebuild.
+- Fixing one affected cell reduces the open-finding count after Preview diagnostics rebuild.
 - A card disappears only after every finding of that semantic type is resolved.
+
+## Enter edit lifecycle correction
+
+The full-scenario workbook produced the expected `7 sorun türü · 8 açık bulgu`, and editing affected cells reduced the counts correctly. A remaining WPF lifecycle defect was reproduced when the user pressed Enter after editing: `Specified argument was out of the range of valid values (Parameter 'index')` escaped through `DispatcherUnhandledException`, causing the generic startup-failure dialog and application shutdown.
+
+Root cause and correction:
+
+- `CellEditEnding` cancelled the visual edit and awaited a working-data mutation immediately.
+- That mutation rebuilt `PreviewTable` while WPF DataGrid was still unwinding its edit transaction, leaving internal row/cell indexes stale.
+- The handler now captures row, column and text, returns from `CellEditEnding`, then commits at `DispatcherPriority.Background`.
+- The visual cell/row edit is cancelled only after the original edit event has completed.
+- Cell commit errors are surfaced in the workspace status instead of escaping from an `async void` event path.
+- Queued diagnostic/focus restoration now validates the current item/column projection through `TryApplyGridCell`.
+- A stale restore that reaches a rebuilt grid catches `ArgumentOutOfRangeException` / transient `InvalidOperationException` and is ignored rather than terminating the application.
 
 ## Boundaries
 
@@ -61,7 +74,7 @@ Correction:
 
 ## Regression coverage
 
-Application coverage now includes:
+Application coverage includes:
 
 1. stable code/key/affected-column classification;
 2. frozen composition-result compatibility;
@@ -71,12 +84,14 @@ Application coverage now includes:
 6. separation of unrelated unknown legacy warnings;
 7. true distinct-key count beyond the 25-key navigation window.
 
-The existing Sprint 20 architecture test identity is preserved and now additionally requires:
+The existing Sprint 20 architecture test identity is preserved and additionally requires:
 
 - Warning Center to pass `KeyValues` and `AffectedColumn`;
 - navigation to use the affected-column target;
 - raw Preview column identity to compensate for hidden `#` metadata;
-- runtime store to expose open-finding count.
+- runtime store to expose open-finding count;
+- Enter commits to be deferred until after `CellEditEnding` through the dispatcher;
+- DataGrid stale-selection restore to be bounds-safe.
 
 ## Expected test inventory
 
@@ -92,21 +107,31 @@ Expected total:
 655 / 655
 ```
 
-## Supplied Windows evidence before precise-cell correction
+## Supplied Windows evidence
 
-The latest supplied Debug run reported:
+The latest supplied command log before the Enter correction reported:
 
-- Build: `0 warnings / 0 errors`
-- Domain: `20/20`
-- Application: `294/294`
-- Engine: `68/68`
-- Architecture: `126/126`
-- Infrastructure: `146/146`
-- Total: `654/654`
+- Build: failed with `0 warnings / 2 errors`.
+- Both errors were `CS0121` because a temporary diagnostic `IReadOnlyList.IndexOf` extension conflicted with the existing Quick Assembly extension.
+- Domain: `20/20`.
+- Application: `295/295`.
+- Engine: `68/68`.
+- Architecture: `125/126`; the only failure detected a complete Product/Serial/Quantity alias set in UI diagnostics.
+- Infrastructure: `146/146`.
 
-That automated result belongs to the earlier head. The subsequent UI evidence invalidated the product gate because warning cards selected key cells rather than affected cells.
+Corrections:
 
-The screenshots showed `245 → 244` after editing the selected `Parça Numarası` cell. This was not a valid warning resolution; it demonstrated the wrong-cell navigation defect.
+- Removed the duplicate diagnostic `IndexOf` extension and used a private non-extension list search.
+- Removed role alias sets from UI and reused `ExcelSemanticFieldMatcher`.
+
+The subsequent UI screenshots confirm:
+
+- the scenario workbook generates exactly `7 sorun türü · 8 açık bulgu`;
+- the seven expected cards are visible;
+- editing an affected cell reduces open findings;
+- pressing Enter reproduced the DataGrid index crash described above.
+
+All supplied automated evidence belongs to superseded heads. The current exact-head Windows gate remains pending.
 
 ## Exact-head Windows gate
 
@@ -135,24 +160,23 @@ Expected:
 
 ## Required manual smoke
 
-1. Click the missing-quantity card.
-2. Confirm the selected row belongs to the shown PN/key and the selected column is `Adet`, not `Parça Numarası`.
-3. Enter a valid quantity in that selected `Adet` cell.
-4. Confirm the card's `açık bulgu` count decreases after Preview refresh.
-5. Click again and confirm navigation advances to another still-invalid `Adet` cell.
-6. Click the `Tr İsim` conflict card and confirm the `Tr İsim` cell is selected.
-7. Click the `NSN` conflict card and confirm the `NSN` cell is selected.
-8. Hide `Adet`, click the quantity card, and confirm the column is restored and the correct cell is selected.
-9. Confirm the header distinguishes problem types from total open findings.
-10. Confirm Preview report-element navigation still works.
-11. Export a healthy document and confirm Word generation is unchanged.
+1. Open `KKL_Tum_Uyari_Senaryolari.xlsx` and confirm `7 sorun türü · 8 açık bulgu`.
+2. Click the missing-quantity card and confirm the selected column is `Adet`, not `Parça Numarası`.
+3. Enter a valid quantity and press Enter.
+4. Confirm the application remains open and no startup/error dialog appears.
+5. Confirm the open-finding count decreases after Preview refresh.
+6. Click again and confirm navigation advances to another still-invalid `Adet` cell.
+7. Click `Tr İsim`, `NSN`, duplicate-serial and serial-count cards; confirm each selects its true affected column.
+8. Hide `Adet`, click a quantity card, and confirm the column is restored and the correct cell is selected.
+9. Resolve all seven problem types and confirm the Warning Center reaches zero.
+10. Export the healthy-control sheet and confirm Word generation is unchanged.
 
 ## Gate status
 
-- Previous Debug build/test: `0/0`, `654/654` on superseded head.
-- Wrong-cell navigation: reproduced and corrected in source.
+- Full-scenario warning generation: GREEN (`7` types / `8` findings).
+- Warning recalculation after edit: GREEN in supplied smoke.
+- Wrong-cell navigation: corrected in source; exact-head re-smoke pending.
+- Enter edit crash: reproduced and corrected in source; exact-head re-smoke pending.
 - Current exact-head Release build/test: pending.
-- Correct affected-cell navigation smoke: pending.
-- Warning resolution smoke: pending.
-- Final export smoke: pending.
+- Final healthy export smoke: pending.
 - PR remains draft.
