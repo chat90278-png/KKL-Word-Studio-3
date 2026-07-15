@@ -18,7 +18,8 @@ Remove message-text classification and grouping from Preview/UI consumers withou
 - Added stable table-composition diagnostic codes for configuration, quantity, merge-conflict and serial findings.
 - Added `TableCompositionDiagnostic` with original technical message, record key and affected-column metadata.
 - Existing `Warnings` / `CompositionWarnings` string collections remain available for frozen compatibility and support logs.
-- `TableRowCompositionResult.Diagnostics` and `TableContentNode.CompositionDiagnostics` expose the structured Application projection.
+- The frozen Sprint 15 `TableRowCompositionResult` public shape remains exactly `Rows`, `CellSpans`, `RowGroups`, `Warnings`.
+- `TableContentNode.CompositionDiagnostics` exposes the structured Application projection without expanding the frozen composer result.
 - Legacy text interpretation is isolated in one compatibility classifier rather than repeated by Preview or UI code.
 
 ### Preview diagnostic factory
@@ -35,7 +36,7 @@ Remove message-text classification and grouping from Preview/UI consumers withou
 - Production diagnostics group by factory-owned semantic identity instead of normalized localized messages.
 - Different localized/raw messages can represent one actionable semantic problem.
 - Different problem codes on the same table remain separate actions.
-- Unknown legacy messages retain message-specific identity so unrelated findings cannot collapse into one card.
+- Unrelated unknown legacy messages remain separate rather than collapsing into one card.
 - A narrow legacy fallback preserves historical manually-created diagnostic tests/callers that do not yet provide a grouping key.
 - Error → Warning → Information ordering, source deduplication, distinct key collection and occurrence counts remain intact.
 
@@ -56,19 +57,20 @@ Remove message-text classification and grouping from Preview/UI consumers withou
 - `PreviewDiagnosticSummaryService` remains the single actionable grouping projection.
 - UI does not classify warning text or own diagnostic business rules.
 - Preview renderer, deterministic layout engine and Word exporter remain unchanged.
+- Frozen Sprint 15 table-composition contracts remain unchanged.
 
 ## Regression coverage
 
 New Application tests cover:
 
 1. stable composition code/key/affected-column extraction;
-2. structured composition result while retaining legacy messages;
+2. structured projection while retaining the frozen result and legacy messages;
 3. factory code and grouping identity propagation;
 4. semantic grouping across different localized messages;
 5. separation of different diagnostic codes on the same table;
 6. separation of unrelated unknown legacy messages on the same table.
 
-The existing Sprint 20 architecture guard now requires structured factory ownership and forbids title/key regex classification inside `PreviewDiagnosticFactory`.
+The existing Sprint 20 architecture guard requires structured factory ownership and forbids title/key regex classification inside `PreviewDiagnosticFactory`.
 
 ## Expected test inventory
 
@@ -84,7 +86,47 @@ Expected total:
 654 / 654
 ```
 
-## Windows gate
+## Supplied Windows evidence
+
+The supplied Windows run used Debug commands and did not include `git rev-parse HEAD` or `git status --short`.
+
+Results before the frozen-contract correction:
+
+- Build: `0 warnings / 0 errors`
+- Domain: `20/20`
+- Application: `294/294`
+- Engine: `68/68`
+- Architecture: `125/126`
+- Infrastructure: `146/146`
+- Total: `653 passed / 1 failed / 654 total`
+
+The sole failure was:
+
+```text
+Sprint15FrozenContractGuardTests.ApplicationTableContracts_MatchFrozenSprint15Shape
+```
+
+Root cause: a public `Diagnostics` property had been added to frozen `TableRowCompositionResult`.
+
+Correction:
+
+- Removed `Diagnostics` from `TableRowCompositionResult`.
+- Restored its exact Sprint 15 public property set.
+- Kept structured projection at `TableContentNode.CompositionDiagnostics`.
+- Updated the new regression test to require that the frozen result exposes no `Diagnostics` property.
+
+## Manual smoke evidence
+
+The supplied UI screenshot confirms:
+
+1. missing-quantity findings are grouped into one card with repeat/key counts;
+2. `Tr İsim` and `NSN` merge conflicts remain separate cards on the same table;
+3. warning-card navigation reaches the report element and Excel source;
+4. the accepted Warning Center visual layout remains unchanged.
+
+Manual structured grouping/navigation smoke: GREEN.
+
+## Exact-head Windows gate
 
 ```bat
 git fetch origin
@@ -109,23 +151,19 @@ Expected:
 654 / 654 tests
 ```
 
-## Manual smoke
+## Remaining manual smoke
 
-1. Produce two missing-quantity warnings for different PN/key values on the same table; confirm one grouped card with two keys.
-2. Produce a quantity warning and a conflicting-column warning on the same table; confirm two separate cards.
-3. Produce two unrelated, unclassified table warnings; confirm they remain two separate cards.
-4. Click each card and confirm Preview navigation still reaches the stable report element.
-5. Confirm Excel source/sheet/range/key navigation remains available.
-6. Confirm Error/Warning/Information filters and badge counts remain correct.
-7. Confirm the accepted Warning Center layout has not changed.
-8. Export a healthy document and confirm Word generation is unchanged.
-9. Confirm an unusable source still fails through the existing exporter contract.
+1. Confirm Error/Warning/Information filters and badge counts remain correct.
+2. Export a healthy document and confirm Word generation is unchanged.
+3. Confirm an unusable source still fails through the existing exporter contract.
 
 ## Gate status
 
 - Source review: complete.
+- Supplied Debug build: GREEN `0/0`.
+- Supplied automated test run: blocked only by the now-corrected frozen-contract drift.
+- Manual structured grouping/navigation smoke: GREEN.
 - Container build/test: unavailable in this environment.
-- GitHub Actions: no configured checks observed on the previous merged head.
 - Exact-head Windows Release build/test: pending.
-- Manual structured-grouping/navigation/export smoke: pending.
+- Final export smoke: pending.
 - PR must remain draft until exact-head Windows evidence is GREEN.
