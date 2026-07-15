@@ -14,6 +14,12 @@ public sealed class Sprint24WordExportPreflightArchitectureTests
             "KKL.WordStudio.UI",
             "ViewModels",
             "MainViewModel.cs");
+        var dockViewModel = Read(
+            root,
+            "src",
+            "KKL.WordStudio.UI",
+            "ViewModels",
+            "DockViewModel.cs");
         var warningFilter = Read(
             root,
             "src",
@@ -46,12 +52,15 @@ public sealed class Sprint24WordExportPreflightArchitectureTests
         Assert.True(exporterIndex > saveDialogIndex);
 
         Assert.Contains("ReportPaneViewModel.Shared.OpenForAction()", mainViewModel, StringComparison.Ordinal);
-        Assert.Contains("DockViewModel.Page = DockPage.Warnings", mainViewModel, StringComparison.Ordinal);
-        Assert.Contains("_warningCenterViewModel.ShowErrorsForExportBlock()", mainViewModel, StringComparison.Ordinal);
+        Assert.Contains("DockViewModel.ShowBlockingErrors()", mainViewModel, StringComparison.Ordinal);
         Assert.Contains("preflight.NonBlockingFindingCount", mainViewModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("WarningCenterViewModel warningCenterViewModel", mainViewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("MessageBox", mainViewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("PreviewDiagnosticCatalog.Resolve", mainViewModel, StringComparison.Ordinal);
 
+        Assert.Contains("Show(DockPage.Warnings)", dockViewModel, StringComparison.Ordinal);
+        Assert.Contains("BlockingErrorsRequested?.Invoke()", dockViewModel, StringComparison.Ordinal);
+        Assert.Contains("BlockingErrorsRequested += ShowErrorsForExportBlock", warningFilter, StringComparison.Ordinal);
         Assert.Contains("Filter = WarningCenterFilter.Error", warningFilter, StringComparison.Ordinal);
         Assert.DoesNotContain("new WarningCenter", warningFilter, StringComparison.Ordinal);
 
