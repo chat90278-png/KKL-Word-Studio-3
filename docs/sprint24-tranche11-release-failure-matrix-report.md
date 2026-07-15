@@ -37,4 +37,4 @@ Infrastructure  159
 Total           677 / 677
 ```
 
-Exact-head Windows build/test and manual missing/corrupt-file smoke remain pending.
+The authoritative exact head is maintained in PR #28. Exact-head Windows build/test and manual missing/corrupt-file smoke remain pending.
