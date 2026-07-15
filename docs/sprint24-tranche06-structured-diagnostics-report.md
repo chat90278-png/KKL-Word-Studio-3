@@ -60,7 +60,7 @@ Root cause and correction:
 - The handler now captures row, column and text, returns from `CellEditEnding`, then commits at `DispatcherPriority.Background`.
 - The visual cell/row edit is cancelled only after the original edit event has completed.
 - Cell commit errors are surfaced in the workspace status instead of escaping from an `async void` event path.
-- Queued diagnostic/focus restoration now validates the current item/column projection through `TryApplyGridCell`.
+- Queued diagnostic/focus restoration validates the current item/column projection through `TryApplyGridCell`.
 - A stale restore that reaches a rebuilt grid catches `ArgumentOutOfRangeException` / transient `InvalidOperationException` and is ignored rather than terminating the application.
 
 ## Boundaries
@@ -134,6 +134,12 @@ The subsequent UI screenshots confirm:
 All supplied automated evidence belongs to superseded heads. The current exact-head Windows gate remains pending.
 
 ## Exact-head Windows gate
+
+Current exact head before any further correction:
+
+```text
+f7dbb28bdeb0289ecaba77813bd04ee3ddecec51
+```
 
 ```bat
 git fetch origin
