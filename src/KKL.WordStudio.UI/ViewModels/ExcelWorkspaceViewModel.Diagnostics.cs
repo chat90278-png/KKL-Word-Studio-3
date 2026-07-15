@@ -70,11 +70,12 @@ public sealed partial class ExcelWorkspaceViewModel
             WorkingDataCell keyMatch;
             if (expectedKeyColumnIndex >= 0)
             {
-                var preferredMatch = matches.FirstOrDefault(candidate =>
-                    candidate.ColumnIndex == expectedKeyColumnIndex);
-                if (preferredMatch.ColumnIndex != expectedKeyColumnIndex)
+                var preferredMatches = matches
+                    .Where(candidate => candidate.ColumnIndex == expectedKeyColumnIndex)
+                    .ToList();
+                if (preferredMatches.Count == 0)
                     continue;
-                keyMatch = preferredMatch;
+                keyMatch = preferredMatches[0];
             }
             else
             {
