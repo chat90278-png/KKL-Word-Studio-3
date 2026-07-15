@@ -8,7 +8,6 @@ using KKL.WordStudio.Application.Formatting;
 using KKL.WordStudio.Infrastructure.DataProviders;
 using KKL.WordStudio.Infrastructure.Excel;
 using KKL.WordStudio.Infrastructure.Export.Exporters;
-using KKL.WordStudio.Infrastructure.Persistence;
 using KKL.WordStudio.Infrastructure.ReferenceFormatting;
 using KKL.WordStudio.Infrastructure.Word;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +24,6 @@ public static class InfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddWordStudioInfrastructure(this IServiceCollection services)
     {
-        services.AddSingleton<IProjectService, KwsProjectRepository>();
         services.AddSingleton<IExcelWorkbookReader, OpenXmlExcelWorkbookReader>();
         services.AddSingleton<IFrontMatterDocumentService, OpenXmlFrontMatterDocumentService>();
         services.AddSingleton<IImportedDocumentPreviewProvider, OpenXmlImportedDocumentPreviewProvider>();

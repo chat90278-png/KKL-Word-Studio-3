@@ -8,7 +8,7 @@ using KKL.WordStudio.Shared.Results;
 /// <summary>
 /// Narrow DOCX front-matter importer: validates that the selected file is an
 /// openable WordprocessingML package with a main document/body, then returns
-/// project state. It never edits or rewrites the source file.
+/// session state. It never edits, rewrites, embeds, or copies the source file.
 /// </summary>
 public sealed class OpenXmlFrontMatterDocumentService : IFrontMatterDocumentService
 {
@@ -28,13 +28,11 @@ public sealed class OpenXmlFrontMatterDocumentService : IFrontMatterDocumentServ
             using var document = WordprocessingDocument.Open(filePath, false);
             if (document.MainDocumentPart?.Document?.Body is null)
                 return Result.Failure<FrontMatterDocument>("Seçilen Word belgesinde okunabilir ana belge içeriği bulunamadı.");
-
             return Result.Success(new FrontMatterDocument
             {
                 FileName = Path.GetFileName(filePath),
                 OriginalSourcePath = filePath,
-                ResolvedFilePath = filePath,
-                EmbeddedAssetEntryName = FrontMatterDocument.DefaultEmbeddedAssetEntryName
+                ResolvedFilePath = filePath
             });
         }
         catch (Exception)

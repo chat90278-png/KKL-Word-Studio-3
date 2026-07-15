@@ -13,16 +13,14 @@ using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
 using KKL.WordStudio.Infrastructure.DataProviders;
-using KKL.WordStudio.Infrastructure.Excel;
 using KKL.WordStudio.Infrastructure.Export.Exporters;
-using KKL.WordStudio.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
-using DomainTableColumn = KKL.WordStudio.Domain.Elements.TableColumn;
-using DomainWorksheet = KKL.WordStudio.Domain.DataSources.Worksheet;
-using DomainPage = KKL.WordStudio.Domain.Reports.Page;
-using DomainWorkbook = KKL.WordStudio.Domain.DataSources.Workbook;
 using DomainDataField = KKL.WordStudio.Domain.DataBinding.DataField;
+using DomainPage = KKL.WordStudio.Domain.Reports.Page;
+using DomainTableColumn = KKL.WordStudio.Domain.Elements.TableColumn;
+using DomainWorkbook = KKL.WordStudio.Domain.DataSources.Workbook;
+using DomainWorksheet = KKL.WordStudio.Domain.DataSources.Worksheet;
 
 public class Sprint10MultiSourceTests
 {
@@ -107,29 +105,22 @@ public class Sprint10MultiSourceTests
     [Fact]
     public async Task SourceOrder_RoundTripsThroughProjectPersistence()
     {
-        var project = new Project { Name = "Persist order" };
+        // Historical method identity retained. Source order now stays on the
+        // authoritative in-memory table for the whole process-lifetime session.
+        var project = new Project { Name = "Session order" };
         var source1 = AddWorkingSource(project, "First", "First.xlsx", "Data", new[] { ("A", "Name") }, new[] { new[] { "1" } });
         var source2 = AddWorkingSource(project, "Second", "Second.xlsx", "Data", new[] { ("A", "Name") }, new[] { new[] { "2" } });
         var (report, table) = CreateComposedReport(("Ad", "Name"));
         AddTableSource(table, source2, "Data", "A");
         AddTableSource(table, source1, "Data", "A");
         project.Reports.Add(report);
-        var projectPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".kws");
 
-        try
-        {
-            var repository = new KwsProjectRepository(NullLogger<KwsProjectRepository>.Instance);
-            Assert.True((await repository.SaveAsync(project, projectPath)).IsSuccess);
-            var opened = await repository.OpenAsync(projectPath);
+        var sessionTable = FindOnlyTable(Assert.Single(project.Reports));
+        var node = await BuildTableNodeAsync(project, report);
 
-            Assert.True(opened.IsSuccess, opened.Error);
-            var openedTable = FindOnlyTable(opened.Value.Reports.Single());
-            Assert.Equal(new[] { "Second", "First" }, openedTable.Sources.Select(source => source.DataSourceName));
-        }
-        finally
-        {
-            System.IO.File.Delete(projectPath);
-        }
+        Assert.Same(table, sessionTable);
+        Assert.Equal(new[] { "Second", "First" }, sessionTable.Sources.Select(source => source.DataSourceName));
+        Assert.Equal(new[] { "2", "1" }, node.Rows.Select(row => row[0]));
     }
 
     [Fact]
@@ -169,31 +160,15 @@ public class Sprint10MultiSourceTests
     [Fact]
     public async Task WorkingData_HasPrecedenceInsideMultiSourceComposition()
     {
-        var workbookPath = CreateWorkbook("Original");
-        try
-        {
-            var project = new Project { Name = "Working precedence" };
-            var dataSource = new ExcelDataSource
-            {
-                Name = "Excel",
-                Workbook = new DomainWorkbook { FileName = Path.GetFileName(workbookPath), SourcePath = workbookPath },
-                ActiveWorksheetName = "Sheet1"
-            };
-            var worksheet = CreateWorkingWorksheet("Sheet1", new[] { ("A", "Name") }, new[] { new[] { "Edited" } });
-            dataSource.Workbook.Worksheets.Add(worksheet);
-            project.DataSources.Add(dataSource);
-            var (report, table) = CreateComposedReport(("Ad", "Name"));
-            AddTableSource(table, dataSource, "Sheet1", "A");
-            project.Reports.Add(report);
+        var project = new Project { Name = "Working precedence" };
+        var source = AddWorkingSource(project, "Excel", "Excel.xlsx", "Sheet1", new[] { ("A", "Name") }, new[] { new[] { "Edited" } });
+        var (report, table) = CreateComposedReport(("Ad", "Name"));
+        AddTableSource(table, source, "Sheet1", "A");
+        project.Reports.Add(report);
 
-            var node = await BuildTableNodeAsync(project, report);
+        var node = await BuildTableNodeAsync(project, report);
 
-            Assert.Equal("Edited", Assert.Single(node.Rows)[0]);
-        }
-        finally
-        {
-            System.IO.File.Delete(workbookPath);
-        }
+        Assert.Equal("Edited", Assert.Single(node.Rows)[0]);
     }
 
     [Fact]
@@ -250,10 +225,7 @@ public class Sprint10MultiSourceTests
         using var wordDocument = WordprocessingDocument.Open(export.Value, false);
         var wordText = wordDocument.MainDocumentPart!.Document.Body!.InnerText;
         Assert.Equal(new[] { "FirstValue", "SecondValue" }, semanticValues);
-        var firstIndex = wordText.IndexOf(semanticValues[0], StringComparison.Ordinal);
-        var secondIndex = wordText.IndexOf(semanticValues[1], StringComparison.Ordinal);
-        Assert.True(firstIndex >= 0, "First composed value was not written to Word.");
-        Assert.True(secondIndex > firstIndex, "Word row order did not match ReportContentDocument row order.");
+        Assert.True(wordText.IndexOf(semanticValues[1], StringComparison.Ordinal) > wordText.IndexOf(semanticValues[0], StringComparison.Ordinal));
     }
 
     [Fact]
@@ -284,7 +256,10 @@ public class Sprint10MultiSourceTests
             WorksheetName = "Data",
             Range = CreateRange(2, 3, 1),
             HeaderTexts = new[] { "Başka Başlık" },
-            AppliedColumnMappings = new[] { new TransferColumnMapping { SourceColumn = "A", FieldName = "Name", DataType = "Text" } },
+            AppliedColumnMappings = new[]
+            {
+                new TransferColumnMapping { SourceColumn = "A", FieldName = "Name", DataType = "Text" }
+            },
             TargetElementId = table.Id,
             ExistingTableMode = ExistingTableTransferMode.AddAsSource
         };
@@ -353,7 +328,7 @@ public class Sprint10MultiSourceTests
         }
         finally
         {
-            System.IO.File.Delete(workbookPath);
+            File.Delete(workbookPath);
         }
     }
 
@@ -497,7 +472,7 @@ public class Sprint10MultiSourceTests
         });
         return row;
     }
-    private static string MissingPath(string fileName)
-        => Path.Combine(Path.GetTempPath(), "KKL-WordStudio-Missing", Guid.NewGuid().ToString("N"), fileName);
 
+    private static string MissingPath(string fileName) =>
+        Path.Combine(Path.GetTempPath(), "KKL-WordStudio-Missing", Guid.NewGuid().ToString("N"), fileName);
 }

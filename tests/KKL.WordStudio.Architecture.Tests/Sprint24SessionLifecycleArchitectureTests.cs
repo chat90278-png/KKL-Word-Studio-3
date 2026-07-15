@@ -9,10 +9,14 @@ public sealed class Sprint24SessionLifecycleArchitectureTests
     {
         var root = SolutionRootLocator.Find();
         var source = Read(root, "src", "KKL.WordStudio.UI", "ViewModels", "MainViewModel.cs");
+        var factory = Read(root, "src", "KKL.WordStudio.Application", "Workspace", "WorkspaceSessionFactory.cs");
 
-        Assert.Contains("projectService.CreateNew()", source, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceSessionFactory.CreateDefault()", source, StringComparison.Ordinal);
         Assert.Contains("_workspace.SetActiveProject", source, StringComparison.Ordinal);
         Assert.Contains("ExportToWordAsync", source, StringComparison.Ordinal);
+        Assert.Contains("new Project", factory, StringComparison.Ordinal);
+        Assert.Contains("new Report", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProjectService", source, StringComparison.Ordinal);
         Assert.DoesNotContain("NewProject()", source, StringComparison.Ordinal);
         Assert.DoesNotContain("OpenProjectAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("SaveProjectAsync", source, StringComparison.Ordinal);
@@ -62,6 +66,52 @@ public sealed class Sprint24SessionLifecycleArchitectureTests
         Assert.DoesNotContain("new ExcelReportTransferService", quick, StringComparison.Ordinal);
         Assert.DoesNotContain("önce bir proje oluşturun veya açın", quick, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Rapor çalışma alanı hazır değil.", quick, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NativeProjectPersistence_IsAbsentFromProductionComposition()
+    {
+        var root = SolutionRootLocator.Find();
+        var productionFiles = SourceScan.ReadCodeFiles(root, "src", ".cs");
+        var forbiddenTokens = new[]
+        {
+            "IProjectService",
+            "KwsProjectRepository",
+            "KwsProjectManifest",
+            "ProjectFileExtension",
+            "ProjectFileFormatVersion",
+            "\".kws\""
+        };
+
+        foreach (var token in forbiddenTokens)
+        {
+            var offenders = productionFiles
+                .Where(file => file.Text.Contains(token, StringComparison.Ordinal))
+                .Select(file => file.RelativePath)
+                .ToList();
+            Assert.True(
+                offenders.Count == 0,
+                $"Native project lifecycle token '{token}' remains in production: {string.Join(", ", offenders)}");
+        }
+
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.Application",
+            "Abstractions",
+            "IProjectService.cs")));
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.Infrastructure",
+            "Persistence",
+            "KwsProjectRepository.cs")));
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.Infrastructure",
+            "Persistence",
+            "KwsProjectManifest.cs")));
     }
 
     private static string Read(string root, params string[] parts) =>

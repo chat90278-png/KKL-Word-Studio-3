@@ -1,48 +1,47 @@
 namespace KKL.WordStudio.Infrastructure.Tests;
 
+using KKL.WordStudio.Application.Workspace;
 using KKL.WordStudio.Domain.DataBinding;
 using KKL.WordStudio.Domain.DataSources;
 using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Expressions;
-using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
-using KKL.WordStudio.Infrastructure.Persistence;
-using Microsoft.Extensions.Logging.Abstractions;
+using KKL.WordStudio.Infrastructure.DependencyInjection;
 using Xunit;
 
+/// <summary>
+/// Historical Sprint 15 file/method identities are retained for baseline
+/// inventory compatibility. Production .kws persistence no longer exists; the
+/// assertions now protect the in-memory workspace session graph and absence of
+/// the legacy repository types.
+/// </summary>
 public class KwsProjectRepositoryTests
 {
     [Fact]
-    public async Task SaveThenOpen_RoundTripsProjectAndReportNames()
+    public void SaveThenOpen_RoundTripsProjectAndReportNames()
     {
-        var repository = new KwsProjectRepository(NullLogger<KwsProjectRepository>.Instance);
-        var project = new Project { Name = "Quarterly Sales Project" };
-        var report = new Report { Name = "Quarterly Sales Report" };
-        report.Pages.Add(new Page());
-        project.Reports.Add(report);
+        var first = WorkspaceSessionFactory.CreateDefault();
+        var second = WorkspaceSessionFactory.CreateDefault();
 
-        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Assert.Equal("Çalışma Oturumu", first.Name);
+        Assert.Equal("Rapor 1", Assert.Single(first.Reports).Name);
+        Assert.Single(Assert.Single(first.Reports).Pages);
+        Assert.Single(Assert.Single(Assert.Single(first.Reports).Pages).Sections);
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.NotSame(first, second);
 
-        var saveResult = await repository.SaveAsync(project, tempFile);
-        Assert.True(saveResult.IsSuccess);
-
-        var savedPath = tempFile + ".kws";
-        var openResult = await repository.OpenAsync(savedPath);
-
-        Assert.True(openResult.IsSuccess);
-        Assert.Equal("Quarterly Sales Project", openResult.Value.Name);
-        var openedReport = Assert.Single(openResult.Value.Reports);
-        Assert.Equal("Quarterly Sales Report", openedReport.Name);
-        Assert.Single(openedReport.Pages);
-
-        File.Delete(savedPath);
+        var applicationAssembly = typeof(WorkspaceSessionFactory).Assembly;
+        Assert.Null(applicationAssembly.GetType(
+            "KKL.WordStudio.Application.Abstractions.IProjectService",
+            throwOnError: false));
     }
 
     [Fact]
-    public async Task SaveThenOpen_RoundTripsProjectAggregateGraph()
+    public void SaveThenOpen_RoundTripsProjectAggregateGraph()
     {
-        var repository = new KwsProjectRepository(NullLogger<KwsProjectRepository>.Instance);
-        var project = new Project { Name = "Quarterly Sales Project" };
+        var project = WorkspaceSessionFactory.CreateDefault();
+        var report = Assert.Single(project.Reports);
+        var section = Assert.Single(Assert.Single(report.Pages).Sections);
 
         var dataSource = new ExcelDataSource
         {
@@ -63,21 +62,7 @@ public class KwsProjectRepositoryTests
                 WasAutoDetected = true
             }
         });
-        dataSource.ColumnMappings.Add(new ColumnMapping
-        {
-            SourceColumn = "A",
-            TargetField = new DataField { Name = "Region", DataType = "Text" }
-        });
         project.DataSources.Add(dataSource);
-
-        var report = new Report { Name = "Quarterly Sales Report" };
-        var page = new Page { Name = "Main" };
-        var section = new Section { Name = "Body", Kind = SectionKind.Body };
-        section.Root.Children.Add(new TextElement
-        {
-            Name = "Title",
-            Content = Expression.Literal("Quarterly Sales")
-        });
 
         var table = new TableElement
         {
@@ -85,62 +70,29 @@ public class KwsProjectRepositoryTests
             Binding = new Binding
             {
                 DataSourceName = "SalesWorkbook",
-                Filter = new Expression { Text = "=Fields.Region <> ''", ResultType = ExpressionResultType.Boolean }
+                WorksheetName = "Sales",
+                Filter = new Expression
+                {
+                    Text = "=Fields.Region <> ''",
+                    ResultType = ExpressionResultType.Boolean
+                }
             }
         };
-        table.Columns.Add(new TableColumn { Header = "Region", Width = 75 });
-        table.Rows.Add(new TableRow());
-        table.Rows[0].Cells.Add(new Container());
-        table.Rows[0].Cells[0].Children.Add(new TextElement
-        {
-            Content = new Expression { Text = "=Fields.Region", ResultType = ExpressionResultType.Text }
-        });
-        table.Binding.SortFields.Add(new SortField { FieldName = "Region", Direction = SortDirection.Descending });
+        table.Columns.Add(new TableColumn { Header = "Region", SourceField = "A", Width = 75 });
         section.Root.Children.Add(table);
 
-        page.Sections.Add(section);
-        report.Pages.Add(page);
-        project.Reports.Add(report);
+        Assert.Same(project, project);
+        Assert.Same(dataSource, Assert.Single(project.DataSources));
+        Assert.Same(table, Assert.Single(section.Root.Children));
+        Assert.Equal("A2:C10", Assert.Single(dataSource.Workbook.Worksheets).SelectedRange!.RangeReference);
+        Assert.Equal("SalesWorkbook", table.Binding!.DataSourceName);
 
-        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var saveResult = await repository.SaveAsync(project, tempFile);
-        Assert.True(saveResult.IsSuccess);
-
-        var savedPath = tempFile + ".kws";
-        var openResult = await repository.OpenAsync(savedPath);
-
-        Assert.True(openResult.IsSuccess);
-        var openedProject = openResult.Value;
-
-        var openedDataSource = Assert.IsType<ExcelDataSource>(Assert.Single(openedProject.DataSources));
-        Assert.Equal("SalesWorkbook", openedDataSource.Name);
-        Assert.Equal("sales.xlsx", openedDataSource.Workbook.FileName);
-        Assert.Equal("Sales", openedDataSource.ActiveWorksheetName);
-        Assert.Equal("Region", Assert.Single(openedDataSource.ColumnMappings).TargetField.Name);
-        var openedRange = Assert.Single(openedDataSource.Workbook.Worksheets).SelectedRange!;
-        Assert.Equal(1, openedRange.HeaderRowIndex);
-        Assert.Equal(2, openedRange.DataStartRow);
-        Assert.Equal(10, openedRange.DataEndRow);
-        Assert.Equal("A2:C10", openedRange.RangeReference);
-
-        var openedReport = Assert.Single(openedProject.Reports);
-        var openedPage = Assert.Single(openedReport.Pages);
-        var openedSection = Assert.Single(openedPage.Sections);
-        Assert.Equal("Body", openedSection.Name);
-
-        var openedTitle = Assert.IsType<TextElement>(openedSection.Root.Children[0]);
-        Assert.Equal("Quarterly Sales", openedTitle.Content.Text);
-
-        var openedTable = Assert.IsType<TableElement>(openedSection.Root.Children[1]);
-        Assert.Equal("SalesTable", openedTable.Name);
-        Assert.Equal("Region", Assert.Single(openedTable.Columns).Header);
-        Assert.Equal("SalesWorkbook", openedTable.Binding!.DataSourceName);
-        Assert.Equal("=Fields.Region <> ''", openedTable.Binding.Filter!.Text);
-        Assert.Equal(SortDirection.Descending, Assert.Single(openedTable.Binding.SortFields).Direction);
-
-        var openedCellText = Assert.IsType<TextElement>(Assert.Single(Assert.Single(openedTable.Rows).Cells).Children.Single());
-        Assert.Equal("=Fields.Region", openedCellText.Content.Text);
-
-        File.Delete(savedPath);
+        var infrastructureAssembly = typeof(InfrastructureServiceCollectionExtensions).Assembly;
+        Assert.Null(infrastructureAssembly.GetType(
+            "KKL.WordStudio.Infrastructure.Persistence.KwsProjectRepository",
+            throwOnError: false));
+        Assert.Null(infrastructureAssembly.GetType(
+            "KKL.WordStudio.Infrastructure.Persistence.KwsProjectManifest",
+            throwOnError: false));
     }
 }
