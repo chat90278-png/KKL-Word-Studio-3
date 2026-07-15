@@ -25,7 +25,12 @@ public sealed class OpenXmlFrontMatterDocumentService : IFrontMatterDocumentServ
 
         try
         {
-            using var document = WordprocessingDocument.Open(filePath, false);
+            using var stream = new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read);
+            using var document = WordprocessingDocument.Open(stream, false);
             if (document.MainDocumentPart?.Document?.Body is null)
                 return Result.Failure<FrontMatterDocument>("Seçilen Word belgesinde okunabilir ana belge içeriği bulunamadı.");
             return Result.Success(new FrontMatterDocument

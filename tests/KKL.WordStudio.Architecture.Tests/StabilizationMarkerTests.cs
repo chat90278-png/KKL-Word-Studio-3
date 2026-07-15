@@ -89,12 +89,10 @@ public sealed class StabilizationMarkerTests
         var path = Path.Combine(root, "src", "KKL.WordStudio.Infrastructure", "Word", "OpenXmlFrontMatterDocumentService.cs");
         var source = SourceScan.ReadWithoutComments(path);
 
-        Assert.Matches(
-            new Regex(@"WordprocessingDocument\s*\.\s*Open\s*\(\s*filePath\s*,\s*false\s*\)", RegexOptions.CultureInvariant),
-            source);
-        Assert.DoesNotMatch(
-            new Regex(@"WordprocessingDocument\s*\.\s*Open\s*\([^,]+,\s*true\s*\)", RegexOptions.Singleline | RegexOptions.CultureInvariant),
-            source);
+        Assert.Contains("new FileStream(", source, StringComparison.Ordinal);
+        Assert.Contains("FileAccess.Read", source, StringComparison.Ordinal);
+        Assert.Contains("WordprocessingDocument.Open(stream, false)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("WordprocessingDocument.Open(stream, true)", source, StringComparison.Ordinal);
     }
 
     [Fact]
