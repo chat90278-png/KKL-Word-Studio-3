@@ -50,7 +50,7 @@
 
 ## Test total
 
-The earlier `652/652` expectation was incorrect. The latest Windows run discovered these project totals:
+The earlier `652/652` expectation was incorrect. Windows test discovery established these project totals:
 
 - Domain: `20`
 - Application: `288`
@@ -64,7 +64,7 @@ Current exact-suite target:
 648 / 648
 ```
 
-The test count is preserved while the obsolete fallback-engine tests are retargeted to the authoritative deterministic engine contract.
+The obsolete production fallback engine is removed while the baseline test file and method identities are preserved. Those legacy-named tests now execute the authoritative deterministic engine.
 
 Coverage includes:
 
@@ -92,7 +92,9 @@ The supplied Windows runs did not include `git rev-parse HEAD`, so they cannot b
 - OpenXML row-property mutation removing `TableHeader` or `TableRowHeight`;
 - an older caption-boundary assertion conflicting with the Sprint 24 heading-chain rule;
 - brittle source-regex architecture checks;
-- a real second `IDocumentLayoutEngine`: the unused Sprint 14 fallback bootstrap.
+- a real second `IDocumentLayoutEngine`: the unused Sprint 14 fallback bootstrap;
+- a Sprint 15 baseline test still constructing the removed fallback type;
+- baseline inventory requiring the historical fallback test file and three method identities to remain present.
 
 Corrections:
 
@@ -101,9 +103,11 @@ Corrections:
 - Automatic numbered-caption fidelity compares automatic and equivalent visible captions under the current pagination rule.
 - Word row pagination adds `CantSplit` without rebuilding row properties, preserving native header and height properties.
 - Architecture verification inspects compiled Engine types.
-- The unused fallback engine was removed and its tests were converted to deterministic engine contract tests.
+- The unused production fallback engine was removed.
+- The Sprint 15 cell-span contract now runs through `DeterministicDocumentLayoutEngine`.
+- The baseline fallback test filename and method names remain intact, but their implementation now validates deterministic-engine compatibility.
 
-The latest supplied run reached build `0 warnings / 0 errors`; all tests passed except the architecture test that identified the real fallback implementation. That root cause is now removed, but a new exact-head Windows run is still required.
+The latest supplied run failed compilation with one `CS0246` fallback reference, so its subsequent test output is not a valid full-suite result. It also surfaced the baseline inventory identity requirement. Both issues are corrected, but a new exact-head Windows run is still required.
 
 ## Windows gate
 
@@ -144,8 +148,9 @@ Expected:
 ## Gate status
 
 - Source review: complete.
-- Latest supplied Windows build: `0 warnings / 0 errors` on an unverified head.
-- Latest supplied Windows tests: `647 passed / 1 failed / 648 total`; the sole failure identified the now-removed fallback engine.
+- Latest supplied Windows build: RED with `0 warnings / 1 error` on an unverified head; the remaining fallback test reference is corrected.
+- Test output following that failed build is not accepted as a gate.
+- Baseline test inventory compatibility is restored without reintroducing a production fallback engine.
 - GitHub CI status: no checks are configured/reported for the current head.
 - Current exact-head Windows build/test/manual smoke: pending user evidence.
 - PR must remain draft and must not be merged until the Windows gate is GREEN.
