@@ -45,7 +45,7 @@ public sealed class Sprint15ContractBootstrapTests
                 ShowPageNumbers = false
             }
         };
-        var engine = new FallbackDocumentLayoutEngine();
+        var engine = new DeterministicDocumentLayoutEngine();
 
         var result = await engine.LayoutAsync(new DocumentLayoutRequest
         {
