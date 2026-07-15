@@ -12,6 +12,14 @@ public sealed class Sprint22BrandingArchitectureTests
         var shell = Read(root, "src", "KKL.WordStudio.UI", "MainWindow.xaml");
         var shellCode = Read(root, "src", "KKL.WordStudio.UI", "MainWindow.xaml.cs");
         var generator = Read(root, "scripts", "generate-app-icon.ps1");
+        var packager = Read(root, "scripts", "release-win-x64.ps1");
+        var legacyIcon = Path.Combine(
+            root,
+            "src",
+            "KKL.WordStudio.UI",
+            "Assets",
+            "Brand",
+            "AppIcon.ico");
 
         Assert.Contains("<GeneratedApplicationIcon>$(MSBuildProjectDirectory)\\$(IntermediateOutputPath)Generated\\AppIcon.ico</GeneratedApplicationIcon>", project, StringComparison.Ordinal);
         Assert.Contains("<ApplicationIcon>$(GeneratedApplicationIcon)</ApplicationIcon>", project, StringComparison.Ordinal);
@@ -19,7 +27,9 @@ public sealed class Sprint22BrandingArchitectureTests
         Assert.Contains("BeforeTargets=\"CoreCompile\"", project, StringComparison.Ordinal);
         Assert.Contains("Assets\\Brand\\AppIcon.base64", project, StringComparison.Ordinal);
         Assert.Contains("scripts\\generate-app-icon.ps1", project, StringComparison.Ordinal);
+        Assert.Contains("<Version>1.0.2</Version>", project, StringComparison.Ordinal);
         Assert.DoesNotContain("<Resource Include=\"Assets\\Brand\\AppIcon.ico\" />", project, StringComparison.Ordinal);
+        Assert.False(File.Exists(legacyIcon), "The legacy checked-in AppIcon.ico must not remain in the repository.");
 
         Assert.Contains("<Resource Include=\"Assets\\Brand\\BrandMark.png\" />", project, StringComparison.Ordinal);
         Assert.Contains("<Resource Include=\"Assets\\Brand\\BrandMarkSmall.png\" />", project, StringComparison.Ordinal);
@@ -35,6 +45,10 @@ public sealed class Sprint22BrandingArchitectureTests
         Assert.Contains("[IO.BinaryWriter]::new", generator, StringComparison.Ordinal);
         Assert.Contains("duplicate frame offsets", generator, StringComparison.Ordinal);
         Assert.Contains("non-PNG frame", generator, StringComparison.Ordinal);
+
+        Assert.Contains("KKL-Word-Studio-v$Version-win-x64.exe", packager, StringComparison.Ordinal);
+        Assert.Contains("KKL-Word-Studio-v*-single-exe", packager, StringComparison.Ordinal);
+        Assert.Contains("Remove-Item $publishDirectory -Recurse -Force", packager, StringComparison.Ordinal);
 
         // Loading an ICO through Window.Icon invokes WPF's runtime TypeConverter.
         // The application icon is generated only for the native executable at compile time.
