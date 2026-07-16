@@ -1,5 +1,6 @@
 namespace KKL.WordStudio.UI.Services;
 
+using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Windows.Media;
@@ -12,6 +13,8 @@ using System.Windows.Media.Imaging;
 /// </summary>
 public sealed class GuideImageSourceLoader
 {
+    private static readonly byte[] PngEndMarker = [0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82];
+
     private readonly Assembly _assembly = typeof(GuideImageSourceLoader).Assembly;
     private readonly Dictionary<string, ImageSource?> _embeddedCache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -75,27 +78,78 @@ public sealed class GuideImageSourceLoader
 
     internal static byte[] DecodeBase64Resource(string text)
     {
+        if (string.IsNullOrWhiteSpace(text))
+            throw new FormatException("Guide image resource is empty.");
+
         var encoded = new StringBuilder(text.Length);
         foreach (var character in text)
         {
-            if (char.IsWhiteSpace(character))
-                continue;
-
             if (char.IsAsciiLetterOrDigit(character) || character is '+' or '/' or '=')
                 encoded.Append(character);
         }
 
         var normalized = encoded.ToString();
+        var jpegStart = normalized.IndexOf("/9j/", StringComparison.Ordinal);
+        var pngStart = normalized.IndexOf("iVBORw0KGgo", StringComparison.Ordinal);
+        var start = jpegStart < 0
+            ? pngStart
+            : pngStart < 0
+                ? jpegStart
+                : Math.Min(jpegStart, pngStart);
+
+        if (start < 0)
+            throw new FormatException("Guide image resource does not contain a JPEG or PNG payload.");
+
+        normalized = normalized[start..];
+
+        // Repository text transports may append metadata after the payload. Remove
+        // existing padding and rebuild it after isolating the known image prefix.
         var paddingIndex = normalized.IndexOf('=');
         if (paddingIndex >= 0)
+            normalized = normalized[..paddingIndex];
+
+        while (normalized.Length > 0 && normalized.Length % 4 == 1)
+            normalized = normalized[..^1];
+
+        if (normalized.Length == 0)
+            throw new FormatException("Guide image resource has no decodable payload.");
+
+        var requiredPadding = (4 - normalized.Length % 4) % 4;
+        if (requiredPadding > 0)
+            normalized = normalized.PadRight(normalized.Length + requiredPadding, '=');
+
+        return TrimToImagePayload(Convert.FromBase64String(normalized));
+    }
+
+    private static byte[] TrimToImagePayload(byte[] bytes)
+    {
+        if (IsJpeg(bytes))
         {
-            var end = paddingIndex + 1;
-            if (end < normalized.Length && normalized[end] == '=') end++;
-            normalized = normalized[..end];
+            for (var index = 2; index < bytes.Length - 1; index++)
+            {
+                if (bytes[index] == 0xFF && bytes[index + 1] == 0xD9)
+                    return bytes[..(index + 2)];
+            }
+        }
+        else if (IsPng(bytes))
+        {
+            var markerIndex = bytes.AsSpan().IndexOf(PngEndMarker);
+            if (markerIndex >= 0)
+                return bytes[..(markerIndex + PngEndMarker.Length)];
         }
 
-        return Convert.FromBase64String(normalized);
+        throw new FormatException("Guide image resource is truncated or unsupported.");
     }
+
+    private static bool IsJpeg(byte[] bytes) =>
+        bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+
+    private static bool IsPng(byte[] bytes) =>
+        bytes.Length >= 8
+        && bytes[0] == 0x89
+        && bytes[1] == 0x50
+        && bytes[2] == 0x4E
+        && bytes[3] == 0x47;
 
     private static ImageSource CreateBitmap(byte[] bytes)
     {
