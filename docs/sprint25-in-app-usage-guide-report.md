@@ -20,6 +20,22 @@
 9. Hızlı Rapor
 10. Word Dosyası Oluştur
 
+## Editable content
+
+- `Düzenleme Modu` edits the selected section without changing the live workspace.
+- Title, purpose, step list, warning/tip text and the screenshot can be replaced.
+- `Kaydet` persists only the selected section under `%LocalAppData%\KKL Word Studio\UsageGuide`.
+- `Vazgeç` discards the current draft.
+- `Seçili Bölümü Varsayılana Döndür` removes that section's local override.
+- Custom images are copied into the user profile and loaded without keeping files locked.
+
+## Image quality and asset safety
+
+- Embedded and custom images use high-quality WPF scaling.
+- `StretchDirection=DownOnly` prevents small screenshots from being enlarged into blurred full-width images.
+- Embedded Base64 decoding tolerates whitespace and repository formatting artifacts.
+- Architecture guards validate that every default screen decodes to a supported JPEG or PNG payload.
+
 ## Gate
 
-Pending exact-head Windows Release build/test and manual guide navigation smoke.
+Pending exact-head Windows Release build/test and manual guide navigation/editing smoke.
