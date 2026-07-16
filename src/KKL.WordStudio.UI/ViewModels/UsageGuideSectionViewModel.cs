@@ -1,85 +1,75 @@
 namespace KKL.WordStudio.UI.ViewModels;
 
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
-using System.IO;
+using System.Collections.ObjectModel;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
 using KKL.WordStudio.UI.Models;
 using KKL.WordStudio.UI.Services;
 
 public sealed partial class UsageGuideSectionViewModel : ViewModelBase
 {
+    private readonly UsageGuideSection _defaults;
     private readonly GuideImageSourceLoader _imageLoader;
-    private readonly string _defaultImageAssetName;
 
-    public UsageGuideSectionViewModel(UsageGuideSection section, GuideImageSourceLoader imageLoader)
+    public UsageGuideSectionViewModel(
+        UsageGuideSection section,
+        GuideImageSourceLoader imageLoader,
+        UsageGuideSectionOverride? contentOverride,
+        string? customImagePath)
     {
+        _defaults = section;
         _imageLoader = imageLoader;
-        _defaultImageAssetName = section.ImageAssetName;
         _title = section.Title;
-        Icon = section.Icon;
         _purpose = section.Purpose;
-        _actionsText = string.Join(Environment.NewLine, section.Actions);
+        _actions = new ObservableCollection<string>(section.Actions);
         _tip = section.Tip;
-        _imageSource = imageLoader.Load(section.ImageAssetName);
+        _imageSource = imageLoader.LoadEmbedded(section.ImageAssetName);
+
+        if (contentOverride is not null)
+            ApplyOverride(contentOverride, customImagePath);
     }
 
-    public string Icon { get; }
+    public string Id => _defaults.Id;
+    public string Icon => _defaults.Icon;
+    public string DefaultImageAssetName => _defaults.ImageAssetName;
 
-    [ObservableProperty] private string _title;
-    [ObservableProperty] private string _purpose;
-    [ObservableProperty] private string _actionsText;
-    [ObservableProperty] private string _tip;
-    [ObservableProperty] private ImageSource? _imageSource;
-    [ObservableProperty] private string? _customImagePath;
+    [ObservableProperty]
+    private string _title;
 
-    public IReadOnlyList<string> Actions => ActionsText
-        .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    [ObservableProperty]
+    private string _purpose;
 
-    partial void OnActionsTextChanged(string value) => OnPropertyChanged(nameof(Actions));
+    [ObservableProperty]
+    private ObservableCollection<string> _actions;
 
-    [RelayCommand]
-    private void ChangeImage()
+    [ObservableProperty]
+    private string _tip;
+
+    [ObservableProperty]
+    private ImageSource? _imageSource;
+
+    [ObservableProperty]
+    private string? _customImagePath;
+
+    public void ApplyOverride(UsageGuideSectionOverride contentOverride, string? customImagePath)
     {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Kılavuz ekran görüntüsünü seçin",
-            Filter = "Görsel dosyaları|*.png;*.jpg;*.jpeg;*.webp|Tüm dosyalar|*.*"
-        };
-        if (dialog.ShowDialog() != true) return;
-
-        var imageDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "KKL Word Studio", "Guide", "Images");
-        Directory.CreateDirectory(imageDirectory);
-        var extension = Path.GetExtension(dialog.FileName);
-        var destination = Path.Combine(imageDirectory, $"{Guid.NewGuid():N}{extension}");
-        File.Copy(dialog.FileName, destination, overwrite: true);
-        RestoreImage(destination);
+        Title = contentOverride.Title;
+        Purpose = contentOverride.Purpose;
+        Actions = new ObservableCollection<string>(contentOverride.Actions);
+        Tip = contentOverride.Tip;
+        CustomImagePath = customImagePath;
+        ImageSource = customImagePath is null
+            ? _imageLoader.LoadEmbedded(_defaults.ImageAssetName)
+            : _imageLoader.LoadFile(customImagePath) ?? _imageLoader.LoadEmbedded(_defaults.ImageAssetName);
     }
 
-    public void RestoreImage(string? path)
+    public void ResetToDefault()
     {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
-        CustomImagePath = path;
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.UriSource = new Uri(path, UriKind.Absolute);
-        bitmap.EndInit();
-        bitmap.Freeze();
-        ImageSource = bitmap;
-    }
-
-    public void ResetToDefaults(UsageGuideSection section)
-    {
-        Title = section.Title;
-        Purpose = section.Purpose;
-        ActionsText = string.Join(Environment.NewLine, section.Actions);
-        Tip = section.Tip;
+        Title = _defaults.Title;
+        Purpose = _defaults.Purpose;
+        Actions = new ObservableCollection<string>(_defaults.Actions);
+        Tip = _defaults.Tip;
         CustomImagePath = null;
-        ImageSource = _imageLoader.Load(_defaultImageAssetName);
+        ImageSource = _imageLoader.LoadEmbedded(_defaults.ImageAssetName);
     }
 }
