@@ -31,6 +31,8 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                        <Button Content="Kullanım Kılavuzu" Style="{StaticResource Btn.Mini}"
+                                Command="{Binding ShowUsageGuideCommand}" Height="36" Padding="14,0" Margin="0,0,8,0" />
                         <Button Content="Word Dosyası Oluştur" Style="{StaticResource Btn.Primary}" Command="{Binding ExportToWordCommand}" />
                     </StackPanel>
 
@@ -106,6 +108,13 @@
                         <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{DynamicResource Brush.Border}" />
                         <ContentControl x:Name="ContextDockHost" Grid.Column="2" />
                     </Grid>
+                </Border>
+
+                <!-- Full-workspace, non-modal usage guide. Existing editor views remain alive underneath. -->
+                <Border Grid.ColumnSpan="3" Panel.ZIndex="200"
+                        Background="{DynamicResource Brush.App.Background}"
+                        Visibility="{Binding IsUsageGuideOpen, Converter={StaticResource BoolToVisibility}}">
+                    <ContentControl x:Name="UsageGuideHost" />
                 </Border>
             </Grid>
         </DockPanel>
