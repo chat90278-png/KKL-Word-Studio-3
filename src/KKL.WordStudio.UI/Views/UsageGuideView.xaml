@@ -35,7 +35,7 @@
         <Style x:Key="GuideDisplayPanel" TargetType="StackPanel">
             <Setter Property="Visibility" Value="Visible" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                <DataTrigger Binding="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
                     <Setter Property="Visibility" Value="Collapsed" />
                 </DataTrigger>
             </Style.Triggers>
@@ -70,7 +70,7 @@
                                Foreground="#FFDCEBFF" FontSize="11.5" Margin="0,5,0,0" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="Düzenleme Modu" Command="{Binding BeginEditCommand}" Style="{StaticResource Btn.Mini}" Height="36" Padding="16,0" Margin="0,0,8,0">
+                    <Button Content="Düzenleme Modu" Command="{Binding BeginEditCommand}" Height="36" Padding="16,0" Margin="0,0,8,0">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource Btn.Mini}">
                                 <Setter Property="Visibility" Value="Visible" />
@@ -86,7 +86,7 @@
                             Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}" />
                     <Button Content="Vazgeç" Command="{Binding CancelEditsCommand}" Style="{StaticResource Btn.Mini}" Height="36" Padding="16,0" Margin="0,0,8,0"
                             Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}" />
-                    <Button x:Name="CloseGuideButton" Content="Çalışma Alanına Dön" Style="{StaticResource Btn.Mini}" Height="36" Padding="16,0">
+                    <Button x:Name="CloseGuideButton" Content="Çalışma Alanına Dön" Height="36" Padding="16,0">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource Btn.Mini}">
                                 <Setter Property="IsEnabled" Value="True" />
