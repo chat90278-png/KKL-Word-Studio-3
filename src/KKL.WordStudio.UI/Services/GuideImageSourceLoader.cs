@@ -1,12 +1,13 @@
 namespace KKL.WordStudio.UI.Services;
 
 using System.Reflection;
+using System.Text;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 /// <summary>
-/// Loads the approved high-resolution guide screens from embedded Base64 resources
-/// and user-selected replacements from disk. Bitmap data is fully cached in memory,
+/// Loads the approved guide screens from embedded Base64 resources and
+/// user-selected replacements from disk. Bitmap data is fully cached in memory,
 /// so neither the executable resource stream nor a custom image file stays locked.
 /// </summary>
 public sealed class GuideImageSourceLoader
@@ -35,7 +36,7 @@ public sealed class GuideImageSourceLoader
                 return _embeddedCache[assetName] = null;
 
             using var reader = new StreamReader(resource);
-            var bytes = Convert.FromBase64String(reader.ReadToEnd().Trim());
+            var bytes = DecodeBase64Resource(reader.ReadToEnd());
             return _embeddedCache[assetName] = CreateBitmap(bytes);
         }
         catch (FormatException)
@@ -70,6 +71,30 @@ public sealed class GuideImageSourceLoader
         {
             return null;
         }
+    }
+
+    internal static byte[] DecodeBase64Resource(string text)
+    {
+        var encoded = new StringBuilder(text.Length);
+        foreach (var character in text)
+        {
+            if (char.IsWhiteSpace(character))
+                continue;
+
+            if (char.IsAsciiLetterOrDigit(character) || character is '+' or '/' or '=')
+                encoded.Append(character);
+        }
+
+        var normalized = encoded.ToString();
+        var paddingIndex = normalized.IndexOf('=');
+        if (paddingIndex >= 0)
+        {
+            var end = paddingIndex + 1;
+            if (end < normalized.Length && normalized[end] == '=') end++;
+            normalized = normalized[..end];
+        }
+
+        return Convert.FromBase64String(normalized);
     }
 
     private static ImageSource CreateBitmap(byte[] bytes)
