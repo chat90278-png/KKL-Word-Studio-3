@@ -77,6 +77,8 @@ public partial class App : Application
                     services.AddSingleton<IDialogService, DialogService>();
                     services.AddSingleton<IFileDialogService, FileDialogService>();
                     services.AddSingleton<IShellLauncher, ShellLauncher>();
+                    services.AddSingleton<GuideImageSourceLoader>();
+                    services.AddSingleton<UsageGuideViewModel>();
                     services.AddSingleton<MainViewModel>();
 
                     services.AddSingleton<ExcelWorkspaceViewModel>();
@@ -103,6 +105,7 @@ public partial class App : Application
                     services.AddSingleton<WarningCenterViewModel>();
                     services.AddSingleton<WarningCenterView>();
                     services.AddSingleton<ContextDockView>();
+                    services.AddSingleton<UsageGuideView>();
 
                     services.AddSingleton<MainWindow>();
 
