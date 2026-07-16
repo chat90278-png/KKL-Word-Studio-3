@@ -50,14 +50,14 @@ public sealed partial class UsageGuideSectionViewModel : ViewModelBase
         };
         if (dialog.ShowDialog() != true) return;
 
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.UriSource = new Uri(dialog.FileName, UriKind.Absolute);
-        bitmap.EndInit();
-        bitmap.Freeze();
-        ImageSource = bitmap;
-        CustomImagePath = dialog.FileName;
+        var imageDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "KKL Word Studio", "Guide", "Images");
+        Directory.CreateDirectory(imageDirectory);
+        var extension = Path.GetExtension(dialog.FileName);
+        var destination = Path.Combine(imageDirectory, $"{Guid.NewGuid():N}{extension}");
+        File.Copy(dialog.FileName, destination, overwrite: true);
+        RestoreImage(destination);
     }
 
     public void RestoreImage(string? path)
