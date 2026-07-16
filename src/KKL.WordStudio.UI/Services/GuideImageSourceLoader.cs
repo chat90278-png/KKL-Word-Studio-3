@@ -2,13 +2,14 @@ namespace KKL.WordStudio.UI.Services;
 
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 /// <summary>
-/// Loads guide screenshots from embedded Base64 resources. Keeping the source
-/// images as text allows the repository and single-file publish pipeline to
-/// carry the real screenshots without creating loose runtime files.
+/// Loads guide screenshots from embedded Base64 resources. Screens are stored
+/// in ordered text chunks so repository writes and single-file publishing stay
+/// reliable without creating loose runtime files.
 /// </summary>
 public sealed class GuideImageSourceLoader
 {
@@ -20,22 +21,31 @@ public sealed class GuideImageSourceLoader
         if (_cache.TryGetValue(assetName, out var cached))
             return cached;
 
-        var suffix = $".{assetName}.base64";
-        var resourceName = _assembly
-            .GetManifestResourceNames()
-            .FirstOrDefault(name => name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+        var resourceNames = _assembly.GetManifestResourceNames();
+        var chunkMarker = $".{assetName}.part";
+        var chunks = resourceNames
+            .Where(name => name.Contains(chunkMarker, StringComparison.OrdinalIgnoreCase)
+                           && name.EndsWith(".base64", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
-        if (resourceName is null)
+        if (chunks.Length == 0)
             return _cache[assetName] = null;
 
         try
         {
-            using var resource = _assembly.GetManifestResourceStream(resourceName);
-            if (resource is null)
-                return _cache[assetName] = null;
+            var encoded = new StringBuilder();
+            foreach (var chunk in chunks)
+            {
+                using var resource = _assembly.GetManifestResourceStream(chunk);
+                if (resource is null)
+                    return _cache[assetName] = null;
 
-            using var reader = new StreamReader(resource);
-            var bytes = Convert.FromBase64String(reader.ReadToEnd().Trim());
+                using var reader = new StreamReader(resource);
+                encoded.Append(reader.ReadToEnd().Trim());
+            }
+
+            var bytes = Convert.FromBase64String(encoded.ToString());
             using var imageStream = new MemoryStream(bytes, writable: false);
 
             var bitmap = new BitmapImage();
