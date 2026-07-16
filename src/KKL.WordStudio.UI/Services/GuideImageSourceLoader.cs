@@ -1,60 +1,87 @@
 namespace KKL.WordStudio.UI.Services;
 
-using System.IO;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 /// <summary>
-/// Loads guide screenshots from embedded Base64 resources. Keeping the source
-/// images as text allows the repository and single-file publish pipeline to
-/// carry the real screenshots without creating loose runtime files.
+/// Loads the approved high-resolution guide screens from embedded Base64 resources
+/// and user-selected replacements from disk. Bitmap data is fully cached in memory,
+/// so neither the executable resource stream nor a custom image file stays locked.
 /// </summary>
 public sealed class GuideImageSourceLoader
 {
     private readonly Assembly _assembly = typeof(GuideImageSourceLoader).Assembly;
-    private readonly Dictionary<string, ImageSource?> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ImageSource?> _embeddedCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public ImageSource? Load(string assetName)
+    public ImageSource? Load(string assetName) => LoadEmbedded(assetName);
+
+    public ImageSource? LoadEmbedded(string assetName)
     {
-        if (_cache.TryGetValue(assetName, out var cached))
+        if (_embeddedCache.TryGetValue(assetName, out var cached))
             return cached;
 
-        var suffix = $".{assetName}.base64";
         var resourceName = _assembly
             .GetManifestResourceNames()
-            .FirstOrDefault(name => name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(name => name.EndsWith($".{assetName}.base64", StringComparison.OrdinalIgnoreCase));
 
         if (resourceName is null)
-            return _cache[assetName] = null;
+            return _embeddedCache[assetName] = null;
 
         try
         {
             using var resource = _assembly.GetManifestResourceStream(resourceName);
             if (resource is null)
-                return _cache[assetName] = null;
+                return _embeddedCache[assetName] = null;
 
             using var reader = new StreamReader(resource);
             var bytes = Convert.FromBase64String(reader.ReadToEnd().Trim());
-            using var imageStream = new MemoryStream(bytes, writable: false);
-
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
-            bitmap.StreamSource = imageStream;
-            bitmap.EndInit();
-            bitmap.Freeze();
-
-            return _cache[assetName] = bitmap;
+            return _embeddedCache[assetName] = CreateBitmap(bytes);
         }
         catch (FormatException)
         {
-            return _cache[assetName] = null;
+            return _embeddedCache[assetName] = null;
         }
         catch (NotSupportedException)
         {
-            return _cache[assetName] = null;
+            return _embeddedCache[assetName] = null;
         }
+        catch (IOException)
+        {
+            return _embeddedCache[assetName] = null;
+        }
+    }
+
+    public ImageSource? LoadFile(string path)
+    {
+        try
+        {
+            return File.Exists(path) ? CreateBitmap(File.ReadAllBytes(path)) : null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    private static ImageSource CreateBitmap(byte[] bytes)
+    {
+        using var imageStream = new MemoryStream(bytes, writable: false);
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
+        bitmap.StreamSource = imageStream;
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
     }
 }
