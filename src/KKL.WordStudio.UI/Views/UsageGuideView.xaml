@@ -66,7 +66,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel>
                     <TextBlock Text="KKL Word Studio Kullanım Kılavuzu" Foreground="White" FontSize="22" FontWeight="Bold" />
-                    <TextBlock Text="Meyveli demo veri üzerinden ekran bazlı, düzenlenebilir kullanım anlatımı"
+                    <TextBlock Text="Excel verisini rapora aktarmak ve Word dosyası oluşturmak için kısa kullanım anlatımı"
                                Foreground="#FFDCEBFF" FontSize="11.5" Margin="0,5,0,0" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -158,8 +158,8 @@
                     <Grid Margin="22">
                         <StackPanel Style="{StaticResource GuideDisplayPanel}" DataContext="{Binding SelectedSection}">
                             <TextBlock Text="{Binding Title}" FontSize="23" FontWeight="Bold" Foreground="#FF102A56" />
-                            <TextBlock Text="Gerçek uygulama ekranı ve doğrulanmış kullanıcı akışı" FontSize="10.5"
-                                       Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,4,0,14" />
+                            <TextBlock Text="Ekran görüntüsündeki örnek veriler yalnızca arayüzü göstermek için kullanılmıştır."
+                                       FontSize="10.5" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,4,0,14" />
 
                             <Border Background="#FFF8FAFD" BorderBrush="#FFD8E1ED" BorderThickness="1" CornerRadius="12" Padding="10">
                                 <Image Source="{Binding ImageSource}"
