@@ -185,6 +185,11 @@ public sealed partial class UsageGuideViewModel : ViewModelBase
             ["Alt sekmelerden çalışmak istediğiniz sayfayı seçin.", "Tablodaki başlıkları ve veri satırlarını kontrol edin.", "Sütun harflerinin yanındaki kutularla rapora aktarılacak sütunları belirleyin.", "Durum satırında otomatik algılanan veri aralığını kontrol edin."],
             "Ekran görüntüsündeki örnek kayıtlar yalnızca arayüzü göstermek içindir; kendi Excel dosyanız farklı sütunlar içerebilir."),
 
+        new("sutun-islemleri", "Sütun Ekleme ve Silme", "±", "02-demo-excel-yuklu.jpg",
+            "Excel çalışma alanında yeni sütun oluşturmak, gereksiz sütunları kaldırmak veya bir sütunu geçici olarak gizlemek için kullanılır.",
+            ["İşlem yapmak istediğiniz sütunun başlığına sağ tıklayın.", "Sola Sütun Ekle veya Sağa Sütun Ekle komutuyla seçili sütunun yanına boş bir sütun ekleyin.", "Yeni sütunun başlığını ve hücrelerini çalışma alanında düzenleyin.", "Bir veya daha fazla sütun seçiliyse Sütunu Sil komutuyla seçili sütunları kaldırın.", "Sütunu Gizle komutuyla sütunu silmeden ekrandan gizleyin.", "İşlemden sonra rapora aktarılacak sütunları ve önizlemeyi yeniden kontrol edin."],
+            "Ekleme ve silme uygulamanın çalışma verisine uygulanır; kaynak Excel dosyası değiştirilmez. Gerekirse Geri Al ve Yinele komutlarını kullanın."),
+
         new("veri-araligi", "Veri Aralığını Düzenle", "↔", "16-veri-araligi-birlesik.jpg",
             "Başlık satırını, veri başlangıç ve bitiş satırlarını ve kullanılacak sütun sınırlarını belirler.",
             ["Veri Aralığını Düzenle düğmesine basın.", "Dosyanızda başlık satırı varsa Başlık satırı var seçeneğini açık bırakın.", "Başlangıç ve bitiş satırlarıyla sütun sınırlarını kontrol edin.", "Yeniden Algıla ile otomatik tespit yapın veya Uygula ile girdiğiniz aralığı kullanın."],
