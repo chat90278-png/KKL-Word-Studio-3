@@ -24,7 +24,7 @@ public sealed class Sprint25UsageGuideArchitectureTests
     }
 
     [Fact]
-    public void Guide_UsesApprovedFruitDemoWorkflowAndDecodableScreens()
+    public void Guide_UsesGeneralProductWorkflowAndDecodableScreens()
     {
         var root = SolutionRootLocator.Find();
         var project = Read(root, "src", "KKL.WordStudio.UI", "KKL.WordStudio.UI.csproj");
@@ -33,8 +33,11 @@ public sealed class Sprint25UsageGuideArchitectureTests
         var assets = Path.Combine(root, "src", "KKL.WordStudio.UI", "Assets", "GuideScreens");
 
         Assert.Contains("Assets\\GuideScreens\\*.base64", project, StringComparison.Ordinal);
-        Assert.Contains("Parca_Listesi", guide, StringComparison.Ordinal);
-        Assert.Contains("No, Tr İsim, Parça Numarası, NSN, Seri Numarası ve Adet", guide, StringComparison.Ordinal);
+        Assert.Contains("Excel Kaynağı ve Sayfa Seçimi", guide, StringComparison.Ordinal);
+        Assert.Contains("Ekran görüntüsündeki örnek kayıtlar yalnızca arayüzü göstermek içindir", guide, StringComparison.Ordinal);
+        Assert.DoesNotContain("No, Tr İsim, Parça Numarası, NSN, Seri Numarası ve Adet", guide, StringComparison.Ordinal);
+        Assert.DoesNotContain("Meyveli demo veri üzerinden", view, StringComparison.Ordinal);
+        Assert.Contains("Ekran görüntüsündeki örnek veriler yalnızca arayüzü göstermek için kullanılmıştır", view, StringComparison.Ordinal);
         Assert.Contains("StretchDirection=\"DownOnly\"", view, StringComparison.Ordinal);
         Assert.Contains("BitmapScalingMode=\"HighQuality\"", view, StringComparison.Ordinal);
 
