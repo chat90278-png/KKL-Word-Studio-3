@@ -34,6 +34,11 @@ public sealed class Sprint25UsageGuideArchitectureTests
 
         Assert.Contains("Assets\\GuideScreens\\*.base64", project, StringComparison.Ordinal);
         Assert.Contains("Excel Kaynağı ve Sayfa Seçimi", guide, StringComparison.Ordinal);
+        Assert.Contains("Sütun Ekleme ve Silme", guide, StringComparison.Ordinal);
+        Assert.Contains("Sola Sütun Ekle", guide, StringComparison.Ordinal);
+        Assert.Contains("Sağa Sütun Ekle", guide, StringComparison.Ordinal);
+        Assert.Contains("Sütunu Sil", guide, StringComparison.Ordinal);
+        Assert.Contains("Sütunu Gizle", guide, StringComparison.Ordinal);
         Assert.Contains("Ekran görüntüsündeki örnek kayıtlar yalnızca arayüzü göstermek içindir", guide, StringComparison.Ordinal);
         Assert.DoesNotContain("No, Tr İsim, Parça Numarası, NSN, Seri Numarası ve Adet", guide, StringComparison.Ordinal);
         Assert.DoesNotContain("Meyveli demo veri üzerinden", view, StringComparison.Ordinal);
