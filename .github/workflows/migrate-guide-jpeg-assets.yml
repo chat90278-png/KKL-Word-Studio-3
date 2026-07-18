@@ -9,7 +9,7 @@ on:
       - "src/KKL.WordStudio.UI/KKL.WordStudio.UI.csproj"
       - "src/KKL.WordStudio.UI/Services/GuideImageSourceLoader.cs"
       - "tests/KKL.WordStudio.Architecture.Tests/Sprint25UsageGuideArchitectureTests.cs"
-      - "scripts/migrate-guide-images.py"
+      - "scripts/migrate-guide-images.ps1"
       - ".github/workflows/migrate-guide-jpeg-assets.yml"
   pull_request:
     branches:
@@ -19,7 +19,7 @@ on:
       - "src/KKL.WordStudio.UI/KKL.WordStudio.UI.csproj"
       - "src/KKL.WordStudio.UI/Services/GuideImageSourceLoader.cs"
       - "tests/KKL.WordStudio.Architecture.Tests/Sprint25UsageGuideArchitectureTests.cs"
-      - "scripts/migrate-guide-images.py"
+      - "scripts/migrate-guide-images.ps1"
       - ".github/workflows/migrate-guide-jpeg-assets.yml"
 
 permissions:
@@ -44,7 +44,7 @@ jobs:
 
       - name: Convert Base64 resources to JPEG files
         shell: pwsh
-        run: python scripts/migrate-guide-images.py
+        run: ./scripts/migrate-guide-images.ps1
 
       - name: Commit migration diagnostics
         if: failure() && hashFiles('migration-output.txt') != ''
