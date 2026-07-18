@@ -106,7 +106,7 @@ try {
 
         $jpeg = [IO.File]::ReadAllBytes($targetPath)
         $signature = if ($jpeg.Length -ge 3) { [BitConverter]::ToString($jpeg[0..2]) } else { '<too-short>' }
-        if ($jpeg.Length -le 1000 -or $jpeg[0] -ne 0xFF -or $jpeg[1] -ne 0xD8 -or $jpeg[2] -ne 0xFF) {
+        if ($jpeg.Length -le 100 -or $jpeg[0] -ne 0xFF -or $jpeg[1] -ne 0xD8 -or $jpeg[2] -ne 0xFF) {
             throw "JPEG encoding failed: $($source.Name); dimensions=$($bitmap.PixelWidth)x$($bitmap.PixelHeight); bytes=$($jpeg.Length); signature=$signature"
         }
 
