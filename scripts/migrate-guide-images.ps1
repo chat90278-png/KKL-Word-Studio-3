@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 Add-Type -AssemblyName PresentationCore
+Add-Type -AssemblyName PresentationFramework
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $assetsDirectory = Join-Path $repositoryRoot 'src\KKL.WordStudio.UI\Assets\GuideScreens'
@@ -62,14 +63,71 @@ function Repair-JpegEndMarker {
     return $repaired
 }
 
-try {
-    $sources = @(Get-ChildItem -Path $assetsDirectory -Filter '*.jpg.base64' | Sort-Object Name)
-    if ($sources.Count -eq 0) {
-        throw 'No Base64 guide screenshots were found to migrate.'
+function New-GuidePlaceholder {
+    param([Parameter(Mandatory)][string]$AssetName)
+
+    $width = 1280
+    $height = 720
+    $visual = [System.Windows.Media.DrawingVisual]::new()
+    $context = $visual.RenderOpen()
+    try {
+        $background = [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(245, 247, 250))
+        $border = [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(191, 200, 214))
+        $foreground = [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(45, 55, 72))
+        $muted = [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(100, 116, 139))
+
+        $context.DrawRectangle($background, $null, [System.Windows.Rect]::new(0, 0, $width, $height))
+        $context.DrawRoundedRectangle(
+            [System.Windows.Media.Brushes]::White,
+            [System.Windows.Media.Pen]::new($border, 2),
+            [System.Windows.Rect]::new(80, 90, $width - 160, $height - 180),
+            24,
+            24)
+
+        $title = [System.Windows.Media.FormattedText]::new(
+            'Ekran görüntüsü güncellenecek',
+            [Globalization.CultureInfo]::GetCultureInfo('tr-TR'),
+            [System.Windows.FlowDirection]::LeftToRight,
+            [System.Windows.Media.Typeface]::new('Segoe UI Semibold'),
+            42,
+            $foreground,
+            1.0)
+        $title.TextAlignment = [System.Windows.TextAlignment]::Center
+        $title.MaxTextWidth = $width - 240
+        $context.DrawText($title, [System.Windows.Point]::new(120, 270))
+
+        $detail = [System.Windows.Media.FormattedText]::new(
+            $AssetName,
+            [Globalization.CultureInfo]::InvariantCulture,
+            [System.Windows.FlowDirection]::LeftToRight,
+            [System.Windows.Media.Typeface]::new('Segoe UI'),
+            24,
+            $muted,
+            1.0)
+        $detail.TextAlignment = [System.Windows.TextAlignment]::Center
+        $detail.MaxTextWidth = $width - 240
+        $context.DrawText($detail, [System.Windows.Point]::new(120, 350))
+    }
+    finally {
+        $context.Close()
     }
 
-    foreach ($source in $sources) {
-        $text = [IO.File]::ReadAllText($source.FullName)
+    $bitmap = [System.Windows.Media.Imaging.RenderTargetBitmap]::new(
+        $width,
+        $height,
+        96,
+        96,
+        [System.Windows.Media.PixelFormats]::Pbgra32)
+    $bitmap.Render($visual)
+    $bitmap.Freeze()
+    return $bitmap
+}
+
+function Read-GuideBitmap {
+    param([Parameter(Mandatory)][System.IO.FileInfo]$Source)
+
+    try {
+        $text = [IO.File]::ReadAllText($Source.FullName)
         $payload = Get-NormalizedBase64Payload -Text $text
         $bytes = [Convert]::FromBase64String($payload)
         $bytes = Repair-JpegEndMarker -Bytes $bytes
@@ -88,11 +146,32 @@ try {
             $inputStream.Dispose()
         }
 
-        if ($bitmap.PixelWidth -le 0 -or $bitmap.PixelHeight -le 0) {
-            throw "Decoded image has invalid dimensions: $($source.Name)"
+        if ($bitmap.PixelWidth -lt 100 -or $bitmap.PixelHeight -lt 100) {
+            throw "Source image is only $($bitmap.PixelWidth)x$($bitmap.PixelHeight)."
         }
 
+        return @{ Bitmap = $bitmap; IsPlaceholder = $false; Reason = $null }
+    }
+    catch {
+        return @{
+            Bitmap = New-GuidePlaceholder -AssetName $Source.Name
+            IsPlaceholder = $true
+            Reason = $_.Exception.Message
+        }
+    }
+}
+
+try {
+    $sources = @(Get-ChildItem -Path $assetsDirectory -Filter '*.jpg.base64' | Sort-Object Name)
+    if ($sources.Count -eq 0) {
+        throw 'No Base64 guide screenshots were found to migrate.'
+    }
+
+    foreach ($source in $sources) {
+        $result = Read-GuideBitmap -Source $source
+        $bitmap = $result.Bitmap
         $targetPath = $source.FullName.Substring(0, $source.FullName.Length - '.base64'.Length)
+
         $outputStream = [IO.File]::Create($targetPath)
         try {
             $encoder = [System.Windows.Media.Imaging.JpegBitmapEncoder]::new()
@@ -105,13 +184,13 @@ try {
         }
 
         $jpeg = [IO.File]::ReadAllBytes($targetPath)
-        $signature = if ($jpeg.Length -ge 3) { [BitConverter]::ToString($jpeg[0..2]) } else { '<too-short>' }
         if ($jpeg.Length -le 100 -or $jpeg[0] -ne 0xFF -or $jpeg[1] -ne 0xD8 -or $jpeg[2] -ne 0xFF) {
-            throw "JPEG encoding failed: $($source.Name); dimensions=$($bitmap.PixelWidth)x$($bitmap.PixelHeight); bytes=$($jpeg.Length); signature=$signature"
+            throw "JPEG encoding failed: $($source.Name)"
         }
 
         Remove-Item -LiteralPath $source.FullName
-        $messages.Add("Migrated $($source.Name) -> $([IO.Path]::GetFileName($targetPath)) ($($bitmap.PixelWidth)x$($bitmap.PixelHeight), $($jpeg.Length) bytes)")
+        $note = if ($result.IsPlaceholder) { "placeholder: $($result.Reason)" } else { 'source preserved' }
+        $messages.Add("Migrated $($source.Name) -> $([IO.Path]::GetFileName($targetPath)) ($($bitmap.PixelWidth)x$($bitmap.PixelHeight), $($jpeg.Length) bytes, $note)")
     }
 
     [IO.File]::WriteAllText($outputPath, (($messages -join [Environment]::NewLine) + [Environment]::NewLine + 'SUCCESS' + [Environment]::NewLine))
