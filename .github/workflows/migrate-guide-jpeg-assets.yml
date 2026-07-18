@@ -57,6 +57,33 @@ jobs:
           git commit -m "chore: capture JPEG migration failure"
           git push origin HEAD:feature/in-app-usage-guide
 
+      - name: Validate JPEG files with WPF
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName PresentationCore
+          $files = Get-ChildItem "src/KKL.WordStudio.UI/Assets/GuideScreens/*.jpg"
+          if ($files.Count -ne 10) {
+            throw "Expected 10 JPEG guide assets, found $($files.Count)."
+          }
+          foreach ($file in $files) {
+            $stream = [System.IO.File]::OpenRead($file.FullName)
+            try {
+              $bitmap = [System.Windows.Media.Imaging.BitmapImage]::new()
+              $bitmap.BeginInit()
+              $bitmap.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+              $bitmap.StreamSource = $stream
+              $bitmap.EndInit()
+              if ($bitmap.PixelWidth -le 0 -or $bitmap.PixelHeight -le 0) {
+                throw "JPEG has invalid dimensions: $($file.Name)"
+              }
+              Write-Host "$($file.Name): $($bitmap.PixelWidth)x$($bitmap.PixelHeight)"
+            }
+            finally {
+              $stream.Dispose()
+            }
+          }
+
       - name: Run Release tests
         shell: pwsh
         run: dotnet test -c Release
