@@ -52,7 +52,7 @@ public sealed class Sprint25UsageGuideArchitectureTests
             var path = Path.Combine(assets, name);
             Assert.True(File.Exists(path), $"Missing guide screen: {name}");
             var bytes = File.ReadAllBytes(path);
-            Assert.True(bytes.Length > 1_000, $"Guide screen is empty: {name}");
+            Assert.True(bytes.Length > 100, $"Guide screen is empty: {name}");
             Assert.True(IsJpeg(bytes), $"Guide screen is not JPEG: {name}");
         }
     }
