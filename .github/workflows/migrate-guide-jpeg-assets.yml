@@ -1,0 +1,77 @@
+name: Migrate guide screenshots to JPEG
+
+on:
+  push:
+    branches:
+      - feature/in-app-usage-guide
+    paths:
+      - "src/KKL.WordStudio.UI/Assets/GuideScreens/*.jpg.base64"
+      - "src/KKL.WordStudio.UI/KKL.WordStudio.UI.csproj"
+      - "src/KKL.WordStudio.UI/Services/GuideImageSourceLoader.cs"
+      - "tests/KKL.WordStudio.Architecture.Tests/Sprint25UsageGuideArchitectureTests.cs"
+      - ".github/workflows/migrate-guide-jpeg-assets.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Convert Base64 resources to JPEG files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          @'
+          from pathlib import Path
+          import base64
+
+          assets = Path("src/KKL.WordStudio.UI/Assets/GuideScreens")
+          sources = sorted(assets.glob("*.jpg.base64"))
+          if not sources:
+              raise SystemExit("No Base64 guide screenshots were found to migrate.")
+
+          for source in sources:
+              encoded = "".join(
+                  character
+                  for character in source.read_text(encoding="utf-8")
+                  if character.isalnum() or character in "+/="
+              )
+              image = base64.b64decode(encoded, validate=False)
+              if len(image) <= 1000 or not image.startswith(b"\xff\xd8\xff"):
+                  raise RuntimeError(f"Decoded asset is not a valid JPEG: {source}")
+
+              target = source.with_suffix("")
+              target.write_bytes(image)
+              source.unlink()
+              print(f"Migrated {source.name} -> {target.name} ({len(image)} bytes)")
+          '@ | python -
+
+      - name: Run Release tests
+        shell: pwsh
+        run: dotnet test -c Release
+
+      - name: Commit JPEG assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all src/KKL.WordStudio.UI/Assets/GuideScreens
+          if (-not (git status --porcelain)) {
+            throw "JPEG migration produced no repository changes."
+          }
+          git commit -m "fix: migrate guide screenshots to JPEG assets"
+          git push origin HEAD:feature/in-app-usage-guide
