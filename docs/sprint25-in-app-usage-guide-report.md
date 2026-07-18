@@ -3,22 +3,23 @@
 ## Scope
 
 - Adds a full-workspace usage-guide page opened from the main command bar.
-- Uses the approved `No / Tr İsim / Parça Numarası / NSN / Seri Numarası / Adet` fruit-demo workflow.
-- Embeds ten real application screenshots as Base64 resources so self-contained single-file publish has no loose guide files.
+- Uses general product workflow examples that do not require a specific worksheet name, column schema or demo workbook.
+- Embeds ten real application screenshots as direct JPEG resources so self-contained single-file publish has no loose guide files.
 - Keeps guide state UI-only; workbook, report, diagnostics and export state are not modified.
 
 ## Guide sections
 
 1. Başlangıç Ekranı
-2. Excel Kaynağı ve Worksheet
-3. Veri Aralığını Düzenle
-4. Word'e Aktar
-5. İçindekiler ve Preview
-6. Tablo Özellikleri
-7. Başlık Özellikleri
-8. Uyarılar
-9. Hızlı Rapor
-10. Word Dosyası Oluştur
+2. Excel Kaynağı ve Sayfa Seçimi
+3. Sütun Ekleme ve Silme
+4. Veri Aralığını Düzenle
+5. Word'e Aktar
+6. İçindekiler ve Önizleme
+7. Tablo Özellikleri
+8. Başlık Özellikleri
+9. Uyarılar
+10. Hızlı Rapor
+11. Word Dosyası Oluştur
 
 ## Editable content
 
@@ -31,10 +32,11 @@
 
 ## Image quality and asset safety
 
+- Built-in screenshots are stored under `Assets/GuideScreens` as real `.jpg` files.
 - Embedded and custom images use high-quality WPF scaling.
 - `StretchDirection=DownOnly` prevents small screenshots from being enlarged into blurred full-width images.
-- Embedded Base64 decoding tolerates whitespace and repository formatting artifacts.
-- Architecture guards validate that every default screen decodes to a supported JPEG or PNG payload.
+- Embedded JPEG resources are read directly as binary streams; no Base64 decoding layer remains.
+- Architecture guards validate that every default screen exists and has a JPEG signature.
 
 ## Gate
 
