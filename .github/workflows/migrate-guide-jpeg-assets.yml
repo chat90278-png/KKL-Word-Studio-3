@@ -43,49 +43,71 @@ jobs:
       - name: Convert Base64 resources to JPEG files
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
+          $ErrorActionPreference = 'Continue'
           @'
           from pathlib import Path
           import base64
+          import traceback
 
-          assets = Path("src/KKL.WordStudio.UI/Assets/GuideScreens")
-          sources = sorted(assets.glob("*.jpg.base64"))
-          if not sources:
-              raise SystemExit("No Base64 guide screenshots were found to migrate.")
+          output = Path("migration-output.txt")
+          messages = []
 
-          allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+          try:
+              assets = Path("src/KKL.WordStudio.UI/Assets/GuideScreens")
+              sources = sorted(assets.glob("*.jpg.base64"))
+              if not sources:
+                  raise RuntimeError("No Base64 guide screenshots were found to migrate.")
 
-          for source in sources:
-              text = source.read_text(encoding="utf-8-sig", errors="ignore")
-              normalized = "".join(character for character in text if character in allowed)
+              allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
 
-              jpeg_start = normalized.find("/9j/")
-              if jpeg_start < 0:
-                  raise RuntimeError(f"JPEG payload start was not found: {source}")
-              normalized = normalized[jpeg_start:]
+              for source in sources:
+                  text = source.read_text(encoding="utf-8-sig", errors="ignore")
+                  normalized = "".join(character for character in text if character in allowed)
+                  messages.append(f"{source.name}: filtered={len(normalized)}")
 
-              padding_index = normalized.find("=")
-              if padding_index >= 0:
-                  normalized = normalized[:padding_index]
+                  jpeg_start = normalized.find("/9j/")
+                  if jpeg_start < 0:
+                      raise RuntimeError(f"JPEG payload start was not found: {source}")
+                  normalized = normalized[jpeg_start:]
 
-              while normalized and len(normalized) % 4 == 1:
-                  normalized = normalized[:-1]
-              normalized += "=" * ((4 - len(normalized) % 4) % 4)
+                  padding_index = normalized.find("=")
+                  if padding_index >= 0:
+                      normalized = normalized[:padding_index]
 
-              image = base64.b64decode(normalized, validate=False)
-              jpeg_end = image.find(b"\xff\xd9", 2)
-              if jpeg_end < 0:
-                  raise RuntimeError(f"JPEG end marker was not found: {source}")
-              image = image[:jpeg_end + 2]
+                  while normalized and len(normalized) % 4 == 1:
+                      normalized = normalized[:-1]
+                  normalized += "=" * ((4 - len(normalized) % 4) % 4)
 
-              if len(image) <= 1000 or not image.startswith(b"\xff\xd8\xff"):
-                  raise RuntimeError(f"Decoded asset is not a valid JPEG: {source}")
+                  image = base64.b64decode(normalized, validate=False)
+                  jpeg_end = image.find(b"\xff\xd9", 2)
+                  if jpeg_end < 0:
+                      raise RuntimeError(f"JPEG end marker was not found: {source}")
+                  image = image[:jpeg_end + 2]
 
-              target = source.with_suffix("")
-              target.write_bytes(image)
-              source.unlink()
-              print(f"Migrated {source.name} -> {target.name} ({len(image)} bytes)")
+                  if len(image) <= 1000 or not image.startswith(b"\xff\xd8\xff"):
+                      raise RuntimeError(f"Decoded asset is not a valid JPEG: {source}")
+
+                  target = source.with_suffix("")
+                  target.write_bytes(image)
+                  source.unlink()
+                  messages.append(f"Migrated {source.name} -> {target.name} ({len(image)} bytes)")
+
+              output.write_text("\n".join(messages) + "\nSUCCESS\n", encoding="utf-8")
+          except Exception:
+              output.write_text("\n".join(messages) + "\n\n" + traceback.format_exc(), encoding="utf-8")
+              raise
           '@ | python -
+
+      - name: Commit migration diagnostics
+        if: failure()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add migration-output.txt
+          git commit -m "chore: capture JPEG migration failure"
+          git push origin HEAD:feature/in-app-usage-guide
 
       - name: Run Release tests
         shell: pwsh
@@ -98,6 +120,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all src/KKL.WordStudio.UI/Assets/GuideScreens
+          git add migration-output.txt
           if (-not (git status --porcelain)) {
             throw "JPEG migration produced no repository changes."
           }
