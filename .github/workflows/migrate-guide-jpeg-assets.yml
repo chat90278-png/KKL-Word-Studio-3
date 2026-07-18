@@ -9,6 +9,7 @@ on:
       - "src/KKL.WordStudio.UI/KKL.WordStudio.UI.csproj"
       - "src/KKL.WordStudio.UI/Services/GuideImageSourceLoader.cs"
       - "tests/KKL.WordStudio.Architecture.Tests/Sprint25UsageGuideArchitectureTests.cs"
+      - "scripts/migrate-guide-images.py"
       - ".github/workflows/migrate-guide-jpeg-assets.yml"
   pull_request:
     branches:
@@ -18,6 +19,7 @@ on:
       - "src/KKL.WordStudio.UI/KKL.WordStudio.UI.csproj"
       - "src/KKL.WordStudio.UI/Services/GuideImageSourceLoader.cs"
       - "tests/KKL.WordStudio.Architecture.Tests/Sprint25UsageGuideArchitectureTests.cs"
+      - "scripts/migrate-guide-images.py"
       - ".github/workflows/migrate-guide-jpeg-assets.yml"
 
 permissions:
@@ -42,64 +44,10 @@ jobs:
 
       - name: Convert Base64 resources to JPEG files
         shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Continue'
-          @'
-          from pathlib import Path
-          import base64
-          import traceback
-
-          output = Path("migration-output.txt")
-          messages = []
-
-          try:
-              assets = Path("src/KKL.WordStudio.UI/Assets/GuideScreens")
-              sources = sorted(assets.glob("*.jpg.base64"))
-              if not sources:
-                  raise RuntimeError("No Base64 guide screenshots were found to migrate.")
-
-              allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
-
-              for source in sources:
-                  text = source.read_text(encoding="utf-8-sig", errors="ignore")
-                  normalized = "".join(character for character in text if character in allowed)
-                  messages.append(f"{source.name}: filtered={len(normalized)}")
-
-                  jpeg_start = normalized.find("/9j/")
-                  if jpeg_start < 0:
-                      raise RuntimeError(f"JPEG payload start was not found: {source}")
-                  normalized = normalized[jpeg_start:]
-
-                  padding_index = normalized.find("=")
-                  if padding_index >= 0:
-                      normalized = normalized[:padding_index]
-
-                  while normalized and len(normalized) % 4 == 1:
-                      normalized = normalized[:-1]
-                  normalized += "=" * ((4 - len(normalized) % 4) % 4)
-
-                  image = base64.b64decode(normalized, validate=False)
-                  jpeg_end = image.find(b"\xff\xd9", 2)
-                  if jpeg_end < 0:
-                      raise RuntimeError(f"JPEG end marker was not found: {source}")
-                  image = image[:jpeg_end + 2]
-
-                  if len(image) <= 1000 or not image.startswith(b"\xff\xd8\xff"):
-                      raise RuntimeError(f"Decoded asset is not a valid JPEG: {source}")
-
-                  target = source.with_suffix("")
-                  target.write_bytes(image)
-                  source.unlink()
-                  messages.append(f"Migrated {source.name} -> {target.name} ({len(image)} bytes)")
-
-              output.write_text("\n".join(messages) + "\nSUCCESS\n", encoding="utf-8")
-          except Exception:
-              output.write_text("\n".join(messages) + "\n\n" + traceback.format_exc(), encoding="utf-8")
-              raise
-          '@ | python -
+        run: python scripts/migrate-guide-images.py
 
       - name: Commit migration diagnostics
-        if: failure()
+        if: failure() && hashFiles('migration-output.txt') != ''
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -120,9 +68,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all src/KKL.WordStudio.UI/Assets/GuideScreens
-          git add migration-output.txt
-          if (-not (git status --porcelain)) {
-            throw "JPEG migration produced no repository changes."
+          if (-not (git status --porcelain --untracked-files=no)) {
+            throw "JPEG migration produced no tracked repository changes."
           }
           git commit -m "fix: migrate guide screenshots to JPEG assets"
           git push origin HEAD:feature/in-app-usage-guide
