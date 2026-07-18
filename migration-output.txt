@@ -1,5 +1,10 @@
-01-ana-ekran-bos.jpg.base64: filtered=12133
-
 Traceback (most recent call last):
-  File "<stdin>", line 37, in <module>
+  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 61, in main
+    messages = migrate()
+               ^^^^^^^^^
+  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 50, in migrate
+    image = decode_jpeg_resource(source)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 34, in decode_jpeg_resource
+    raise RuntimeError(f"JPEG end marker was not found: {source}")
 RuntimeError: JPEG end marker was not found: src\KKL.WordStudio.UI\Assets\GuideScreens\01-ana-ekran-bos.jpg.base64
