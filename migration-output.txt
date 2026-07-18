@@ -1,2 +1,2 @@
 
-System.Management.Automation.RuntimeException: JPEG encoding failed: 01-ana-ekran-bos.jpg.base64
+System.Management.Automation.RuntimeException: JPEG encoding failed: 01-ana-ekran-bos.jpg.base64; dimensions=1x1; bytes=631; signature=FF-D8-FF
