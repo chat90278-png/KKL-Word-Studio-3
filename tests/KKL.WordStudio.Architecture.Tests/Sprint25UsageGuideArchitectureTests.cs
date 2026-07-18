@@ -1,6 +1,5 @@
 namespace KKL.WordStudio.Architecture.Tests;
 
-using System.Text;
 using Xunit;
 
 public sealed class Sprint25UsageGuideArchitectureTests
@@ -24,7 +23,7 @@ public sealed class Sprint25UsageGuideArchitectureTests
     }
 
     [Fact]
-    public void Guide_UsesGeneralProductWorkflowAndDecodableScreens()
+    public void Guide_UsesGeneralProductWorkflowAndEmbeddedJpegScreens()
     {
         var root = SolutionRootLocator.Find();
         var project = Read(root, "src", "KKL.WordStudio.UI", "KKL.WordStudio.UI.csproj");
@@ -32,7 +31,8 @@ public sealed class Sprint25UsageGuideArchitectureTests
         var view = Read(root, "src", "KKL.WordStudio.UI", "Views", "UsageGuideView.xaml");
         var assets = Path.Combine(root, "src", "KKL.WordStudio.UI", "Assets", "GuideScreens");
 
-        Assert.Contains("Assets\\GuideScreens\\*.base64", project, StringComparison.Ordinal);
+        Assert.Contains("Assets\\GuideScreens\\*.jpg", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("Assets\\GuideScreens\\*.base64", project, StringComparison.Ordinal);
         Assert.Contains("Excel Kaynağı ve Sayfa Seçimi", guide, StringComparison.Ordinal);
         Assert.Contains("Sütun Ekleme ve Silme", guide, StringComparison.Ordinal);
         Assert.Contains("Sola Sütun Ekle", guide, StringComparison.Ordinal);
@@ -45,14 +45,15 @@ public sealed class Sprint25UsageGuideArchitectureTests
         Assert.Contains("Ekran görüntüsündeki örnek veriler yalnızca arayüzü göstermek için kullanılmıştır", view, StringComparison.Ordinal);
         Assert.Contains("StretchDirection=\"DownOnly\"", view, StringComparison.Ordinal);
         Assert.Contains("BitmapScalingMode=\"HighQuality\"", view, StringComparison.Ordinal);
+        Assert.Empty(Directory.EnumerateFiles(assets, "*.base64", SearchOption.TopDirectoryOnly));
 
         foreach (var name in ScreenNames)
         {
             var path = Path.Combine(assets, name);
             Assert.True(File.Exists(path), $"Missing guide screen: {name}");
-            var bytes = Decode(File.ReadAllText(path));
+            var bytes = File.ReadAllBytes(path);
             Assert.True(bytes.Length > 1_000, $"Guide screen is empty: {name}");
-            Assert.True(IsJpeg(bytes) || IsPng(bytes), $"Unsupported guide image: {name}");
+            Assert.True(IsJpeg(bytes), $"Guide screen is not JPEG: {name}");
         }
     }
 
@@ -92,36 +93,16 @@ public sealed class Sprint25UsageGuideArchitectureTests
 
     private static readonly string[] ScreenNames =
     [
-        "01-ana-ekran-bos.jpg.base64", "02-demo-excel-yuklu.jpg.base64",
-        "16-veri-araligi-birlesik.jpg.base64", "03-worde-aktar-yerlesim-onayi.jpg.base64",
-        "04-preview-ve-icindekiler.jpg.base64", "05-tablo-ozellikleri.jpg.base64",
-        "06-baslik-ozellikleri.jpg.base64", "07-uyarilar.jpg.base64",
-        "17-hizli-rapor-birlesik.jpg.base64", "11-word-ciktisi.jpg.base64"
+        "01-ana-ekran-bos.jpg", "02-demo-excel-yuklu.jpg",
+        "16-veri-araligi-birlesik.jpg", "03-worde-aktar-yerlesim-onayi.jpg",
+        "04-preview-ve-icindekiler.jpg", "05-tablo-ozellikleri.jpg",
+        "06-baslik-ozellikleri.jpg", "07-uyarilar.jpg",
+        "17-hizli-rapor-birlesik.jpg", "11-word-ciktisi.jpg"
     ];
 
-    private static byte[] Decode(string text)
-    {
-        var builder = new StringBuilder(text.Length);
-        foreach (var character in text)
-        {
-            if (char.IsWhiteSpace(character)) continue;
-            if (char.IsAsciiLetterOrDigit(character) || character is '+' or '/' or '=')
-                builder.Append(character);
-        }
+    private static bool IsJpeg(byte[] bytes) =>
+        bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
 
-        var value = builder.ToString();
-        var padding = value.IndexOf('=');
-        if (padding >= 0)
-        {
-            var end = padding + 1;
-            if (end < value.Length && value[end] == '=') end++;
-            value = value[..end];
-        }
-
-        return Convert.FromBase64String(value);
-    }
-
-    private static bool IsJpeg(byte[] bytes) => bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
-    private static bool IsPng(byte[] bytes) => bytes.Length >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
-    private static string Read(string root, params string[] parts) => File.ReadAllText(Path.Combine(new[] { root }.Concat(parts).ToArray()));
+    private static string Read(string root, params string[] parts) =>
+        File.ReadAllText(Path.Combine(new[] { root }.Concat(parts).ToArray()));
 }
