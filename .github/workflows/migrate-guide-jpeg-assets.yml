@@ -53,12 +53,11 @@ jobs:
           if not sources:
               raise SystemExit("No Base64 guide screenshots were found to migrate.")
 
+          allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+
           for source in sources:
-              normalized = "".join(
-                  character
-                  for character in source.read_text(encoding="utf-8")
-                  if character.isalnum() or character in "+/="
-              )
+              text = source.read_text(encoding="utf-8-sig", errors="ignore")
+              normalized = "".join(character for character in text if character in allowed)
 
               jpeg_start = normalized.find("/9j/")
               if jpeg_start < 0:
