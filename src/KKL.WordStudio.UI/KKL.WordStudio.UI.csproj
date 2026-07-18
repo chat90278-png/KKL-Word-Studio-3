@@ -31,7 +31,7 @@
   <ItemGroup>
     <Resource Include="Assets\Brand\BrandMark.png" />
     <Resource Include="Assets\Brand\BrandMarkSmall.png" />
-    <EmbeddedResource Include="Assets\GuideScreens\*.base64" />
+    <EmbeddedResource Include="Assets\GuideScreens\*.jpg" />
   </ItemGroup>
 
   <ItemGroup>
