@@ -1,10 +1,10 @@
 Traceback (most recent call last):
-  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 61, in main
+  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 63, in main
     messages = migrate()
                ^^^^^^^^^
-  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 50, in migrate
-    image = decode_jpeg_resource(source)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 34, in decode_jpeg_resource
-    raise RuntimeError(f"JPEG end marker was not found: {source}")
-RuntimeError: JPEG end marker was not found: src\KKL.WordStudio.UI\Assets\GuideScreens\01-ana-ekran-bos.jpg.base64
+  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 49, in migrate
+    image, repaired = decode_jpeg_resource(source)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\KKL-Word-Studio-3\KKL-Word-Studio-3\scripts\migrate-guide-images.py", line 21, in decode_jpeg_resource
+    raise RuntimeError(f"JPEG payload start was not found: {source}")
+RuntimeError: JPEG payload start was not found: src\KKL.WordStudio.UI\Assets\GuideScreens\06-baslik-ozellikleri.jpg.base64
