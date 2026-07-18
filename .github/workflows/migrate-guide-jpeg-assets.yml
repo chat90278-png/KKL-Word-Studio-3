@@ -10,6 +10,15 @@ on:
       - "src/KKL.WordStudio.UI/Services/GuideImageSourceLoader.cs"
       - "tests/KKL.WordStudio.Architecture.Tests/Sprint25UsageGuideArchitectureTests.cs"
       - ".github/workflows/migrate-guide-jpeg-assets.yml"
+  pull_request:
+    branches:
+      - fix/v1.0.1-branding-architecture-guard
+    paths:
+      - "src/KKL.WordStudio.UI/Assets/GuideScreens/*.jpg.base64"
+      - "src/KKL.WordStudio.UI/KKL.WordStudio.UI.csproj"
+      - "src/KKL.WordStudio.UI/Services/GuideImageSourceLoader.cs"
+      - "tests/KKL.WordStudio.Architecture.Tests/Sprint25UsageGuideArchitectureTests.cs"
+      - ".github/workflows/migrate-guide-jpeg-assets.yml"
 
 permissions:
   contents: write
@@ -23,6 +32,7 @@ jobs:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
+          ref: feature/in-app-usage-guide
           fetch-depth: 0
 
       - name: Install .NET 8 SDK
