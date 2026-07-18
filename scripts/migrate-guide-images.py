@@ -9,9 +9,10 @@ OUTPUT = Path("migration-output.txt")
 ALLOWED_BASE64 = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
 )
+JPEG_EOI = b"\xff\xd9"
 
 
-def decode_jpeg_resource(source: Path) -> bytes:
+def decode_jpeg_resource(source: Path) -> tuple[bytes, bool]:
     text = source.read_text(encoding="utf-8-sig", errors="ignore")
     normalized = "".join(character for character in text if character in ALLOWED_BASE64)
 
@@ -29,15 +30,13 @@ def decode_jpeg_resource(source: Path) -> bytes:
     normalized += "=" * ((4 - len(normalized) % 4) % 4)
 
     image = base64.b64decode(normalized, validate=False)
-    jpeg_end = image.find(b"\xff\xd9", 2)
-    if jpeg_end < 0:
-        raise RuntimeError(f"JPEG end marker was not found: {source}")
-
-    image = image[: jpeg_end + 2]
     if len(image) <= 1_000 or not image.startswith(b"\xff\xd8\xff"):
-        raise RuntimeError(f"Decoded asset is not a valid JPEG: {source}")
+        raise RuntimeError(f"Decoded asset is not a JPEG payload: {source}")
 
-    return image
+    jpeg_end = image.find(JPEG_EOI, 2)
+    repaired = jpeg_end < 0
+    image = image + JPEG_EOI if repaired else image[: jpeg_end + len(JPEG_EOI)]
+    return image, repaired
 
 
 def migrate() -> list[str]:
@@ -47,11 +46,14 @@ def migrate() -> list[str]:
 
     messages: list[str] = []
     for source in sources:
-        image = decode_jpeg_resource(source)
+        image, repaired = decode_jpeg_resource(source)
         target = source.with_suffix("")
         target.write_bytes(image)
         source.unlink()
-        messages.append(f"Migrated {source.name} -> {target.name} ({len(image)} bytes)")
+        repair_note = " (EOI repaired)" if repaired else ""
+        messages.append(
+            f"Migrated {source.name} -> {target.name} ({len(image)} bytes){repair_note}"
+        )
 
     return messages
 
