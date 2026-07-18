@@ -54,12 +54,31 @@ jobs:
               raise SystemExit("No Base64 guide screenshots were found to migrate.")
 
           for source in sources:
-              encoded = "".join(
+              normalized = "".join(
                   character
                   for character in source.read_text(encoding="utf-8")
                   if character.isalnum() or character in "+/="
               )
-              image = base64.b64decode(encoded, validate=False)
+
+              jpeg_start = normalized.find("/9j/")
+              if jpeg_start < 0:
+                  raise RuntimeError(f"JPEG payload start was not found: {source}")
+              normalized = normalized[jpeg_start:]
+
+              padding_index = normalized.find("=")
+              if padding_index >= 0:
+                  normalized = normalized[:padding_index]
+
+              while normalized and len(normalized) % 4 == 1:
+                  normalized = normalized[:-1]
+              normalized += "=" * ((4 - len(normalized) % 4) % 4)
+
+              image = base64.b64decode(normalized, validate=False)
+              jpeg_end = image.find(b"\xff\xd9", 2)
+              if jpeg_end < 0:
+                  raise RuntimeError(f"JPEG end marker was not found: {source}")
+              image = image[:jpeg_end + 2]
+
               if len(image) <= 1000 or not image.startswith(b"\xff\xd8\xff"):
                   raise RuntimeError(f"Decoded asset is not a valid JPEG: {source}")
 
