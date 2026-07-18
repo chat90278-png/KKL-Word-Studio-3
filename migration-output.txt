@@ -1,0 +1,5 @@
+01-ana-ekran-bos.jpg.base64: filtered=12133
+
+Traceback (most recent call last):
+  File "<stdin>", line 37, in <module>
+RuntimeError: JPEG end marker was not found: src\KKL.WordStudio.UI\Assets\GuideScreens\01-ana-ekran-bos.jpg.base64
