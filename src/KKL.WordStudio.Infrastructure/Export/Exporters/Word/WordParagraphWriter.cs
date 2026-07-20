@@ -11,7 +11,10 @@ internal static class WordParagraphWriter
 {
     private const double TwipsPerMillimeter = 1440.0 / 25.4;
 
-    public static Paragraph BuildParagraph(TextContentNode text)
+    public static Paragraph BuildParagraph(TextContentNode text) =>
+        BuildParagraph(text, nativeHeadingLevel: null);
+
+    public static Paragraph BuildParagraph(TextContentNode text, int? nativeHeadingLevel)
     {
         ArgumentNullException.ThrowIfNull(text);
 
@@ -28,8 +31,11 @@ internal static class WordParagraphWriter
         var paragraphProperties = BuildParagraphProperties(format);
         if (isHeading)
         {
-            var styleId = text.Kind == ReportContentKind.Heading ? "Heading1" : "Heading2";
-            paragraphProperties.AddChild(new ParagraphStyleId { Val = styleId }, true);
+            var fallbackHeadingLevel = text.Kind == ReportContentKind.Heading ? 1 : 2;
+            var resolvedHeadingLevel = Math.Clamp(nativeHeadingLevel ?? fallbackHeadingLevel, 1, 3);
+            paragraphProperties.AddChild(
+                new ParagraphStyleId { Val = $"Heading{resolvedHeadingLevel}" },
+                true);
         }
 
         // Historical compatibility: only untouched compatibility-default headings inherit
@@ -135,12 +141,12 @@ internal static class WordParagraphWriter
     public static Paragraph BuildPageBreakParagraph() =>
         new(new Run(new Break { Type = BreakValues.Page }));
 
-    /// <summary>A native, updatable Word TOC field — the user "Update Field"s it in Word to populate entries from the Heading1/Heading2-styled paragraphs WordStyleWriter/this class produce.</summary>
+    /// <summary>A native, updatable Word TOC field — the user "Update Field"s it in Word to populate entries from the Heading1/Heading2/Heading3-styled paragraphs WordStyleWriter/this class produce.</summary>
     public static Paragraph BuildTocParagraph()
     {
         var field = new SimpleField(new Run(new Text("Right-click and choose \"Update Field\" to generate the table of contents.")))
         {
-            Instruction = @" TOC \o ""1-2"" \h \z \u "
+            Instruction = @" TOC \o ""1-3"" \h \z \u "
         };
         var paragraph = new Paragraph();
         paragraph.AppendChild(field);

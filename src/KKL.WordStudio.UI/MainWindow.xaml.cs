@@ -16,7 +16,8 @@ public partial class MainWindow : Window
         LoadedSourcesView loadedSourcesView,
         ExcelWorkspaceView excelWorkspaceView,
         PreviewView previewView,
-        ContextDockView contextDockView)
+        ContextDockView contextDockView,
+        UsageGuideView usageGuideView)
     {
         InitializeComponent();
         ApplyRuntimeBrandIcon();
@@ -29,6 +30,7 @@ public partial class MainWindow : Window
         ExcelWorkspaceHost.Content = excelWorkspaceView;
         PreviewHost.Content = previewView;
         ContextDockHost.Content = contextDockView;
+        UsageGuideHost.Content = usageGuideView;
 
         _viewModel.DockViewModel.PropertyChanged += DockViewModel_PropertyChanged;
         _viewModel.ReportPane.PropertyChanged += ReportPane_PropertyChanged;

@@ -18,7 +18,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 /// </summary>
 internal static class WordStyleWriter
 {
-    /// <summary>Heading1/Heading2 carry a real outlineLvl — required for Word's native TOC field to find them (see ADR 0007).</summary>
+    /// <summary>Heading1/Heading2/Heading3 carry real outline levels so Word's native hierarchy and TOC match the protected root, heading and alt-heading structure.</summary>
     public static void AddStyleDefinitions(MainDocumentPart mainPart)
     {
         var stylesPart = mainPart.AddNewPart<StyleDefinitionsPart>();
@@ -34,6 +34,7 @@ internal static class WordStyleWriter
 
         styles.Append(BuildHeadingStyle("Heading1", "heading 1", outlineLevel: 0, fontSizeHalfPoints: "36"));
         styles.Append(BuildHeadingStyle("Heading2", "heading 2", outlineLevel: 1, fontSizeHalfPoints: "28"));
+        styles.Append(BuildHeadingStyle("Heading3", "heading 3", outlineLevel: 2, fontSizeHalfPoints: "28"));
 
         stylesPart.Styles = styles;
         styles.Save(stylesPart);

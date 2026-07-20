@@ -30,6 +30,9 @@ public sealed partial class MainViewModel : ViewModelBase
     /// <summary>Shared session-only busy state rendered by MainWindow as a full interaction shield.</summary>
     public LongOperationViewModel LongOperation { get; } = LongOperationViewModel.Shared;
 
+    /// <summary>Read-only in-application help content. It never mutates workbook or report state.</summary>
+    public UsageGuideViewModel UsageGuide { get; }
+
     [ObservableProperty]
     private Project _currentProject;
 
@@ -40,12 +43,16 @@ public sealed partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string? _lastExportedFilePath;
 
+    [ObservableProperty]
+    private bool _isUsageGuideOpen;
+
     public MainViewModel(
         IReportExporterRegistry exporterRegistry,
         IWorkspace workspace,
         IFileDialogService fileDialogService,
         IShellLauncher shellLauncher,
         DockViewModel dockViewModel,
+        UsageGuideViewModel usageGuide,
         ILogger<MainViewModel> logger)
     {
         _exporterRegistry = exporterRegistry;
@@ -53,6 +60,7 @@ public sealed partial class MainViewModel : ViewModelBase
         _fileDialogService = fileDialogService;
         _shellLauncher = shellLauncher;
         DockViewModel = dockViewModel;
+        UsageGuide = usageGuide;
         _logger = logger;
 
         _currentProject = WorkspaceSessionFactory.CreateDefault();
@@ -62,6 +70,16 @@ public sealed partial class MainViewModel : ViewModelBase
             "Excel-first workspace session initialized: {ProjectId}",
             _currentProject.Id);
     }
+
+    [RelayCommand]
+    private void ShowUsageGuide()
+    {
+        UsageGuide.ResetToStart();
+        IsUsageGuideOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseUsageGuide() => IsUsageGuideOpen = false;
 
     [RelayCommand]
     private async Task ExportToWordAsync()
