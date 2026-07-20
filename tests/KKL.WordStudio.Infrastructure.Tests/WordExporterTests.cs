@@ -4,6 +4,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using KKL.WordStudio.Application.Abstractions;
 using KKL.WordStudio.Application.Content;
+using KKL.WordStudio.Application.Structure;
 using KKL.WordStudio.Application.Styling;
 using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Expressions;
@@ -61,7 +62,70 @@ public class WordExporterTests
         Assert.Contains("Region", allText);
         Assert.Contains("Total", allText);
 
+        var headingParagraph = body.Elements<Paragraph>()
+            .Single(paragraph => ParagraphText(paragraph) == "Quarterly Sales");
+        Assert.Equal("Heading1", headingParagraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value);
+
         Assert.Single(body.Descendants<Table>());
+    }
+
+    [Fact]
+    public async Task ExportAsync_MapsProtectedRootHierarchyToHeading1Heading2AndHeading3()
+    {
+        var report = new Report { Name = "Hierarchy Report", IncludeTableOfContents = true };
+        var page = new Page();
+        var section = new Section { Kind = SectionKind.Body };
+
+        section.Root.Children.Add(new TextElement
+        {
+            Name = ReportDocumentStructurePolicy.RootElementName,
+            Style = HeadingStylePresets.CreateHeadingStyle(),
+            Content = Expression.Literal("1. System Test Procedure Configuration List")
+        });
+        section.Root.Children.Add(new TextElement
+        {
+            Name = "Heading",
+            Style = HeadingStylePresets.CreateHeadingStyle(),
+            Content = Expression.Literal("1.1 Yeni başlık")
+        });
+        section.Root.Children.Add(new TextElement
+        {
+            Name = "Alt Heading",
+            Style = HeadingStylePresets.CreateAltHeadingStyle(),
+            Content = Expression.Literal("1.1.1 Yeni alt başlık")
+        });
+
+        page.Sections.Add(section);
+        report.Pages.Add(page);
+
+        var project = new Project();
+        project.Reports.Add(report);
+
+        var contentBuilder = new ReportContentBuilder(new NoOpDataProviderRegistry());
+        var exporter = new WordExporter(contentBuilder, NullLogger<WordExporter>.Instance);
+
+        var result = await exporter.ExportAsync(project, report, ExportOptions.Default);
+        Assert.True(result.IsSuccess);
+
+        using var document = WordprocessingDocument.Open(result.Value, false);
+        var mainPart = document.MainDocumentPart!;
+        var paragraphs = mainPart.Document.Body!
+            .Elements<Paragraph>()
+            .Where(paragraph => paragraph.ParagraphProperties?.ParagraphStyleId is not null)
+            .ToDictionary(ParagraphText, paragraph => paragraph.ParagraphProperties!.ParagraphStyleId!.Val!.Value);
+
+        Assert.Equal("Heading1", paragraphs["1. System Test Procedure Configuration List"]);
+        Assert.Equal("Heading2", paragraphs["1.1 Yeni başlık"]);
+        Assert.Equal("Heading3", paragraphs["1.1.1 Yeni alt başlık"]);
+
+        var heading3Style = mainPart.StyleDefinitionsPart!.Styles!
+            .Elements<Style>()
+            .Single(style => style.StyleId == "Heading3");
+        Assert.Equal(2, heading3Style.StyleParagraphProperties?.OutlineLevel?.Val?.Value);
+
+        var tocField = mainPart.Document.Body!.Descendants<SimpleField>()
+            .Single(field => field.Instruction?.Value?.Contains("TOC", StringComparison.Ordinal) == true);
+        Assert.Contains(@"\o ""1-3""", tocField.Instruction!.Value);
     }
 
     [Fact]
@@ -117,9 +181,14 @@ public class WordExporterTests
 
         var styles = mainPart.StyleDefinitionsPart!.Styles!.Elements<Style>();
         Assert.Contains(styles, s => s.StyleId == "Heading1");
+        Assert.Contains(styles, s => s.StyleId == "Heading2");
+        Assert.Contains(styles, s => s.StyleId == "Heading3");
 
         var sectionProperties = mainPart.Document.Body!.Elements<SectionProperties>().Single();
         Assert.NotNull(sectionProperties.GetFirstChild<PageSize>());
         Assert.NotNull(sectionProperties.GetFirstChild<PageMargin>());
     }
+
+    private static string ParagraphText(Paragraph paragraph) =>
+        string.Concat(paragraph.Descendants<Text>().Select(text => text.Text));
 }
