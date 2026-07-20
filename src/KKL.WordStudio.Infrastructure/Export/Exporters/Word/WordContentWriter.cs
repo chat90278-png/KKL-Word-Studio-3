@@ -9,25 +9,33 @@ using KKL.WordStudio.Application.Formatting;
 internal static class WordContentWriter
 {
     public static void AppendNode(OpenXmlCompositeElement container, ReportContentNode node) =>
-        AppendNode(container, node, captionSequenceCounters: null, startOnNewPage: false);
+        AppendNode(container, node, captionSequenceCounters: null, startOnNewPage: false, nativeHeadingLevel: null);
 
     public static void AppendNode(
         OpenXmlCompositeElement container,
         ReportContentNode node,
         IDictionary<string, int>? captionSequenceCounters) =>
-        AppendNode(container, node, captionSequenceCounters, startOnNewPage: false);
+        AppendNode(container, node, captionSequenceCounters, startOnNewPage: false, nativeHeadingLevel: null);
 
     public static void AppendNode(
         OpenXmlCompositeElement container,
         ReportContentNode node,
         IDictionary<string, int>? captionSequenceCounters,
-        bool startOnNewPage)
+        bool startOnNewPage) =>
+        AppendNode(container, node, captionSequenceCounters, startOnNewPage, nativeHeadingLevel: null);
+
+    public static void AppendNode(
+        OpenXmlCompositeElement container,
+        ReportContentNode node,
+        IDictionary<string, int>? captionSequenceCounters,
+        bool startOnNewPage,
+        int? nativeHeadingLevel)
     {
         switch (node)
         {
             case TextContentNode text:
             {
-                var paragraph = WordParagraphWriter.BuildParagraph(text);
+                var paragraph = WordParagraphWriter.BuildParagraph(text, nativeHeadingLevel);
                 if (startOnNewPage)
                 {
                     paragraph.ParagraphProperties ??= new ParagraphProperties();
