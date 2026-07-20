@@ -5,6 +5,8 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using KKL.WordStudio.Application.Abstractions;
 using KKL.WordStudio.Application.Content;
+using KKL.WordStudio.Application.Structure;
+using KKL.WordStudio.Domain.Elements;
 using KKL.WordStudio.Domain.Projects;
 using KKL.WordStudio.Domain.Reports;
 using KKL.WordStudio.Infrastructure.Export.Exporters.Word;
@@ -73,12 +75,23 @@ public sealed class WordExporter : IReportExporter
                 if (report.IncludeTableOfContents && document.TableOfContents.Count > 0)
                     body.AppendChild(WordParagraphWriter.BuildTocParagraph());
 
+                var protectedRootIds = ResolveProtectedRootIds(report);
+                var usesProtectedRootHierarchy = protectedRootIds.Count > 0;
                 var captionSequenceCounters = new Dictionary<string, int>(StringComparer.Ordinal);
                 ReportContentNode? previousNode = null;
                 foreach (var node in document.BodyNodes)
                 {
                     var startOnNewPage = ReportFlowPaginationPolicy.StartsNewPageAfterTable(previousNode, node);
-                    WordContentWriter.AppendNode(body, node, captionSequenceCounters, startOnNewPage);
+                    var nativeHeadingLevel = ResolveNativeHeadingLevel(
+                        node,
+                        protectedRootIds,
+                        usesProtectedRootHierarchy);
+                    WordContentWriter.AppendNode(
+                        body,
+                        node,
+                        captionSequenceCounters,
+                        startOnNewPage,
+                        nativeHeadingLevel);
                     previousNode = node;
                 }
 
@@ -101,5 +114,35 @@ public sealed class WordExporter : IReportExporter
             return Result.Failure<Stream>(
                 "Word dosyası oluşturulamadı. Bağlı tabloların veri kaynaklarının hâlâ erişilebilir olduğundan emin olup yeniden deneyin.");
         }
+    }
+
+    private static HashSet<Guid> ResolveProtectedRootIds(Report report) =>
+        report.Pages
+            .SelectMany(page => page.Sections)
+            .Where(section => section.Kind == SectionKind.Body)
+            .SelectMany(section => section.Root.Children)
+            .OfType<TextElement>()
+            .Where(ReportDocumentStructurePolicy.IsRoot)
+            .Select(element => element.Id)
+            .ToHashSet();
+
+    private static int? ResolveNativeHeadingLevel(
+        ReportContentNode node,
+        IReadOnlySet<Guid> protectedRootIds,
+        bool usesProtectedRootHierarchy)
+    {
+        if (node is not TextContentNode text
+            || text.Kind is not (ReportContentKind.Heading or ReportContentKind.AltHeading))
+        {
+            return null;
+        }
+
+        if (!usesProtectedRootHierarchy)
+            return text.Kind == ReportContentKind.Heading ? 1 : 2;
+
+        if (protectedRootIds.Contains(text.ElementId))
+            return 1;
+
+        return text.Kind == ReportContentKind.Heading ? 2 : 3;
     }
 }
